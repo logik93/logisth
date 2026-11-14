@@ -1,10 +1,28 @@
 {
   "tag": "v0.9.3",
-  "automation_commit": "6e41474dacd557a6309226d08edb53051d70ebcd",
-  "run_id": "43654188961",
-  "run_url": "https://github.com/logik93/logisth/actions/runs/43654188961",
-  "phase": "building",
-  "pipeline_phase": "building",
-  "stage": "",
-  "recorded_at": "2026-11-14T23:37:49.075980+00:00"
+  "automation_commit": "51eb9b2693b9f11517d79f0bbae24ea586394b4e",
+  "run_id": "43653511744",
+  "run_url": "https://github.com/logik93/logisth/actions/runs/43653511744",
+  "phase": "failed",
+  "pipeline_phase": "failed",
+  "stage": "windows-linux",
+  "recorded_at": "2026-11-14T23:45:11.017255+00:00",
+  "jobs": {
+    "started": {
+      "result": "success",
+      "outputs": {}
+    },
+    "plugins": {
+      "result": "success",
+      "outputs": {}
+    },
+    "windows_asan": {
+      "result": "success",
+      "outputs": {}
+    },
+    "publish": {
+      "result": "failure",
+      "outputs": {}
+    }
+  }
 }
