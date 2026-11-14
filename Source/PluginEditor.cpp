@@ -78,6 +78,7 @@ void LogisthColours::choosePalette(int selected) {
 void LogisthColours::applyPalette(const ThemeDefinition &theme) {
     darkTheme = theme.dark;
     fontFamily = theme.fontFamily;
+    skin = theme.skin;
     backgroundStyle = theme.backgroundStyle;
     knobStyle = theme.knobStyle;
     knobColour = theme.colours[10];
@@ -161,6 +162,19 @@ void LogisthLook::drawRotarySlider(Graphics &g, int x, int y, int w, int h, floa
                          jmax(from, angle), true);
     g.setColour(s.isEnabled() ? knobColour : knobColour.withAlpha(.25f));
     g.strokePath(active, PathStrokeType(small ? 1.6f : 2.4f));
+    if (s.getProperties().contains("live") && float(s.getProperties()["live"]) >= 0 && !small) {
+        float live = float(s.getProperties()["live"]), lo = float(s.getProperties()["liveLow"]),
+              hi = float(s.getProperties()["liveHigh"]);
+        Path arc;
+        arc.addCentredArc(centre.x, centre.y, radius + 3, radius + 3, 0, start + lo * (end - start),
+                          start + hi * (end - start), true);
+        g.setColour(mint.withAlpha(.5f));
+        g.strokePath(arc, PathStrokeType(2));
+        float a = start + live * (end - start) - MathConstants<float>::halfPi;
+        g.setColour(mint);
+        g.fillEllipse(centre.x + std::cos(a) * (radius + 3) - 2,
+                      centre.y + std::sin(a) * (radius + 3) - 2, 4, 4);
+    }
     float r = radius - (small ? 3 : 4);
     auto knob = Rectangle<float>(centre.x - r, centre.y - r, 2 * r, 2 * r);
     if (!small) {
@@ -322,7 +336,16 @@ class LogisthEditor::Console : public Component,
                     kind = Style::Menu;
                     menu.getProperties().set("routing", String(spec.id).contains("dest"));
                     for (int i = 0; i < choices.size(); ++i) {
-                        if (String(spec.id).contains("dest") && (i == 13 || i == 19))
+                        if (String(spec.id).startsWith("m") && String(spec.id).contains("target")) {
+                            if (i == 4 || i == 20)
+                                menu.getRootMenu()->addColumnBreak();
+                            if (i == 1 || i == 4 || i == 20)
+                                menu.getRootMenu()->addSectionHeader(i == 1   ? "Filters"
+                                                                     : i == 4 ? "Players"
+                                                                              : "Effects / time");
+                        }
+                        if (String(spec.id).contains("dest") &&
+                            (i == 13 || i == 19 || i == 38 || i == 45 || i == 52))
                             menu.getRootMenu()->addColumnBreak();
                         if (String(spec.id).contains("dest") && (i == 1 || i == 13 || i == 19))
                             menu.getRootMenu()->addSectionHeader(i == 1 ? "Oscillators"
@@ -455,6 +478,23 @@ class LogisthEditor::Console : public Component,
         Param parameter() const {
             return id;
         }
+        void liveValue(float value, bool active) {
+            auto &props = slider.getProperties();
+            if (!active) {
+                props.set("live", -1.f);
+                slider.repaint();
+                return;
+            }
+            float normalized = float(slider.valueToProportionOfLength(value));
+            float base = float(slider.valueToProportionOfLength(slider.getValue()));
+            liveLow = std::min(std::min(normalized, base), liveLow * .985f + base * .015f);
+            liveHigh = std::max(std::max(normalized, base), liveHigh * .985f + base * .015f);
+            props.set("live", normalized);
+            props.set("liveLow", liveLow);
+            props.set("liveHigh", liveHigh);
+            slider.repaint();
+        }
+        float liveLow = 1, liveHigh = 0;
         void enable(bool enabled) {
             setEnabled(enabled);
             label.setAlpha(enabled ? 1.f : .4f);
@@ -751,9 +791,9 @@ class LogisthEditor::Console : public Component,
             button.onClick = [this, i] { setPart(i); };
             addAndMakeVisible(button);
         }
-        StringArray names{"ARPEGGIATOR", "DISTORTION", "PHASER",     "CHORUS", "EQUALIZER",
-                          "REVERB",      "DELAY",      "COMPRESSOR", "CHORDS", "SAMPLE"};
-        for (int i = 0; i < 10; ++i) {
+        StringArray names{"ARPEGGIATOR", "DISTORTION", "PHASER", "CHORUS", "EQUALIZER", "REVERB",
+                          "DELAY",       "COMPRESSOR", "CHORDS", "SAMPLE", "MORPH"};
+        for (int i = 0; i < 11; ++i) {
             rackButtons[size_t(i)] = std::make_unique<RackButton>(*this, i, names[i]);
             addAndMakeVisible(*rackButtons[size_t(i)]);
         }
@@ -842,11 +882,13 @@ class LogisthEditor::Console : public Component,
         settingsPanel.setComponentID("settings.panel");
         addChildComponent(settingsPanel);
         initialiseSettings();
+        initialiseMorph();
         for (int i = 0; i < 4; ++i) {
             auto &view = sourceViews[size_t(i)];
             view.setComponentID("source.view." + String(i));
-            view.addItemList(
-                {"VOICE", "SOURCE", "ENV", "GRAINS", "MOTION", "TIME", "MOD", "PLAYBACK"}, 1);
+            view.addItemList({"VOICE", "SOURCE", "ENV", "GRAINS", "MOTION", "TIME", "MOD",
+                              "PLAYBACK", "ROUTING"},
+                             1);
             view.setSelectedId(
                 processor.state.getRawParameterValue("o" + String(i + 1) + "engine")->load() > 0
                     ? 2
@@ -1126,6 +1168,11 @@ class LogisthEditor::Console : public Component,
         for (ComboBox *box :
              {&themeChoice, &scaleChoice, &colourRole, &themeFont, &themeBackground, &themeKnobs})
             box->setColour(ComboBox::textColourId, screenText);
+        for (auto &name : macroNames) {
+            name.setColour(TextEditor::backgroundColourId, screen);
+            name.setColour(TextEditor::outlineColourId, screenLine);
+            name.applyColourToAllText(screenText, true);
+        }
         for (TextEditor *editor : {&themeName, &colourHex}) {
             editor->setColour(TextEditor::backgroundColourId, panel);
             editor->applyColourToAllText(ink, true);
@@ -1183,12 +1230,27 @@ class LogisthEditor::Console : public Component,
     }
     void setRack(int page) {
         settingsOpen = false;
-        rack = jlimit(0, 9, page);
+        rack = jlimit(0, 10, page);
         layout();
         repaint();
     }
     void showScenario(int index) {
-        previewReverb = previewEq = previewWave = -1;
+        previewReverb = previewEq = previewWave = previewStretch = -1;
+        if (index == 23 || index == 24 || index == 25) {
+            settingsOpen = false;
+            previewSource = index >= 24 ? 2 : -1;
+            previewStretch = index == 25 ? 6 : -1;
+            rack = index == 23 ? 10 : 9;
+            selectedPart = 0;
+            if (index >= 24) {
+                layout();
+                for (auto &v : sourceViews)
+                    v.setSelectedId(index == 25 ? 8 : 9, dontSendNotification);
+            }
+            layout();
+            repaint();
+            return;
+        }
         if (index >= 19 && index <= 22) {
             settingsOpen = false;
             selectedPart = 0;
@@ -1257,7 +1319,8 @@ class LogisthEditor::Console : public Component,
     String validate() {
         const bool oldSettings = settingsOpen;
         settingsOpen = false;
-        const int oldPart = selectedPart, oldRack = rack, oldStep = stepPage;
+        const int oldPart = selectedPart, oldRack = rack, oldStep = stepPage,
+                  oldMacro = selectedMacro;
         std::array<int, 4> views;
         for (int i = 0; i < 4; ++i)
             views[size_t(i)] = sourceViews[size_t(i)].getSelectedId();
@@ -1301,7 +1364,7 @@ class LogisthEditor::Console : public Component,
         for (int clock = 0; clock < 2; ++clock) {
             previewSync = clock;
             for (int part = 0; part < 2; ++part)
-                for (int page = 0; page < 10; ++page)
+                for (int page = 0; page < 11; ++page)
                     for (int step = 0; step < 2; ++step) {
                         selectedPart = part;
                         rack = page;
@@ -1319,7 +1382,7 @@ class LogisthEditor::Console : public Component,
         for (int part = 0; part < 2; ++part)
             for (int mode = 0; mode < 4; ++mode)
                 for (int model = 0; model < 2; ++model)
-                    for (int view = 1; view <= 8; ++view) {
+                    for (int view = 1; view <= 9; ++view) {
                         selectedPart = part;
                         previewSource = mode;
                         previewGran = model;
@@ -1339,15 +1402,32 @@ class LogisthEditor::Console : public Component,
             inspect();
         }
         previewWave = -1;
+        previewSource = 2;
+        previewStretch = 6;
+        for (int part = 0; part < 2; ++part) {
+            selectedPart = part;
+            layout();
+            for (auto &view : sourceViews)
+                if (view.indexOfItemId(8) >= 0)
+                    view.setSelectedId(8, dontSendNotification);
+            inspect();
+        }
+        previewStretch = -1;
         rack = 4;
         for (int mode = 0; mode < 2; ++mode) {
             previewEq = mode;
             inspect();
         }
         previewEq = -1;
+        rack = 10;
+        for (int macro = 0; macro < 4; ++macro) {
+            selectedMacro = macro;
+            inspect();
+        }
         for (size_t i = 0; i < controls.size(); ++i)
             if (!visited.count(i))
                 error = "Unreachable: " + String(parameterSpecs[i].id);
+        selectedMacro = oldMacro;
         settingsOpen = oldSettings;
         selectedPart = oldPart;
         rack = oldRack;
@@ -1360,6 +1440,85 @@ class LogisthEditor::Console : public Component,
     }
 
   private:
+    void initialiseMorph() {
+        for (int i = 0; i < 4; ++i) {
+            auto &name = macroNames[size_t(i)];
+            name.setComponentID("morph.name." + String(i));
+            name.setFont(font(10));
+            name.setInputRestrictions(24);
+            name.setText(processor.macroName(i), false);
+            name.onTextChange = [this, i] {
+                processor.setMacroName(i, macroNames[size_t(i)].getText());
+            };
+            addChildComponent(name);
+            auto &select = macroSelect[size_t(i)];
+            select.setButtonText("ROUTES");
+            select.setComponentID("morph.select." + String(i));
+            select.onClick = [this, i] {
+                selectedMacro = i;
+                layout();
+                repaint();
+            };
+            addChildComponent(select);
+            auto &lock = mutationLock[size_t(i)];
+            lock.setComponentID("morph.lock." + String(i));
+            lock.setButtonText(StringArray{"OSC", "FILTER", "MOD", "FX"}[i]);
+            lock.setClickingTogglesState(true);
+            lock.setTooltip("Lock this section against Mutate");
+            lock.onClick = [this, i] {
+                int bits = processor.mutationLocks();
+                int bit = 1 << i;
+                processor.setMutationLocks(mutationLock[size_t(i)].getToggleState() ? bits | bit
+                                                                                    : bits & ~bit);
+            };
+            addChildComponent(lock);
+        }
+        mutateButton.setButtonText("MUTATE");
+        mutateButton.setComponentID("morph.mutate");
+        mutateButton.onClick = [this] {
+            processor.mutate();
+            undoButton.setEnabled(true);
+        };
+        addChildComponent(mutateButton);
+        undoButton.setButtonText("UNDO");
+        undoButton.setComponentID("morph.undo");
+        undoButton.onClick = [this] {
+            processor.undoMutation();
+            undoButton.setEnabled(false);
+        };
+        addChildComponent(undoButton);
+    }
+    void layoutMorph() {
+        for (int i = 0; i < 4; ++i) {
+            auto &name = macroNames[size_t(i)];
+            name.setBounds(414 + i * 102, 289, 96, 22);
+            name.setVisible(true);
+            size_t base = size_t(Param::macro1) + size_t(i) * 13;
+            put(Param(base), {414 + i * 102, 314, 96, 60}, Style::Knob, {}, true);
+            auto &select = macroSelect[size_t(i)];
+            select.setBounds(414 + i * 102, 377, 96, 20);
+            select.setToggleState(selectedMacro == i, dontSendNotification);
+            select.setVisible(true);
+            auto &lock = mutationLock[size_t(i)];
+            lock.setBounds(414 + i * 73, 508, 69, 20);
+            lock.setToggleState((processor.mutationLocks() & (1 << i)) != 0, dontSendNotification);
+            lock.setVisible(true);
+        }
+        put(Param::mutateamount, {827, 289, 106, 38}, Style::Number, "MUTATE DEPTH", true);
+        mutateButton.setBounds(827, 341, 106, 26);
+        mutateButton.setVisible(true);
+        undoButton.setBounds(827, 374, 106, 23);
+        undoButton.setVisible(true);
+        undoButton.setEnabled(processor.canUndoMutation());
+        size_t base = size_t(Param::macro1) + size_t(selectedMacro) * 13;
+        for (int row = 0; row < 4; ++row) {
+            int y = 410 + row * 23;
+            put(Param(base + 1 + size_t(row) * 3), {414, y, 258, 21}, Style::Menu, {}, true);
+            put(Param(base + 2 + size_t(row) * 3), {682, y, 115, 21}, Style::Number, {}, true);
+            put(Param(base + 3 + size_t(row) * 3), {807, y, 126, 21}, Style::Number, {}, true);
+        }
+    }
+
     void initialiseSettings() {
         const StringArray tabs{"APPEARANCE", "THEME EDITOR", "STYLE", "ABOUT"};
         for (int i = 0; i < 4; ++i) {
@@ -1570,6 +1729,8 @@ class LogisthEditor::Console : public Component,
             pair.first->setFont(font(10));
             settingsPanel.addAndMakeVisible(*pair.first);
         }
+        aboutLogo.setImage(apLogo);
+        settingsPanel.addChildComponent(aboutLogo);
         aboutLabel.setFont(font(11, true));
         aboutLabel.setText("WAVELOGIK / LOGISTH", dontSendNotification);
         aboutInfo.setFont(font(11));
@@ -1660,7 +1821,9 @@ class LogisthEditor::Console : public Component,
             show(themeKnobs, {150, 134, 360, 28});
         } else {
             show(aboutLabel, {0, 40, 510, 25});
-            show(aboutInfo, {0, 74, 510, 150});
+            show(aboutInfo, {0, 74, skin == "ap-flexin" ? 338 : 510, 150});
+            if (skin == "ap-flexin")
+                show(aboutLogo, {350, 74, 160, 150});
         }
     }
     friend class Control;
@@ -1673,6 +1836,8 @@ class LogisthEditor::Console : public Component,
     float value(Param p) const {
         if (previewEq >= 0 && p == Param::eqmode)
             return float(previewEq);
+        if (previewStretch >= 0 && String(parameterSpecs[size_t(p)].id).endsWith("stretchmode"))
+            return float(previewStretch);
         if (previewWave >= 0 && String(parameterSpecs[size_t(p)].id).startsWith("o") &&
             String(parameterSpecs[size_t(p)].id).endsWith("wave"))
             return float(previewWave);
@@ -1866,6 +2031,7 @@ class LogisthEditor::Console : public Component,
                 }
             }
             menu.addItem("MOD", 7);
+            menu.addItem("ROUTING", 9);
             if (mode == 2)
                 menu.addItem("PLAYBACK", 8);
             menu.setSelectedId(menu.indexOfItemId(selected) >= 0 ? selected
@@ -1918,22 +2084,26 @@ class LogisthEditor::Console : public Component,
                         {b.getX() + 12, b.getY() + 34 + i * 39, 62, 33}, Style::Number,
                         StringArray{"OCTAVE", "NOTE", "FINE"}[i]);
             if (view == 7) {
-                StringArray keys{"amdepth", "amratio"}, names{"AM DEPTH", "AM RATIO"};
-                if (mode <= 1) {
-                    keys = {"fmdepth", "fmratio", "amdepth", "amratio"};
-                    names = {"FM INDEX", "FM RATIO", "AM DEPTH", "AM RATIO"};
-                }
-                int wave = int(value(Param(size_t(Param::o1wave) + slot * 12)));
-                if (mode == 0 && (wave == 2 || wave == 5 || wave == 6)) {
-                    keys.addArray({"pulsewidth", "pwmdepth", "pwmrate"});
-                    names.addArray({"WIDTH", "PWM DEPTH", "PWM RATE"});
-                }
-                int cols = 4;
+                StringArray keys{"fmdepth",    "fmratio",  "amdepth", "amratio",
+                                 "pulsewidth", "pwmdepth", "pwmrate"};
+                StringArray names{"FM INDEX",     "FM RATIO",  "AM DEPTH", "AM RATIO",
+                                  "WIDTH / WARP", "PWM DEPTH", "PWM RATE"};
                 for (int i = 0; i < keys.size(); ++i)
-                    control(
-                        id + keys[i],
-                        {b.getX() + 88 + (i % cols) * 88, b.getY() + 35 + (i / cols) * 69, 80, 66},
-                        Style::Knob, names[i]);
+                    control(id + keys[i],
+                            {b.getX() + 88 + (i % 4) * 88, b.getY() + 35 + (i / 4) * 69, 80, 66},
+                            Style::Knob, names[i]);
+            } else if (view == 9) {
+                control(id + "fmsource", {b.getX() + 88, b.getY() + 35, 170, 42}, Style::Menu,
+                        "FM MODULATOR");
+                control(id + "amsource", {b.getX() + 269, b.getY() + 35, 175, 42}, Style::Menu,
+                        "AM MODULATOR");
+                control(id + "pwmsync", {b.getX() + 88, b.getY() + 103, 110, 25}, Style::Toggle,
+                        "PWM SYNC");
+                control(id + "pwmdivision", {b.getX() + 269, b.getY() + 93, 175, 42}, Style::Menu,
+                        "PWM DIVISION");
+                if (mode == 3)
+                    control(id + "trimstart", {b.getX() + 88, b.getY() + 142, 170, 28},
+                            Style::Number, "TRIM START");
             } else if (view == 8) {
                 control(id + "stretchmode", {b.getX() + 88, b.getY() + 36, 170, 42}, Style::Menu,
                         "STRETCH");
@@ -1941,6 +2111,9 @@ class LogisthEditor::Console : public Component,
                         "INTERPOLATION");
                 control(id + "stretch", {b.getX() + 88, b.getY() + 86, 95, 80}, Style::Knob,
                         "TIME FACTOR");
+                if (value(Param(size_t(Param::o1stretchmode) + slot * 10)) == 6)
+                    control(id + "kickattack", {b.getX() + 269, b.getY() + 86, 100, 80},
+                            Style::Knob, "KICK ATTACK");
             } else if (view == 4) {
                 control(id + "gmodel", {b.getX() + 88, b.getY() + 35, 150, 24}, Style::Menu);
                 for (int i = 0; i < 4; ++i)
@@ -2061,10 +2234,18 @@ class LogisthEditor::Console : public Component,
     }
     void rackLayout() {
         Rectangle<int> content{414, 320, 520, 203};
-        for (int i = 0; i < 10; ++i) {
-            rackButtons[size_t(i)]->setBounds(291, 311 + i * 22, 108, 21);
+        for (auto &name : macroNames)
+            name.setVisible(false);
+        for (auto &button : macroSelect)
+            button.setVisible(false);
+        for (auto &button : mutationLock)
+            button.setVisible(false);
+        mutateButton.setVisible(false);
+        undoButton.setVisible(false);
+        for (int i = 0; i < 11; ++i) {
+            rackButtons[size_t(i)]->setBounds(291, 309 + i * 20, 108, 20);
             if (i < 9)
-                put(enables[size_t(i)], {294, 312 + i * 22, 20, 20}, Style::Toggle, {}, true);
+                put(enables[size_t(i)], {294, 309 + i * 20, 20, 20}, Style::Toggle, {}, true);
             if (i < 9)
                 controls[size_t(enables[size_t(i)])]->toFront(false);
         }
@@ -2073,6 +2254,10 @@ class LogisthEditor::Console : public Component,
             settingsPanel.setBounds(414, 289, 520, 234);
             layoutSettings();
             settingsPanel.toFront(false);
+            return;
+        }
+        if (rack == 10) {
+            layoutMorph();
             return;
         }
         if (rack == 4) {
@@ -2373,6 +2558,14 @@ class LogisthEditor::Console : public Component,
             ThemeSettings::scan();
         }
         processor.serviceAssets();
+        if (macroStamp != processor.macroRevision.load()) {
+            macroStamp = processor.macroRevision.load();
+            for (int i = 0; i < 4; ++i)
+                if (!macroNames[size_t(i)].hasKeyboardFocus(true))
+                    macroNames[size_t(i)].setText(processor.macroName(i), false);
+        }
+        if (rack == 10)
+            undoButton.setEnabled(processor.canUndoMutation());
         auto status = processor.sourceStatus();
         if (status != lastStatus) {
             lastStatus = status;
@@ -2408,6 +2601,15 @@ class LogisthEditor::Console : public Component,
             waveView.setMode(
                 int(value(Param(size_t(Param::o1engine) + size_t(waveView.selectedSlot()) * 16))));
             waveView.repaint();
+        }
+        for (int slot = 0; slot < 4; ++slot) {
+            auto picture = processor.playback[size_t(slot)].read();
+            for (auto pair :
+                 {std::pair<Param, float>{Param(size_t(Param::o1fmdepth) + size_t(slot) * 10),
+                                          picture.fm},
+                  {Param(size_t(Param::o1amdepth) + size_t(slot) * 10), picture.am},
+                  {Param(size_t(Param::o1pulsewidth) + size_t(slot) * 10), picture.width}})
+                controls[size_t(pair.first)]->liveValue(pair.second, picture.active);
         }
         if (rack == 4)
             eqView.repaint();
@@ -2449,6 +2651,16 @@ class LogisthEditor::Console : public Component,
                     g.drawHorizontalLine(y, 0, float(getWidth()));
             }
         }
+        if (skin == "ap-flexin") {
+            for (int i = 0; i < 48; ++i) {
+                auto colour = i % 3 == 0   ? Colour(0xff5352ff)
+                              : i % 3 == 1 ? Colour(0xff00d9ee)
+                                           : Colour(0xffb63cff);
+                g.setColour(colour.withAlpha(.16f));
+                float x = float((i * 157) % 1240), y = float(75 + (i * 79) % 765);
+                g.drawLine(x, y, x + 12 + (i % 5) * 9, y, 1);
+            }
+        }
         g.setColour(darkTheme ? line : Colour(0xfff6f5ee));
         g.drawHorizontalLine(0, 0, float(canvasWidth));
         g.setColour(green);
@@ -2458,9 +2670,14 @@ class LogisthEditor::Console : public Component,
         mark.lineTo(38, 24);
         mark.lineTo(45, 43);
         mark.lineTo(50, 30);
-        g.strokePath(mark, PathStrokeType(2.2f, PathStrokeType::curved, PathStrokeType::rounded));
+        if (skin == "ap-flexin")
+            g.drawImageWithin(apLogo, 17, 8, 47, 58, RectanglePlacement::centred);
+        else
+            g.strokePath(mark,
+                         PathStrokeType(2.2f, PathStrokeType::curved, PathStrokeType::rounded));
         drawCaption(g, "logisth", {62, 13, 180, 38}, 31, ink, Justification::centredLeft, true);
-        drawCaption(g, "POLYPHONIC INSTRUMENT", {63, 50, 220, 14}, 8.5f, muted);
+        drawCaption(g, skin == "ap-flexin" ? "AP always flexin'!" : "POLYPHONIC INSTRUMENT",
+                    {63, 50, 155, 14}, 8.5f, muted);
         drawCaption(g, "SOUND LIBRARY", {364, 9, 280, 13}, 8, muted);
         drawCaption(g, "PART", {795, 30, 33, 20}, 8.5f, muted);
         drawCaption(g, "SOLO", {927, 12, 68, 13}, 8, muted);
@@ -2548,16 +2765,20 @@ class LogisthEditor::Console : public Component,
         g.drawRoundedRectangle(Rectangle<float>(280.5f, 278.5f, 667, 257), 8, 1);
         g.drawVerticalLine(404, 292, 523);
         drawCaption(g, "SIGNAL RACK", {292, 290, 108, 16}, 8, mint.withAlpha(.5f));
-        StringArray titles{"ARPEGGIATOR", "DISTORTION", "PHASER",     "CHORUS", "EQUALIZER",
-                           "REVERB",      "DELAY",      "COMPRESSOR", "CHORDS", "SAMPLE"};
+        StringArray titles{"ARPEGGIATOR", "DISTORTION", "PHASER", "CHORUS", "EQUALIZER", "REVERB",
+                           "DELAY",       "COMPRESSOR", "CHORDS", "SAMPLE", "MORPH"};
         drawCaption(g,
-                    settingsOpen  ? "SETTINGS"
-                    : (rack == 9) ? String{}
-                                  : titles[rack],
+                    settingsOpen                ? "SETTINGS"
+                    : (rack == 9 || rack == 10) ? String{}
+                                                : titles[rack],
                     {414, 289, 350, 20}, 12, screenText, Justification::centredLeft, true);
 
         if (settingsOpen) {
             // The settings labels and selector draw inside the central rack.
+        } else if (rack == 10) {
+            drawCaption(g, "TARGET", {414, 398, 258, 12}, 8, muted);
+            drawCaption(g, "FROM", {682, 398, 115, 12}, 8, muted);
+            drawCaption(g, "TO", {807, 398, 126, 12}, 8, muted);
         } else if (rack == 9) {
             int mode =
                 int(value(Param(size_t(Param::o1engine) + size_t(waveView.selectedSlot()) * 16)));
@@ -2621,7 +2842,7 @@ class LogisthEditor::Console : public Component,
     LogisthLook &look;
     std::array<std::unique_ptr<Control>, parameterCount> controls;
     std::array<ToggleButton, 2> parts, stepPages;
-    std::array<std::unique_ptr<RackButton>, 10> rackButtons;
+    std::array<std::unique_ptr<RackButton>, 11> rackButtons;
     std::array<ComboBox, 4> sourceViews, sourceFrame;
     std::array<int, 4> sourceMenuStates{-1, -1, -1, -1};
     std::array<TextButton, 4> sourceLoad, sourceClear;
@@ -2631,7 +2852,7 @@ class LogisthEditor::Console : public Component,
     bool updatingChord = false;
     std::unique_ptr<FileChooser> sourceChooser;
     int previewSource = -1, previewPattern = -1, previewGran = -1, previewReverb = -1,
-        previewEq = -1, previewWave = -1;
+        previewEq = -1, previewWave = -1, previewStretch = -1;
     ComboBox presets;
     TextButton settings;
     TextEditor presetNotes;
@@ -2663,6 +2884,14 @@ class LogisthEditor::Console : public Component,
     std::array<ToggleButton, 3> scopeSources;
     TextButton presetFiles;
     ComboBox waveSlot;
+    std::array<TextEditor, 4> macroNames;
+    std::array<TextButton, 4> macroSelect, mutationLock;
+    TextButton mutateButton, undoButton;
+    int selectedMacro = 0, macroStamp = -1;
+    ImageComponent aboutLogo;
+    Image apLogo = ImageCache::getFromMemory(BinaryData::apmusicgroupwhite_png,
+                                             BinaryData::apmusicgroupwhite_pngSize);
+
     std::unique_ptr<FileChooser> presetChooser;
     Array<File> userPresets;
     int presetRevision = -1;

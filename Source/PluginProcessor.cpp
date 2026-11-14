@@ -40,9 +40,10 @@ LogisthProcessor::LogisthProcessor()
 }
 Params LogisthProcessor::snapshot() const {
     Params p;
+    p.spectralBank = spectralPointer.load();
     for (int i = 0; i < 4; ++i) {
         size_t at = size_t(Param::o1wave) + size_t(i) * 12;
-        auto next = [&] { return raw[at++]->load(); };
+        auto next = [&] { return get(Param(at++)); };
         auto &o = p.osc[size_t(i)];
         o.wave = int(next());
         o.unison = int(next());
@@ -58,7 +59,7 @@ Params LogisthProcessor::snapshot() const {
         o.retrigger = next() > 0;
         o.invert = next() > 0;
         size_t ext = size_t(Param::o1engine) + size_t(i) * 16;
-        auto sourceNext = [&] { return raw[ext++]->load(); };
+        auto sourceNext = [&] { return get(Param(ext++)); };
         o.engine = int(sourceNext());
         o.position = sourceNext();
         o.end = sourceNext();
@@ -73,19 +74,26 @@ Params LogisthProcessor::snapshot() const {
         o.envelopeEnabled = sourceNext() > 0;
         o.envelope = {sourceNext(), sourceNext(), sourceNext(), sourceNext()};
         size_t modulation = size_t(Param::o1fmdepth) + size_t(i) * 10;
-        o.fmDepth = raw[modulation]->load();
-        o.fmRatio = raw[modulation + 1]->load();
-        o.amDepth = raw[modulation + 2]->load();
-        o.amRatio = raw[modulation + 3]->load();
-        o.pulseWidth = raw[modulation + 4]->load();
-        o.pwmDepth = raw[modulation + 5]->load();
-        o.pwmRate = raw[modulation + 6]->load();
-        o.stretchMode = int(raw[modulation + 7]->load());
-        o.stretch = raw[modulation + 8]->load();
-        o.interpolation = int(raw[modulation + 9]->load());
+        o.fmDepth = get(Param(modulation));
+        o.fmRatio = get(Param(modulation + 1));
+        o.amDepth = get(Param(modulation + 2));
+        o.amRatio = get(Param(modulation + 3));
+        o.pulseWidth = get(Param(modulation + 4));
+        o.pwmDepth = get(Param(modulation + 5));
+        o.pwmRate = get(Param(modulation + 6));
+        o.stretchMode = int(get(Param(modulation + 7)));
+        o.stretch = get(Param(modulation + 8));
+        o.interpolation = int(get(Param(modulation + 9)));
+        size_t extra = size_t(Param::o1fmsource) + size_t(i) * 5;
+        o.fmSource = int(get(Param(extra)));
+        o.amSource = int(get(Param(extra + 1)));
+        o.pwmSync = get(Param(extra + 2)) > 0;
+        o.pwmDivision = int(get(Param(extra + 3)));
+        o.kickAttack = get(Param(extra + 4));
         o.data = sourcePointers[size_t(i)].load();
         size_t g = size_t(Param::o1gmodel) + size_t(i) * 15;
-        auto granNext = [&] { return raw[g++]->load(); };
+        auto granNext = [&] { return get(Param(g++)); };
+        o.gran.trimStart = get(Param(size_t(Param::o1trimstart) + size_t(i)));
         o.gran.enabled = granNext() > 0;
         o.gran.attack = granNext() * .001f;
         o.gran.hold = granNext() * .001f;
@@ -104,7 +112,7 @@ Params LogisthProcessor::snapshot() const {
     }
     for (int i = 0; i < 2; ++i) {
         size_t at = size_t(Param::p1input) + size_t(i) * 10;
-        auto next = [&] { return raw[at++]->load(); };
+        auto next = [&] { return get(Param(at++)); };
         auto &part = p.part[size_t(i)];
         part.input = int(next());
         part.filterType = int(next());
@@ -118,14 +126,14 @@ Params LogisthProcessor::snapshot() const {
     auto readRoutes = [&](size_t at) {
         Routes result{};
         for (auto &route : result) {
-            route.destination = Destination(int(raw[at++]->load()));
-            route.amount = raw[at++]->load();
+            route.destination = Destination(int(get(Param(at++))));
+            route.amount = get(Param(at++));
         }
         return result;
     };
     for (int i = 0; i < 2; ++i) {
         size_t at = size_t(Param::env1a) + size_t(i) * 8;
-        auto next = [&] { return raw[at++]->load(); };
+        auto next = [&] { return get(Param(at++)); };
         p.envelopes[i] = {next(), next(), next(), next()};
         p.envelopeRoutes[i] = readRoutes(at);
         at = size_t(Param::lfo1wave) + size_t(i) * 10;
@@ -266,6 +274,8 @@ ArpParams LogisthProcessor::arpSnapshot() const {
     return p;
 }
 void LogisthProcessor::prepareToPlay(double sampleRate, int) {
+    spectralRate = sampleRate;
+    ensureSpectral(true);
     generatedMidi.ensureSize(131072);
     engine.prepare(sampleRate);
     effects.prepare(sampleRate);
@@ -275,6 +285,8 @@ void LogisthProcessor::prepareToPlay(double sampleRate, int) {
 void LogisthProcessor::reset() {
     engine.reset();
     scope.clear();
+    for (auto &trace : playerScopes)
+        trace.clear();
     chordMapper.reset();
     chordsWereEnabled = false;
     effects.reset();
@@ -325,6 +337,7 @@ void LogisthProcessor::processBlock(AudioBuffer<float> &audio, MidiBuffer &midi)
             wasPlaying = position->getIsPlaying();
         }
     keyboard.processNextMidiBuffer(midi, 0, n, true);
+    const bool midiOnly = get(Param::midionly) > 0;
     const auto p = snapshot();
     const auto fx = effectsSnapshot();
     const auto ap = arpSnapshot();
@@ -339,17 +352,21 @@ void LogisthProcessor::processBlock(AudioBuffer<float> &audio, MidiBuffer &midi)
             auto *l = audio.getWritePointer(0) + rendered;
             auto *r = audio.getWritePointer(1) + rendered;
             engine.render(l, r, count, p, driveMod.data(), phaserMod.data(), partScopeA.data(),
-                          partScopeB.data());
+                          partScopeB.data(),
+                          {playerTraces[0].data(), playerTraces[1].data(), playerTraces[2].data(),
+                           playerTraces[3].data()});
             effects.process(l, r, count, driveMod.data(), phaserMod.data(), fx);
             for (int s = 0; s < count; ++s) {
                 masterSmooth += smoothing * (masterTarget - masterSmooth);
                 for (auto *ch : {l, r}) {
-                    float x = get(Param::midionly) > 0 ? 0 : ch[s] * masterSmooth;
+                    float x = midiOnly ? 0 : ch[s] * masterSmooth;
                     ch[s] = std::isfinite(x) ? x : 0;
                     maximum = jmax(maximum, std::abs(ch[s]));
                     const size_t channel = ch == l ? 0 : 1;
                     maxima[channel] = jmax(maxima[channel], std::abs(ch[s]));
                 }
+                for (int slot = 0; slot < 4; ++slot)
+                    playerScopes[size_t(slot)].push(0, 0, playerTraces[size_t(slot)][size_t(s)]);
                 scope.push(partScopeA[size_t(s)] * masterSmooth,
                            partScopeB[size_t(s)] * masterSmooth, l[s] + r[s]);
             }
@@ -478,6 +495,8 @@ void LogisthProcessor::processBlock(AudioBuffer<float> &audio, MidiBuffer &midi)
     arp.advance(scheduled, n, ap, emit);
     renderTo(n);
     scope.commit();
+    for (auto &trace : playerScopes)
+        trace.commit();
     arpPlayhead = arp.playhead();
     midi.clear();
     if (output || flushMidi)
@@ -492,6 +511,7 @@ void LogisthProcessor::getStateInformation(MemoryBlock &dest) try {
     tree.setProperty("schema", 4, nullptr);
     tree.setProperty("presetName", currentPresetName(), nullptr);
     tree.setProperty("presetComment", presetComment(), nullptr);
+    saveMacroMetadata(tree);
     saveAssets(tree);
     copyXmlToBinary(*tree.createXml(), dest);
     if (dest.getSize() > size_t(stateMemoryLimit))
@@ -535,6 +555,15 @@ bool LogisthProcessor::applyState(const void *data, int size) try {
         if (!restoreAssets(source))
             return false;
         state.replaceState(safe);
+        for (int i = 0; i < 4; ++i)
+            setMacroName(
+                i,
+                source.getProperty("macroName" + String(i), "Macro " + String(i + 1)).toString());
+        mutateLocks = jlimit(0, 15, int(source.getProperty("mutateLocks", 0)));
+        {
+            const ScopedLock lock(assetLock);
+            mutationUndo.reset();
+        }
         {
             const ScopedLock lock(assetLock);
             presetName = source.getProperty("presetName", "").toString().substring(0, 128);
@@ -591,6 +620,10 @@ bool LogisthProcessor::applyState(const void *data, int size) try {
     return false;
 }
 void LogisthProcessor::loadPreset(int index) {
+    mutationUndo.reset();
+    mutateLocks = 0;
+    for (int i = 0; i < 4; ++i)
+        setMacroName(i, "Macro " + String(i + 1));
     for (auto *parameter : getParameters()) {
         parameter->beginChangeGesture();
         parameter->setValueNotifyingHost(parameter->getDefaultValue());
@@ -778,4 +811,79 @@ AudioProcessorEditor *LogisthProcessor::createEditor() {
 }
 AudioProcessor *JUCE_CALLTYPE createPluginFilter() {
     return new LogisthProcessor();
+}
+
+String LogisthProcessor::macroName(int index) const {
+    const ScopedLock lock(assetLock);
+    return macroNames[size_t(jlimit(0, 3, index))];
+}
+void LogisthProcessor::setMacroName(int index, const String &name) {
+    const ScopedLock lock(assetLock);
+    auto clean = name.trim().substring(0, 24);
+    macroNames[size_t(jlimit(0, 3, index))] =
+        clean.isEmpty() ? "Macro " + String(index + 1) : clean;
+    ++macroRevision;
+}
+void LogisthProcessor::mutate(uint64_t seed) {
+    const ScopedLock lock(assetLock);
+    std::array<float, parameterCount> before{};
+    for (size_t i = 0; i < parameterCount; ++i)
+        before[i] = state.getParameter(parameterSpecs[i].id)->getValue();
+    mutationUndo = before;
+    Random random(seed ? int64(seed) : Time::getHighResolutionTicks());
+    float depth = raw[size_t(Param::mutateamount)]->load();
+    for (size_t i = 0; i < parameterCount; ++i) {
+        String id(parameterSpecs[i].id), group(parameterSpecs[i].group);
+        int section =
+            group.startsWith("OSC") || group.startsWith("SOURCE") ? 0
+            : group.startsWith("FILTER")                          ? 1
+            : group.startsWith("LFO") || group.startsWith("MOD ENV") || group.startsWith("MISC")
+                ? 2
+                : 3;
+        if (mutateLocks & (1 << section))
+            continue;
+        // Only continuous timbre controls: retain sample files, engines, note timing,
+        // levels, routing choices and MIDI/transport behaviour.
+        bool eligible = id.endsWith("detune") || id.endsWith("stereo") || id.endsWith("phase") ||
+                        id.endsWith("position") || id.endsWith("pulsewidth") ||
+                        id.endsWith("pwmdepth") || id.endsWith("fmdepth") ||
+                        id.endsWith("amdepth") || id.endsWith("cutoff") || id.endsWith("res") ||
+                        id == "filtercutoff" || id == "filterres" || id == "reverb" ||
+                        id == "reverbdecay" || id == "reverbdiffusion" || id == "delay" ||
+                        id == "drive" || id == "chorus" || id == "lfo1rate" || id == "lfo2rate";
+        if (id.endsWith("position") && id.startsWith("o")) {
+            auto engineId = id.substring(0, 2) + "engine";
+            if (auto *engine = state.getRawParameterValue(engineId); engine && engine->load() == 2)
+                eligible = false;
+        }
+        if (!eligible)
+            continue;
+        auto *param = state.getParameter(parameterSpecs[i].id);
+        param->beginChangeGesture();
+        param->setValueNotifyingHost(
+            jlimit(0.f, 1.f, before[i] + (random.nextFloat() * 2 - 1) * depth * .25f));
+        param->endChangeGesture();
+    }
+}
+void LogisthProcessor::undoMutation() {
+    const ScopedLock lock(assetLock);
+    if (!mutationUndo)
+        return;
+    auto before = *mutationUndo;
+    mutationUndo.reset();
+    for (size_t i = 0; i < parameterCount; ++i) {
+        auto *param = state.getParameter(parameterSpecs[i].id);
+        if (std::abs(param->getValue() - before[i]) < 1e-7f)
+            continue;
+        param->beginChangeGesture();
+        param->setValueNotifyingHost(before[i]);
+        param->endChangeGesture();
+    }
+}
+
+void LogisthProcessor::saveMacroMetadata(ValueTree &tree) const {
+    const ScopedLock lock(assetLock);
+    for (int i = 0; i < 4; ++i)
+        tree.setProperty("macroName" + String(i), macroNames[size_t(i)], nullptr);
+    tree.setProperty("mutateLocks", mutateLocks.load(), nullptr);
 }

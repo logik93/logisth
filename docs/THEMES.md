@@ -2,7 +2,7 @@
 
 SETTINGS / APPEARANCE / OPEN FOLDER reveals the current theme directory (initially
 `logisth/themes` under your system user application-data directory). USE FOLDER
-selects another directory and remembers it. Five standard palettes are written
+selects another directory and remembers it. Six standard palettes are written
 there on first use; source/native packages include them in `assets/themes`.
 Missing standard files are recreated; existing files are retained.
 
@@ -11,6 +11,10 @@ Files larger than 64 KiB, malformed JSON, unsupported formats/versions and inval
 colours are ignored. Subfolders are not scanned. File names identify selections;
 adding a theme does not switch the current selection. Removing the selected file
 falls back to Midnight Blue.
+
+The sixth standard skin, AP always flexin'!, uses the optional `"skin": "ap-flexin"`
+property to show its embedded white AP mark (without a handwritten signature).
+The skin travels with the plugin and package; it needs no external font file.
 
 Version 2 adds font, background, knob styles and two dedicated knob colours:
 

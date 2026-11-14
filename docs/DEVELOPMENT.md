@@ -15,13 +15,13 @@ A later explicit instruction to wait or avoid publishing overrides this default.
 4. Refresh documentation images and the PDF (`python scripts/build_manual.py`).
    Commit source/documentation before creating the source archive.
 5. Run `python scripts/package_release.py --preview /absolute/preview-folder
-   --calibration /absolute/calibration-folder`, then `python scripts/verify_release.py
+   --calibration /absolute/calibration-folder --kick-benchmark /absolute/kick-folder`, then `python scripts/verify_release.py
    v<version>`. Source packages include LICENSE, notices, theme templates and scripts.
 6. Commit the new release asset folder, create an annotated unused `v<version>`
    tag, and push the branch/tag atomically. The existing native workflow builds
    VST3, CLAP and Standalone on Windows x64, Linux x64 and macOS Universal.
 7. Wait for every native build/test/architecture check and publication to finish.
-   Current minimum suites: Linux 10, Windows/macOS 8, with no failures or skips.
+   Current minimum suites: Linux 11, Windows/macOS 9, with no failures or skips.
    Read the status branches `ci-build-v<version>-<platform>` and
    `ci-release-v<version>`. If branch HTTP responses are stale, resolve their
    current Git SHA and read status.json at that immutable revision.
@@ -32,3 +32,8 @@ A later explicit instruction to wait or avoid publishing overrides this default.
 VST2 remains optional and requires a separately licensed SDK. macOS packages are
 ad-hoc signed, not notarized; Windows builds are unsigned. Preserve upstream
 library/SDK/font licenses independently of the original-code MIT license.
+
+Current 0.9.3 work resumes the saved implementation after an environment change.
+The owner's later instruction to avoid publication remains the publication gate;
+prepare reviewable local artifacts before requesting authorization to push/tag
+and run the Windows/macOS release workflow. Do not duplicate saved changes.

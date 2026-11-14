@@ -3,8 +3,10 @@
 #include "Chords.h"
 #include "Effects.h"
 #include "Engine.h"
+#include "Morph.h"
 #include "Parameters.h"
 #include <juce_audio_utils/juce_audio_utils.h>
+#include <optional>
 namespace logisth {
 struct ThemeDraft;
 }
@@ -32,8 +34,10 @@ class LogisthProcessor : public juce::AudioProcessor {
     void recallPattern(int);
     void randomisePattern();
     void serviceAssets();
+    void ensureSpectral(bool synchronous = false);
     std::atomic<int> arpPlayhead{-1};
     logisth::ScopeBuffer scope;
+    std::array<logisth::ScopeBuffer, 4> playerScopes;
     std::array<logisth::PlaybackTelemetry, 4> playback;
     void copyPattern(int, int);
     void setPatternName(int, const juce::String &);
@@ -95,6 +99,24 @@ class LogisthProcessor : public juce::AudioProcessor {
     void getStateInformation(juce::MemoryBlock &) override;
     void setStateInformation(const void *, int) override;
     void loadPreset(int);
+    juce::String macroName(int) const;
+    void setMacroName(int, const juce::String &);
+    void mutate(uint64_t seed = 0);
+    void undoMutation();
+    bool canUndoMutation() const {
+        const juce::ScopedLock lock(assetLock);
+        return mutationUndo.has_value();
+    }
+    int mutationLocks() const {
+        return mutateLocks;
+    }
+    void setMutationLocks(int bits) {
+        mutateLocks = bits & 15;
+    }
+    std::atomic<int> macroRevision{0};
+    float effectiveValue(logisth::Param id) const {
+        return get(id);
+    }
     juce::AudioProcessorValueTreeState state;
     juce::MidiKeyboardState keyboard;
     void setUiWheel(bool pitch, float value) {
@@ -114,7 +136,7 @@ class LogisthProcessor : public juce::AudioProcessor {
   private:
     static juce::AudioProcessorValueTreeState::ParameterLayout layout();
     float get(logisth::Param id) const {
-        return raw[size_t(id)]->load();
+        return logisth::morphedValue(id, [this](size_t i) { return raw[i]->load(); });
     }
     logisth::Params snapshot() const;
     logisth::EffectsParams effectsSnapshot() const;
@@ -123,8 +145,14 @@ class LogisthProcessor : public juce::AudioProcessor {
     bool publishSource(int, std::shared_ptr<const logisth::SourceData>);
     void publishChords(std::shared_ptr<const logisth::ChordMap>);
     void saveAssets(juce::ValueTree &);
+    void saveMacroMetadata(juce::ValueTree &) const;
     bool restoreAssets(const juce::ValueTree &);
     mutable juce::CriticalSection assetLock;
+    std::shared_ptr<logisth::SpectralBank> spectralOwner;
+    std::vector<std::shared_ptr<logisth::SpectralBank>> retiredSpectral;
+    std::atomic<logisth::SpectralBank *> spectralPointer{nullptr};
+    std::atomic<bool> spectralPending{false};
+    std::atomic<double> spectralRate{44100};
     std::array<std::shared_ptr<const logisth::SourceData>, 4> sourceOwners;
     std::array<std::atomic<const logisth::SourceData *>, 4> sourcePointers{};
     std::vector<std::shared_ptr<const logisth::SourceData>> retiredSources;
@@ -137,6 +165,9 @@ class LogisthProcessor : public juce::AudioProcessor {
     std::array<juce::ValueTree, 12> patterns;
     juce::File userPresetFolder, activePresetFile;
     juce::String presetName, comment;
+    std::array<juce::String, 4> macroNames{"Macro 1", "Macro 2", "Macro 3", "Macro 4"};
+    std::atomic<int> mutateLocks{0};
+    std::optional<std::array<float, logisth::parameterCount>> mutationUndo;
     std::atomic<int> currentPattern{0};
     juce::ThreadPool importWorkers{1};
     logisth::ChordMapper chordMapper;
@@ -145,6 +176,7 @@ class LogisthProcessor : public juce::AudioProcessor {
     logisth::Engine engine;
     logisth::Effects effects;
     logisth::Arpeggiator arp;
+    std::array<std::array<float, 512>, 4> playerTraces{};
     std::array<float, 512> driveMod{}, phaserMod{}, partScopeA{}, partScopeB{};
     std::atomic<int> uiChanges{0};
     float masterSmooth = 0;

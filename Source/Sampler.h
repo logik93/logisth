@@ -1,5 +1,7 @@
 #pragma once
 #include "Modulation.h"
+#include "PhaseWidth.h"
+#include "Spectral.h"
 #include <cstdint>
 namespace logisth {
 template <class Data>
@@ -50,14 +52,23 @@ struct SamplerPlayer {
     std::array<Grain, 4> grains{};
     double rateCache = 0, smoothing = 0;
     double cursor = 0, untilGrain = 0, lastStart = 0, stretch = 1;
+    double elapsedSamples = 0;
+    SpectralStream *spectral = nullptr;
+    uint64_t token = 0;
+    bool spectralReset = true;
     int algorithm = -1;
     bool finished = false, started = false;
     void reset() {
+        auto *saved = spectral;
+        auto serial = token;
         *this = SamplerPlayer{};
+        spectral = saved;
+        token = serial;
     }
     template <class Data>
     std::array<float, 2> tick(const Data &data, double ratio, double sr, float begin, float end,
-                              bool loop, bool reverse, int mode, float factor, int interpolation) {
+                              bool loop, bool reverse, int mode, float factor, int interpolation,
+                              float width = .5f, double fmOffset = 0, float kickAttack = 25) {
         if (algorithm != mode) {
             reset();
             algorithm = mode;
@@ -76,10 +87,47 @@ struct SamplerPlayer {
         stretch += smoothing * (std::clamp(double(factor), .125, 8.) - stretch);
         double pitch = ratio * data.sampleRate / sr;
         auto read = [&](double offset, int ch) {
+            offset = warpSamplePosition(offset, data.sampleRate * .04, width) + fmOffset;
             double at = reverse ? last - 1 - offset : first + offset;
-            return resample(data, at, ch, interpolation, mode == 1 ? pitch / stretch : pitch, first,
-                            last, loop);
+            if (!loop && (at < first || at >= last))
+                return 0.f;
+            return resample(data, at, ch, interpolation,
+                            mode >= 6   ? data.sampleRate / sr
+                            : mode == 1 ? pitch / stretch
+                                        : pitch,
+                            first, last, loop);
         };
+        if ((mode == 6 || mode == 7) && spectral) {
+            if (finished)
+                return {};
+            double step = data.sampleRate / sr, attack = kickAttack * .001 * sr;
+            float timeFactor = mode == 6 && elapsedSamples < attack ? 1.f : float(stretch);
+            auto out = spectral->tick(read, cursor, step, float(ratio), timeFactor, token,
+                                      data.revision, spectralReset);
+            spectralReset = false;
+            if (mode == 6) {
+                float mix = float(std::clamp((elapsedSamples - attack) / (sr * .008), 0., 1.));
+                for (int ch = 0; ch < 2; ++ch)
+                    out[size_t(ch)] =
+                        read(elapsedSamples * step, ch) * (1 - mix) + out[size_t(ch)] * mix;
+            }
+            if (!loop) {
+                float fade = float(std::clamp((span - cursor) / (step * sr * .005), 0., 1.));
+                for (auto &x : out)
+                    x *= fade;
+            }
+            cursor += step / timeFactor;
+            ++elapsedSamples;
+            if (cursor >= span) {
+                if (loop)
+                    cursor = std::fmod(cursor, span);
+                else {
+                    cursor = span;
+                    finished = true;
+                }
+            }
+            return out;
+        }
         if (mode <= 1) {
             if (finished)
                 return {};
@@ -102,17 +150,21 @@ struct SamplerPlayer {
                         out[size_t(ch)] * mix + read(cursor - (span - fade), ch) * (1 - mix);
                 }
             }
+            ++elapsedSamples;
             cursor += pitch / (mode == 1 ? stretch : 1);
             return out;
         }
-        const int window = std::max(32, int(sr * .04)), hop = window / 2;
+        const int window = std::max(32, int(sr * (mode == 5   ? .012
+                                                  : mode == 4 ? .065
+                                                              : .04))),
+                  hop = window / 2;
         if (!started) {
             grains[0] = {cursor, hop, true};
             started = true;
         }
         if (untilGrain <= 0 && !finished) {
             double at = cursor;
-            if (mode == 3 && cursor > 0) {
+            if (mode >= 3 && cursor > 0) {
                 // WSOLA: align the next window to the previous window's continuation.
                 double predicted = lastStart + pitch * hop, best = -1e30;
                 int search = std::min(192, int(data.sampleRate * .006)),
@@ -173,7 +225,16 @@ struct SamplerPlayer {
                 if (++g.age >= window)
                     g.active = false;
             }
-        cursor += data.sampleRate / sr / stretch;
+        if (mode == 6) {
+            double attack = kickAttack * .001 * sr;
+            float mix = float(std::clamp((elapsedSamples - attack) / (sr * .008), 0., 1.));
+            for (int ch = 0; ch < 2; ++ch)
+                out[size_t(ch)] = read(elapsedSamples * data.sampleRate / sr, ch) * (1 - mix) +
+                                  out[size_t(ch)] * mix;
+        }
+        ++elapsedSamples;
+        cursor += data.sampleRate / sr /
+                  (mode == 6 && elapsedSamples < kickAttack * .001 * sr ? 1 : stretch);
         if (cursor >= span) {
             if (loop)
                 cursor = std::fmod(cursor, span);

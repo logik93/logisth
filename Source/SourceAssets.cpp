@@ -5,9 +5,15 @@ LogisthProcessor::~LogisthProcessor() {
     importWorkers.removeAllJobs(true, -1);
 }
 void LogisthProcessor::serviceAssets() {
+    ensureSpectral();
     const ScopedLock lock(assetLock);
     if (assetReaders.load() == 0) {
         retiredSources.clear();
+        // Previous algorithm crossfades can retain a stream between audio blocks.
+        // Inactive voices are reset before reuse, so release retired banks only
+        // after processing is idle as well as having no concurrent asset reader.
+        if (voices.load() == 0)
+            retiredSpectral.clear();
         retiredChords.clear();
     }
 }
@@ -468,4 +474,63 @@ bool LogisthProcessor::restoreAssets(const ValueTree &tree) {
         currentPattern = jlimit(0, 11, int(tree.getProperty("currentPattern", 0)));
     }
     return true;
+}
+
+void LogisthProcessor::ensureSpectral(bool synchronous) {
+    unsigned wanted = 0;
+    std::array<int, 4> unisons{};
+    for (int i = 0; i < 4; ++i) {
+        auto prefix = "o" + String(i + 1);
+        unisons[size_t(i)] =
+            jlimit(1, 8, int(state.getRawParameterValue(prefix + "voices")->load()));
+        int mode = int(state.getRawParameterValue(prefix + "stretchmode")->load());
+        if (state.getRawParameterValue(prefix + "engine")->load() == 2 && (mode == 6 || mode == 7))
+            wanted |= 1u << i;
+    }
+    if (!wanted)
+        return;
+    double rate = spectralRate.load();
+    std::shared_ptr<SpectralBank> previous;
+    {
+        const ScopedLock lock(assetLock);
+        previous = spectralOwner;
+        if (previous && previous->rate == rate) {
+            bool enough = (previous->mask & wanted) == wanted;
+            for (int i = 0; i < 4; ++i) {
+                if ((wanted & (1u << i)) && previous->capacity[size_t(i)] < unisons[size_t(i)])
+                    enough = false;
+                unisons[size_t(i)] = jmax(unisons[size_t(i)], previous->capacity[size_t(i)]);
+            }
+            if (enough)
+                return;
+            wanted |= previous->mask;
+        }
+    }
+    if (spectralPending.exchange(true))
+        return;
+    {
+        const ScopedLock lock(assetLock);
+        assetStatus = "Preparing spectral processing buffers...";
+    }
+    auto build = [this, previous, wanted, rate, unisons] {
+        try {
+            auto next = std::make_shared<SpectralBank>(rate, wanted, unisons, previous);
+            const ScopedLock lock(assetLock);
+            if (spectralRate.load() == rate) {
+                if (spectralOwner)
+                    retiredSpectral.push_back(spectralOwner);
+                spectralOwner = std::move(next);
+                spectralPointer = spectralOwner.get();
+                assetStatus = "Spectral engine ready";
+            }
+        } catch (const std::bad_alloc &) {
+            const ScopedLock lock(assetLock);
+            assetStatus = "Spectral engine could not allocate its processing buffers.";
+        }
+        spectralPending = false;
+    };
+    if (synchronous)
+        build();
+    else
+        importWorkers.addJob(std::move(build));
 }

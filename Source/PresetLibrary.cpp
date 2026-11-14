@@ -46,6 +46,7 @@ Result LogisthProcessor::savePresetFile(const File &file) try {
     tree.setProperty("schema", 4, nullptr);
     tree.setProperty("presetName", file.getFileNameWithoutExtension(), nullptr);
     tree.setProperty("presetComment", presetComment(), nullptr);
+    saveMacroMetadata(tree);
     saveAssets(tree);
     MemoryBlock data;
     copyXmlToBinary(*tree.createXml(), data);

@@ -206,14 +206,31 @@ struct SourcePlayback {
     uint64_t sourceRevision = 0;
     bool finished = false;
     SamplerPlayer sampler, previousSampler;
+    std::array<SpectralStream *, 2> spectralCells{};
+    uint64_t spectralToken = 0;
+    int spectralLane = 0;
+    void setSpectral(SpectralStream *a, SpectralStream *b, uint64_t serial) {
+        spectralCells = {a, b};
+        spectralToken = serial;
+        sampler.spectral = spectralCells[size_t(spectralLane)];
+        sampler.token = serial;
+    }
     int samplerMode = -1, samplerQuality = 0, previousQuality = 0, fadeLeft = 0, fadeLength = 1;
     void reset() {
+        auto cells = spectralCells;
+        auto serial = spectralToken;
         *this = SourcePlayback{};
+        spectralCells = cells;
+        spectralToken = serial;
+        sampler.spectral = cells[0];
+        sampler.token = serial;
     }
     std::array<float, 2> tick(const SourceData &data, int selected, double ratio, double sr,
                               float position, float end, bool loop, bool reverse, float size,
                               float density, float spray, float scan, float random,
-                              int stretchMode = 0, float stretch = 1, int interpolation = 0) {
+                              int stretchMode = 0, float stretch = 1, int interpolation = 0,
+                              float width = .5f, double fmOffset = 0, float kickAttack = 25,
+                              float trimStart = 0) {
         if (mode != selected || source != &data || sourceRevision != data.revision) {
             reset();
             mode = selected;
@@ -221,7 +238,8 @@ struct SourcePlayback {
             sourceRevision = data.revision;
         }
         const double length = double(data.samples[0].size());
-        double first = position * (length - 2), last = std::max(first + 2., end * (length - 1));
+        double first = (selected == 3 ? trimStart : position) * (length - 2),
+               last = std::max(first + 2., end * (length - 1));
         last = std::min(length - 1, last);
         double span = std::max(1., last - first);
         double speed = ratio * data.sampleRate / sr;
@@ -235,6 +253,10 @@ struct SourcePlayback {
                 previousQuality = samplerQuality;
                 double at = sampler.cursor, factor = sampler.stretch;
                 sampler.reset();
+                spectralLane = 1 - spectralLane;
+                sampler.spectral = spectralCells[size_t(spectralLane)];
+                sampler.token = spectralToken;
+                sampler.elapsedSamples = previousSampler.elapsedSamples;
                 sampler.cursor = at;
                 sampler.stretch = factor;
                 sampler.algorithm = stretchMode;
@@ -244,11 +266,11 @@ struct SourcePlayback {
                 fadeLeft = fadeLength;
             }
             auto out = sampler.tick(data, ratio, sr, position, end, loop, reverse, samplerMode,
-                                    stretch, samplerQuality);
+                                    stretch, samplerQuality, width, fmOffset, kickAttack);
             if (fadeLeft > 0) {
-                auto old =
-                    previousSampler.tick(data, ratio, sr, position, end, loop, reverse,
-                                         previousSampler.algorithm, stretch, previousQuality);
+                auto old = previousSampler.tick(data, ratio, sr, position, end, loop, reverse,
+                                                previousSampler.algorithm, stretch, previousQuality,
+                                                width, fmOffset, kickAttack);
                 float mix = 1 - float(fadeLeft) / fadeLength;
                 for (int ch = 0; ch < 2; ++ch)
                     out[size_t(ch)] = old[size_t(ch)] + (out[size_t(ch)] - old[size_t(ch)]) * mix;
@@ -264,9 +286,13 @@ struct SourcePlayback {
         if (untilGrain <= 0) {
             for (auto &g : grains)
                 if (!g.active) {
-                    double centre = position + elapsed * scan + random * spray * .25;
+                    double centre =
+                        std::max(position, trimStart) + elapsed * scan + random * spray * .25;
                     centre -= std::floor(centre);
-                    g = {centre * (length - 2), 0, std::max(8., size * sr), true};
+                    double at = first + std::fmod(centre * (length - 2) - first, span);
+                    if (at < first)
+                        at += span;
+                    g = {at, 0, std::max(8., size * sr), true};
                     break;
                 }
             untilGrain += sr / std::max(1.f, density);
@@ -277,11 +303,16 @@ struct SourcePlayback {
                 float window =
                     float(.5 - .5 * std::cos(2 * 3.141592653589793 * g.age / g.duration));
                 for (int ch = 0; ch < 2; ++ch)
-                    out[size_t(ch)] += data.sample(g.cursor, ch) * window;
+                    out[size_t(ch)] +=
+                        resample(data,
+                                 warpSamplePosition(g.cursor, data.sampleRate * .04, width) +
+                                     fmOffset,
+                                 ch, 0, speed, first, last, true) *
+                        window;
                 g.cursor += (reverse ? -speed : speed);
-                g.cursor = std::fmod(g.cursor, length - 1);
-                if (g.cursor < 0)
-                    g.cursor += length - 1;
+                g.cursor = first + std::fmod(g.cursor - first, span);
+                if (g.cursor < first)
+                    g.cursor += span;
                 ++active;
                 if (++g.age >= g.duration)
                     g.active = false;

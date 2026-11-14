@@ -1,10 +1,33 @@
-# logisth 0.9.2
+# logisth 0.9.3
 
 **wavelogik logisth — a two-part polyphonic subtractive synthesizer with a compact single-window console.**
 VST3, CLAP and Standalone for Windows, macOS and Linux. Built with JUCE and an
 independent synthesis engine; not affiliated with LennarDigital.
 
 ![logisth dark interface](docs/images/logisth-dark.png)
+
+## New in 0.9.3
+
+- Width/PWM works across every Classic wave, Wavetable, Sampler and both granular
+  models. Periodic waves use phase distortion, sample players warp their read
+  windows, and noise uses duty-controlled gating. PWM can sync to tempo.
+- FM/AM modulators select internal Sine or any A1/A2/B1/B2 player. Muted players
+  can still modulate; cycles use bounded previous-sample signals.
+- Sampler adds Tonal, Transient, Spectral and **Kick** modes. Spectral/Kick use
+  the MIT-licensed Signalsmith Stretch library. Kick retains a configurable
+  0–100 ms attack, then crossfades to its pitched/stretched tail. This is an
+  independent implementation, not Nimble Kick's proprietary Time Machine.
+- Drag a range in SAMPLE after wheel zoom, adjust START/END handles, double-click
+  to fit, right-click to reset. Granular trim is separate from its scanner position.
+- **MORPH** rack: four named macros, four routes each, individual From/To ranges;
+  **MUTATE** with OSC/FILTER/MOD/FX locks and one-step Undo. Stored in presets.
+- Live player traces, warped wavetable previews and modulation rings.
+- Sixth standard theme: **AP always flexin'!**, black with blue/cyan/violet accents
+  and a white AP mark. The handwritten signature has been removed as requested.
+- 712 host parameters. Existing sound defaults and unity-sine calibration remain.
+
+[AP skin](docs/images/logisth-ap.png) · [MORPH](docs/images/logisth-morph.png) ·
+[Kick controls](docs/images/logisth-kick.png) · [English manual](docs/MANUAL.md)
 
 ## New in 0.9.2
 
@@ -151,7 +174,7 @@ sounds. Parameter IDs remain stable; preserving old sound is not the objective.
 - Earlier releases included an experimental Graphs arp, removed in 0.7.0.
   Twelve A–L pattern memories remain available for Legacy and Pattern.
 - User preset library: save/load/delete .logisth files with embedded audio,
-  chords, all patterns and UI preferences. 635 current automatable audio parameters.
+  chords, all patterns and UI preferences. 712 current automatable audio parameters.
 - Compact single-window interface with light/dark themes.
 
 [English manual](docs/MANUAL.md) · [PDF manual](docs/logisth-Manual-English.pdf) ·

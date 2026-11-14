@@ -1,7 +1,9 @@
 #include "AppearanceTests.h"
 #include "EffectsReverbTests.h"
 #include "Features092Tests.h"
+#include "Features093Tests.h"
 #include "GainCalibration.h"
+#include "KickBenchmark.h"
 #include "PluginEditor.h"
 #include "PluginProcessor.h"
 #include "ProcessorPhaseTests.h"
@@ -680,11 +682,11 @@ void checkStartupCommentsAndThemes() {
     settings->onClick();
     auto *panel = console->findChildWithID("settings.panel");
     auto *theme = dynamic_cast<ComboBox *>(panel->findChildWithID("settings.theme"));
-    check(panel->isVisible() && theme && theme->getNumItems() == 5,
-          "five themes share the settings panel");
+    check(panel->isVisible() && theme && theme->getNumItems() == 6,
+          "six themes share the settings panel");
     notes->setText("Readable preset comment", false);
     notes->onTextChange();
-    for (int choice = 0; choice < 5; ++choice) {
+    for (int choice = 0; choice < 6; ++choice) {
         const float before = get("master");
         theme->setSelectedId(choice + 1, sendNotificationSync);
         check(editor->selectedTheme() == choice && ThemeSettings::current() == choice,
@@ -725,7 +727,7 @@ void checkStartupCommentsAndThemes() {
     }
     std::cout
         << "PASS startup/comments/themes: clean saw spectrum, Main defaults/restoration, "
-           "Unicode preset notes, individual routing, five persistent themes and Settings/About\n";
+           "Unicode preset notes, individual routing, six persistent themes and Settings/About\n";
 }
 void checkPointerInteraction() {
     using namespace juce;
@@ -935,6 +937,14 @@ int main(int argc, char **argv) {
             theme_advanced_test::run();
             return 0;
         }
+        if (argc > 2 && juce::String(argv[1]) == "--kick-benchmark") {
+            kick_benchmark::run(juce::File(juce::String::fromUTF8(argv[2])));
+            return 0;
+        }
+        if (argc > 1 && juce::String(argv[1]) == "--features093-check") {
+            features093_test::run();
+            return 0;
+        }
         if (argc > 1 && juce::String(argv[1]) == "--features092-check") {
             features092_test::run();
             return 0;
@@ -968,6 +978,7 @@ int main(int argc, char **argv) {
         appearance_test::run();
         theme_advanced_test::run();
         features092_test::run();
+        features093_test::run();
         processor_phase_test::run();
         checkEnvelopeMidiEdges();
         gain_test::run(true);
@@ -1205,7 +1216,7 @@ int main(int argc, char **argv) {
             };
             auto *logisthEditor = dynamic_cast<LogisthEditor *>(editor.get());
             check(logisthEditor != nullptr, "editor type");
-            for (int page = 0; page < 23; ++page) {
+            for (int page = 0; page < 26; ++page) {
                 previewAudio(page < 4 ? 0 : page == 4 || page == 9 ? 1 : page == 8 ? 2 : 3);
                 auto full = logisthEditor->snapshotPage(page);
                 juce::FileOutputStream out(
@@ -1229,7 +1240,7 @@ int main(int argc, char **argv) {
             std::unique_ptr<juce::AudioProcessorEditor> gallery(p.createEditor());
             auto *galleryEditor = dynamic_cast<LogisthEditor *>(gallery.get());
             check(galleryEditor != nullptr, "theme gallery editor");
-            for (int theme = 0; theme < 5; ++theme) {
+            for (int theme = 0; theme < 6; ++theme) {
                 auto preview = galleryEditor->snapshotTheme(theme);
                 juce::FileOutputStream out(
                     folder.getChildFile("logisth-theme-" + juce::String(theme) + ".png"));

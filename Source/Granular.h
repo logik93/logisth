@@ -3,6 +3,7 @@
 namespace logisth {
 struct GranularParams {
     bool enabled = false, freeze = false, sync = false;
+    float trimStart = 0;
     float attack = .01f, hold = .03f, grainSpacing = 1, waveSpacing = 1, pan = 0, depth = 0,
           frequency = 1, randomness = 0, transientHold = .03f, beats = 4;
     int transients = 0, keyTo = 0;
@@ -30,7 +31,8 @@ struct GranulizerPlayback {
     }
     std::array<float, 2> tick(const SourceData &data, const GranularParams &p, double sr,
                               double pitch, float position, float end, bool loop, bool reverse,
-                              int key, int root, double bpm, float sizeMod = 1) {
+                              int key, int root, double bpm, float sizeMod = 1, float width = .5f,
+                              double fmOffset = 0) {
         const double length = double(data.samples[0].size());
         if (length < 2)
             return {};
@@ -43,7 +45,8 @@ struct GranulizerPlayback {
         double interval = std::max(1., hold * std::max(.05f, p.grainSpacing));
         double speed = (p.keyTo == 0 ? pitch : 1.) * data.sampleRate / sr;
         const auto &markers = p.transients == 1 ? data.regions : data.transients;
-        double first = 0, last = std::clamp(double(end), 0., 1.) * (length - 1);
+        double first = std::clamp(double(p.trimStart), 0., 1.) * (length - 2),
+               last = std::max(first + 2., std::clamp(double(end), 0., 1.) * (length - 1));
         if (last <= first)
             last = length - 1;
         double span = std::max(1., last - first);
@@ -59,12 +62,13 @@ struct GranulizerPlayback {
             if (p.keyTo == 3 && !markers.empty())
                 head = markers[size_t(std::clamp(offset, 0, int(markers.size()) - 1))];
             if (p.waveSpacing < 0 && position == 0)
-                head = length - 2;
+                head = last - 1;
+            head = std::clamp(head, first, last - 1);
             started = true;
             lastPosition = position;
         }
         if (position != lastPosition) {
-            head = std::clamp(head + (position - lastPosition) * (length - 2), 0., last - 1);
+            head = std::clamp(head + (position - lastPosition) * (length - 2), first, last - 1);
             finished = false;
         }
         lastPosition = position;
@@ -74,7 +78,7 @@ struct GranulizerPlayback {
             double waveHold = hold * data.sampleRate / sr;
             if (p.randomness > 0)
                 at += random() * p.randomness * span * .5;
-            at = std::clamp(at, 0., length - 2);
+            at = std::clamp(at, first, last - 1);
             double durationHold = hold;
             double wave = p.waveSpacing + p.depth * std::sin(lfo * 6.283185307179586);
             if (p.sync)
@@ -124,16 +128,20 @@ struct GranulizerPlayback {
                     float panGain =
                         ch == 0 ? std::min(1.f, 1 - grain.pan) : std::min(1.f, 1 + grain.pan);
                     output[size_t(ch)] +=
-                        data.sample(grain.cursor, ch) * std::clamp(envelope, 0.f, 1.f) * panGain;
+                        resample(data,
+                                 warpSamplePosition(grain.cursor, data.sampleRate * .04, width) +
+                                     fmOffset,
+                                 ch, 0, speed, first, last, loop) *
+                        std::clamp(envelope, 0.f, 1.f) * panGain;
                 }
                 grain.cursor += reverse ? -speed : speed;
                 if (loop) {
-                    grain.cursor = std::fmod(grain.cursor, span);
-                    if (grain.cursor < 0)
+                    grain.cursor = first + std::fmod(grain.cursor - first, span);
+                    if (grain.cursor < first)
                         grain.cursor += span;
                 }
                 if (++grain.age >= duration ||
-                    (!loop && (grain.cursor < 0 || grain.cursor >= last)))
+                    (!loop && (grain.cursor < first || grain.cursor >= last)))
                     grain.active = false;
             }
         // Constant overlap compensation for stationary settings, without per-grain gain pumping.

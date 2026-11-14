@@ -1,4 +1,4 @@
-# logisth 0.9.2 — User Manual
+# logisth 0.9.3 — User Manual
 
 wavelogik logisth is a two-part polyphonic subtractive synthesizer for VST3, CLAP and standalone use.
 This manual describes logisth's own controls and behaviour. logisth is an independent
@@ -75,8 +75,9 @@ opens. A fresh installation adapts the initial size to its display. Each open
 window keeps its own size; changing one sets the default for subsequent windows.
 
 SETTINGS has APPEARANCE, THEME EDITOR, STYLE and ABOUT tabs inside the central
-rack. The standard themes are Light, Midnight Blue (default), Cobalt, Graphite
-and Forest. Theme selection is shared by open instances and recalled by new
+rack. The standard themes are Light, Midnight Blue (default), Cobalt, Graphite,
+Forest and AP always flexin'!. The AP skin uses a white geometric AP mark without
+the handwritten signature, on a black/blue/cyan/violet palette. Theme selection is shared by open instances and recalled by new
 ones; audio presets/projects preserve theme and scale. Preferences live in
 `logisth/appearance.json` under the system user application-data directory.
 
@@ -177,14 +178,29 @@ Tri-saw, Pink noise, Brown noise, Organ and Folded sine. Pink and Brown have
 progressively stronger low-frequency spectra. Organ adds octave harmonics;
 Folded sine applies sinusoidal waveshaping. Noise has no fixed periodic phase.
 
-MOD exposes FM INDEX (0–8 radians) and FM RATIO (0.25–16) for Classic/Wavetable.
-This is sinusoidal phase modulation, producing FM sidebands; ratio is relative
-to the carrier pitch. AM DEPTH (0–100%) and AM RATIO (0.125–16) work in all four
-engines using a unipolar sinusoidal amplitude modulator. Pulse, Half pulse and
-Quarter pulse also expose WIDTH, PWM DEPTH and PWM RATE (0.01–20 Hz). WIDTH
-sets the base duty cycle, PWM adds a sinusoidal width sweep. Half/Quarter pulse
-retain their narrower base widths. Other waves hide these pulse controls.
-Manual modulation controls use a short smoothing ramp; ratios are per player.
+MOD exposes FM INDEX (0–8 radians), FM RATIO, AM DEPTH and AM RATIO in each
+player. ROUTING selects the FM and AM modulator: internal Sine or A1/A2/B1/B2.
+A selected player supplies its pre-level signal, so reducing its audible Volume
+to zero does not remove its modulation. Unison voices are averaged and modulation
+signals limited to ±1. Cross-player/self-feedback uses the preceding audio sample
+to keep the result independent of processing order and avoid instantaneous loops.
+External-source mode does not use the internal sine ratio. FM is phase modulation
+in periodic engines and a sample-read offset in sample players; noise has no
+periodic carrier. Spectral sample-read changes are evaluated in 64-sample blocks.
+AM is a unipolar amplitude modulator in all engines.
+
+WIDTH / WARP, PWM DEPTH and PWM RATE are available in all engines. Pulse variants
+retain conventional duty-cycle control. Other periodic Classic waves and Wavetable
+compress one half of the phase cycle and expand the other; Width 50% is neutral.
+Sampler/Granular warp 40 ms source-read windows. Noise uses variable-width gating:
+Width/Depth determines its strength, with pitched gates in free mode and clocked
+gates in synced mode. ROUTING / PWM SYNC selects musical divisions at host tempo.
+The base Width and both LFO route slots remain independently addressable for
+A1/A2/B1/B2, A, B and A+B. Live rings show the current value and recently observed
+modulation range; SAMPLE shows actual player output or a warped table preview.
+Manual control changes retain short smoothing ramps. Strong warping adds harmonics
+and can increase aliasing; reduce depth or use a sinc interpolation mode for samples.
+
 Wavetable treats the file as a bank of consecutive, single-cycle waves. **WT POS**
 selects one frame; the selected cycle repeats at the played note's pitch. It does
 not play the entire file in sequence, and adjacent frames are not blended.
@@ -217,18 +233,48 @@ reverses playback. Without LOOP, playback ends at the selected boundary. Root
 sets the reference pitch, not automatic pitch detection. Stereo files retain
 both channels; mono files feed both channels. Unison and pitch bend still apply.
 
-Sampler / PLAYBACK selects STRETCH and INTERPOLATION. Off is conventional pitched
-playback. Tape links speed and pitch: a 2× TIME FACTOR doubles duration and
-halves pitch. Granular and WSOLA separate sample traversal from note pitch,
-using overlapping 40 ms windows. WSOLA aligns windows by waveform correlation
-for smoother periodic material; Granular keeps a more textured overlap. TIME
-FACTOR ranges from 0.125× to 8× (2× means twice as long). These are time-domain
-algorithms: extreme factors and transients can have audible window artefacts.
+Sampler / PLAYBACK selects STRETCH, TIME FACTOR and INTERPOLATION:
+
+| Mode | Intended material and behaviour |
+| --- | --- |
+| Off | Conventional pitched playback; duration follows played pitch. |
+| Tape | Changes time and pitch together using the Time Factor. |
+| Granular | Textured 40 ms overlapping windows, independent traversal and pitch. |
+| WSOLA | 40 ms windows aligned by waveform correlation. |
+| Tonal | Longer 65 ms correlation-aligned windows for sustained material. |
+| Transient | Shorter 12 ms windows to localize percussive changes. |
+| Kick | Original attack plus a pitch/time-shifted spectral tail. |
+| Spectral | Stereo phase-locked spectral processing through Signalsmith Stretch. |
+
+TIME FACTOR ranges from 0.125× to 8×. At 2×, independent modes take twice as long
+while preserving played-note pitch. Kick protects KICK ATTACK (0–100 ms, default
+25 ms) at original speed/pitch, then uses an 8 ms crossfade into the processed tail.
+Its total duration is attack + stretched remainder. Attack and tail are processed
+independently so pitching does not smear the initial punch. Start with Kick, Time
+Factor 1× and root note set to the sample's tuning for hardstyle kick pitch maps.
+Try Spectral when the complete sound should follow pitch/time processing.
+These modes do not reproduce Nimble Kick's Time Machine implementation.
+
+Spectral analysis windows scale with host sample rate (approximately 80–93 ms
+at 44.1/48/96 kHz); pitch mapping spans ±8 octaves. Unison buffers are prepared
+only for the spectral players and unison counts requested. Signalsmith buffers
+are prepared on the control/import thread, never allocated
+inside sample processing. On first selection a status message indicates preparation;
+the existing time-domain path continues until ready. Spectral quality costs more
+CPU and memory; extreme factors can create audible artifacts. Test your own kicks
+before committing a track; the included synthetic benchmark is a regression fixture.
 
 Interpolation choices are Linear, Cubic, Sinc 16 and Sinc 32. Sinc modes use a
 windowed band-limited resampler with anti-alias filtering when reading faster
-than source rate; Sinc 32 uses more CPU. Stretch/quality switches crossfade over
-20 ms. Stretch is independent per sampler and does not expose Granulizer controls.
+than source rate; Sinc 32 uses more CPU. Algorithm/quality switches crossfade over
+20 ms. KICK ATTACK appears only for Kick mode; Granulizer controls stay separate.
+
+In SAMPLE, wheel zoom anchors under the pointer; Shift+wheel pans. Drag to select
+START/END, then drag either handle to trim. Double-click fits the selection;
+right-click restores the full range. Editing is nondestructive and saved with the
+sound. Granular has a separate TRIM START (also in ROUTING), independent of scanner
+POSITION, so reverse grain order and LFO scanning retain their meaning. A sampler
+selection uses its existing START position and END controls.
 
 Granular offers two models. **Granulizer** is the default for new patches;
 **Cloud** retains the eight Hann-windowed grains, size, density, scan and spray
@@ -364,6 +410,24 @@ pan adds one full side. Volume, Mix, Resonance, Gain and Distortion add one
 linear unit. LFO Rate multiplies by 16 and Phaser Frequency by 1024. Smaller
 amounts give smaller changes; start low. Effects are global, so FX modulation
 uses the newest active voice. LFO feedback modulation uses the previous sample.
+
+## 5.1 MORPH and controlled mutation
+
+Choose MORPH in the signal rack. Rename any of the four macros by editing its
+name field. Each macro has four routes: choose a target and FROM/TO percentages
+of that target's host range. The knob interpolates between them; reversed ranges
+are supported. Skewed targets use their normal host scaling. Routes act on the
+DSP value without overwriting the target's saved base knob. If multiple routes
+address the same target, the last route in macro/slot order takes precedence.
+Unassigned targets keep their base value. Macro names, assignments, ranges and
+amounts are stored in presets and DAW state.
+
+MUTATE makes small random offsets to continuous timbre controls. MUTATE DEPTH
+sets their size. OSC/FILTER/MOD/FX are section locks; enabled locks protect that
+section. Mutation preserves imported files, engine/mode choices, MIDI timing and
+main output level. UNDO restores the parameter snapshot from the last mutation;
+this one-step history is temporary and is cleared when loading another sound.
+Saved presets retain the section locks, but do not contain the Undo history.
 
 ## 6. Chords and pattern arpeggiator
 
@@ -560,7 +624,7 @@ library; it does not relocate files. Load file can open a preset from elsewhere.
 Save/load run on a worker, with completion/errors in the footer. Wait for the
 completion message before closing the instance or moving a newly saved file.
 
-Presets contain all 635 audio parameters, routing, compressed audio for all four
+Presets contain all 712 audio parameters, routing, compressed audio for all four
 slots, WAV regions, chord mappings, twelve named patterns, the preset comment and
 scope selection. Theme and editor size are separate user preferences and are
 retained when sounds change. The original sample files are unnecessary on recall. Saving uses a
@@ -568,7 +632,7 @@ temporary file and atomic replacement. Invalid files leave the current patch
 intact. State/preset files are limited to 1 GiB. These are logisth's own files;
 renaming another format to .logisth does not convert it.
 
-All 635 parameters are available for host automation. The first 514 parameter
+All 712 parameters are available for host automation. The first 514 parameter
 IDs and order from 0.4 are retained. Granulizer and global MIDI-only controls
 follow them; the former Graphs parameter block is removed. A/B views, rack pages,
 theme and scope source do not change the patch's audio settings. DAW state
@@ -641,8 +705,9 @@ smoke test does not replace testing in your particular DAW. Native macOS tests
 run on Intel; Universal architecture checks establish that arm64 code is present,
 not that it has been auditioned on Apple Silicon hardware.
 
-The filter is an independent SVF design. Hall uses JUCE Reverb; the other four
-reverb algorithms are original wavelogik implementations. Modulation
+The filter is an independent SVF design. All five reverb algorithms, including
+the rebuilt Hall, are original wavelogik implementations. Spectral and Kick
+sampler modes use Signalsmith Stretch 1.1.0 and its bundled DSP library (MIT). Modulation
 scales and some sequencer behaviour are implementation choices. No sample-exact
 comparison with Sylenth1 has been performed. Third-party font notices are included
 in assets/fonts. The original Sylenth1 manual and graphics are not redistributed.

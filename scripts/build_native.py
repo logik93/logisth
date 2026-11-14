@@ -114,7 +114,7 @@ def main():
         record = json.loads(existing.read_text())
         fingerprint = source_fingerprint(source)
         name = record.get('archive', '')
-        expected_tests = 10 if args.platform.startswith('linux') else 8
+        expected_tests = 11 if args.platform.startswith('linux') else 9
         valid = (record.get('version') == version and record.get('platform') == args.platform
                  and record.get('source_fingerprint') == fingerprint
                  and record.get('tests', {}).get('passed', 0) >= expected_tests
@@ -147,7 +147,7 @@ def main():
     import xml.etree.ElementTree as ET
     tests = ET.parse(result_file).getroot()
     count = int(tests.attrib.get('tests', '0'))
-    if count < (10 if args.platform == 'linux-x86_64' else 8):
+    if count < (11 if args.platform == 'linux-x86_64' else 9):
         raise ValueError('Required tests did not execute')
     if any(int(tests.attrib.get(key, '0')) for key in ('failures', 'errors', 'skipped', 'disabled')):
         raise ValueError('Failed, skipped or disabled tests prevent packaging')
@@ -205,7 +205,7 @@ def main():
         destination = stage / name
         destination.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(source / name, destination)
-    for directory in ['licenses', 'assets/themes']:
+    for directory in ['licenses', 'assets/themes', 'assets/skins']:
         if (source / directory).is_dir():
             shutil.copytree(source / directory, stage / directory, dirs_exist_ok=True)
     images = source / 'docs' / 'images'

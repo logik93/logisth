@@ -1,0 +1,24 @@
+{
+  "format": "logisth-theme",
+  "version": 2,
+  "name": "AP always flexin'!",
+  "dark": true,
+  "font": "Open Sans",
+  "skin": "ap-flexin",
+  "backgroundStyle": 0,
+  "knobStyle": 0,
+  "colours": {
+    "body": "#030305",
+    "panel": "#0B0B17",
+    "border": "#292544",
+    "text": "#F5F7FF",
+    "muted": "#A4A3BC",
+    "accent": "#6255FF",
+    "highlight": "#13E5FF",
+    "screen": "#04040B",
+    "screenBorder": "#20203B",
+    "screenText": "#F5F7FF",
+    "knob": "#A45BFF",
+    "knobTrack": "#2B2448"
+  }
+}

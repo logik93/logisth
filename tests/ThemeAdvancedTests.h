@@ -54,7 +54,7 @@ inline void run() {
           "renaming retains theme content");
     for (auto &stock : ThemeSettings::defaults())
         check(directory.getChildFile(stock.key + ".json").existsAsFile(),
-              "chosen theme folder contains the five standard files");
+              "chosen theme folder contains the six standard files");
     LogisthProcessor p;
     std::unique_ptr<AudioProcessorEditor> ui(p.createEditor());
     auto *console = ui->getChildComponent(0);

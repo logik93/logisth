@@ -23,7 +23,7 @@ inline void run() {
             directory.deleteRecursively();
         }
     } isolation;
-    check(ThemeSettings::names().size() == 5, "fresh user folder seeds all five default themes");
+    check(ThemeSettings::names().size() == 6, "fresh user folder seeds all six default themes");
     for (const auto &definition : ThemeSettings::defaults()) {
         auto f = isolation.directory.getChildFile(definition.key + ".json");
         ThemeDefinition fromDisk;
@@ -38,7 +38,7 @@ inline void run() {
     custom.colours[5] = Colour(0xff12abef);
     check(ThemeSettings::saveAs(custom).wasOk(),
           "a custom theme is saved without replacing a factory file");
-    check(ThemeSettings::names().size() == 6 &&
+    check(ThemeSettings::names().size() == 7 &&
               ThemeSettings::theme(ThemeSettings::reload()).name == custom.name,
           "custom theme selection survives a preference reload");
     check(ThemeSettings::saveWindow(1705, 1183, 137.5),
@@ -102,9 +102,9 @@ inline void run() {
         Thread::sleep(2100);
         Timer::callPendingTimersSynchronously();
         auto *themes = dynamic_cast<ComboBox *>(panel->findChildWithID("settings.theme"));
-        check(themes->getNumItems() == 7, "theme folder is not polled after only two seconds");
+        check(themes->getNumItems() == 8, "theme folder is not polled after only two seconds");
         dynamic_cast<Button *>(panel->findChildWithID("settings.theme.scan"))->onClick();
-        check(themes->getNumItems() == 8 &&
+        check(themes->getNumItems() == 9 &&
                   ThemeSettings::theme(ThemeSettings::current()).key == activeKey,
               "manual folder scanning discovers installed themes without changing stable "
               "selection");
@@ -138,7 +138,7 @@ inline void run() {
         isolation.directory.getChildFile("invalid-colour.json")
             .replaceWithText(JSON::toString(bad));
         ThemeSettings::scan(true);
-        check(ThemeSettings::names().size() == 8 && ThemeSettings::ignoredFiles() == 2,
+        check(ThemeSettings::names().size() == 9 && ThemeSettings::ignoredFiles() == 2,
               "malformed files and invalid colours are ignored without losing valid themes");
         ui->setSize(1550, 1075);
     }
@@ -156,7 +156,7 @@ inline void run() {
     check(ThemeSettings::saveAs(duplicate).wasOk() &&
               ThemeSettings::theme(ThemeSettings::current()).name == "Handmade Ocean (2)",
           "saving a copy with an existing name adds a readable suffix without overwriting a file");
-    std::cout << "PASS appearance: persisted size, typed scale, isolated instances, five JSON "
+    std::cout << "PASS appearance: persisted size, typed scale, isolated instances, six JSON "
                  "defaults, custom editor, folder scanning and stable selection\n";
 }
 inline void preview(const File &folder) {
@@ -180,11 +180,20 @@ inline void preview(const File &folder) {
         dynamic_cast<Button *>(panel->findChildWithID("settings.tab." + String(tab)))->onClick();
         write("settings-" + String(tab), ui->createComponentSnapshot(ui->getLocalBounds()));
     }
-    for (int theme = 0; theme < 5; ++theme)
+    for (int theme = 0; theme < 6; ++theme)
         write("theme-" + String(theme), editor->snapshotTheme(theme));
     for (int type = 0; type < 5; ++type)
         write("reverb-" + String(type), editor->snapshotPage(14 + type));
-    for (int page = 19; page <= 22; ++page)
+    for (int page = 19; page <= 25; ++page)
         write("feature-" + String(page), editor->snapshotPage(page));
+    editor->snapshotPage(23);
+    editor->setTheme(5);
+    write("ap-morph", ui->createComponentSnapshot(ui->getLocalBounds()));
+    editor->snapshotPage(25);
+    editor->setTheme(5);
+    write("ap-kick", ui->createComponentSnapshot(ui->getLocalBounds()));
+    dynamic_cast<Button *>(console->findChildWithID("ui.settings"))->onClick();
+    dynamic_cast<Button *>(panel->findChildWithID("settings.tab.3"))->onClick();
+    write("ap-about", ui->createComponentSnapshot(ui->getLocalBounds()));
 }
 } // namespace appearance_test

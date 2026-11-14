@@ -22,7 +22,7 @@ three grouped columns. Hover for tooltips and the bottom value readout.
 Numeric values support units such as kHz, ms and percent. Sync displays musical
 divisions instead of free time/rate controls. Arp steps use 01–08 and 09–16 views.
 
-The current engine exposes 635 audio parameters. Tests check access, bounds, click
+The current engine exposes 712 audio parameters. Tests check access, bounds, click
 targets, view changes, bindings, scaling and independent theme persistence.
 See [the English user manual](MANUAL.md) for full operation.
 
@@ -78,3 +78,11 @@ response editor. SETTINGS now has a STYLE tab for font/background/knobs, chosen
 save paths and custom renaming. Unsaved theme drafts survive editor recreation;
 folder scans run every two minutes. All MOD ENV defaults are zero. Reverb adds
 Diffusion and a rebuilt Hall with denser networks and four-window Shimmer.
+
+0.9.3 adds MORPH as the eleventh rack page: four names/knobs, four editable
+routes per macro and mutation/lock/Undo controls inside the existing console.
+Each source adds ROUTING for FM/AM source selection and PWM sync. MOD exposes
+Width/Warp for every engine; PLAYBACK adds Tonal/Transient/Kick/Spectral, showing
+Kick Attack only when applicable. SAMPLE supports zoomed drag selections and
+START/END handles, with separate granular trim/scanning. Six standard themes
+include AP always flexin'! and its white AP mark without the signature.

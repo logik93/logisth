@@ -10,12 +10,12 @@ struct ThemeDefinition {
     juce::String key, name;
     bool dark = true, factory = false;
     std::array<juce::Colour, 12> colours{};
-    juce::String fontFamily = "Open Sans";
+    juce::String fontFamily = "Open Sans", skin;
     int backgroundStyle = 0, knobStyle = 0;
     bool same(const ThemeDefinition &t) const {
         return key == t.key && name == t.name && dark == t.dark && colours == t.colours &&
                fontFamily == t.fontFamily && backgroundStyle == t.backgroundStyle &&
-               knobStyle == t.knobStyle;
+               knobStyle == t.knobStyle && skin == t.skin;
     }
 };
 struct ThemeDraft {
@@ -68,6 +68,16 @@ class ThemeSettings {
             t.colours[11] = t.colours[2];
             result.push_back(t);
         }
+        ThemeDefinition ap = result[1];
+        ap.key = "05-ap-always-flexin";
+        ap.name = "AP always flexin'!";
+        ap.skin = "ap-flexin";
+        const juce::uint32 apColours[]{0xff030305, 0xff0b0b17, 0xff292544, 0xfff5f7ff,
+                                       0xffa4a3bc, 0xff6255ff, 0xff13e5ff, 0xff04040b,
+                                       0xff20203b, 0xfff5f7ff, 0xffa45bff, 0xff2b2448};
+        for (size_t i = 0; i < ap.colours.size(); ++i)
+            ap.colours[i] = juce::Colour(apColours[i]);
+        result.push_back(ap);
         return result;
     }
     static juce::var encode(const ThemeDefinition &theme) {
@@ -76,6 +86,7 @@ class ThemeSettings {
         o->setProperty("format", "logisth-theme");
         o->setProperty("version", 2);
         o->setProperty("font", theme.fontFamily);
+        o->setProperty("skin", theme.skin);
         o->setProperty("backgroundStyle", theme.backgroundStyle);
         o->setProperty("knobStyle", theme.knobStyle);
         o->setProperty("name", theme.name);
@@ -100,6 +111,9 @@ class ThemeSettings {
         if (o->getProperty("format").toString() != "logisth-theme" ||
             !o->getProperty("version").isInt() ||
             (int(o->getProperty("version")) != 1 && int(o->getProperty("version")) != 2))
+            return false;
+        theme.skin = o->getProperty("skin").toString();
+        if (theme.skin.isNotEmpty() && theme.skin != "ap-flexin")
             return false;
         auto name = o->getProperty("name");
         auto dark = o->getProperty("dark");
@@ -194,9 +208,10 @@ class ThemeSettings {
                     continue;
                 }
                 t.key = f.getFileNameWithoutExtension();
-                auto builtin = std::find_if(next.begin(), next.begin() + 5,
-                                            [&](auto &v) { return v.key == t.key; });
-                if (builtin != next.begin() + 5) {
+                auto builtin =
+                    std::find_if(next.begin(), next.begin() + std::ptrdiff_t(standard.size()),
+                                 [&](auto &v) { return v.key == t.key; });
+                if (builtin != next.begin() + std::ptrdiff_t(standard.size())) {
                     t.factory = true;
                     *builtin = t;
                 } else
@@ -228,7 +243,7 @@ class ThemeSettings {
                     if (path.isNotEmpty() && juce::File::isAbsolutePath(path))
                         customFolder = juce::File(path);
                     auto old = o->getProperty("theme");
-                    if (old.isInt() && int(old) >= 0 && int(old) < 5)
+                    if (old.isInt() && int(old) >= 0 && int(old) < int(defaults().size()))
                         selectedKey = defaults()[size_t(int(old))].key;
                     auto key = o->getProperty("themeKey");
                     if (key.isString())

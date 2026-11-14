@@ -44,20 +44,23 @@ class ScopeBuffer {
     }
 };
 struct PlaybackPicture {
-    float position = 0;
+    float position = 0, width = .5f, fm = 0, am = 0;
     bool active = false;
     uint64_t revision = 0;
     std::array<float, 16> grains{};
     int grainCount = 0;
 };
 struct PlaybackTelemetry {
-    std::atomic<float> position{0};
+    std::atomic<float> position{0}, width{.5f}, fm{0}, am{0};
     std::atomic<bool> active{false};
     std::atomic<uint64_t> revision{0};
     std::array<std::atomic<float>, 16> grains{};
     std::atomic<int> grainCount{0};
     void write(const PlaybackPicture &p) {
         position.store(p.position, std::memory_order_relaxed);
+        width.store(p.width);
+        fm.store(p.fm);
+        am.store(p.am);
         for (int i = 0; i < 16; ++i)
             grains[size_t(i)].store(p.grains[size_t(i)], std::memory_order_relaxed);
         grainCount.store(p.grainCount, std::memory_order_relaxed);
@@ -68,6 +71,9 @@ struct PlaybackTelemetry {
         PlaybackPicture p;
         p.active = active.load(std::memory_order_acquire);
         p.position = position.load(std::memory_order_relaxed);
+        p.width = width.load();
+        p.fm = fm.load();
+        p.am = am.load();
         p.revision = revision.load(std::memory_order_relaxed);
         p.grainCount = grainCount.load(std::memory_order_relaxed);
         for (int i = 0; i < 16; ++i)

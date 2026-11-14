@@ -18,6 +18,9 @@ struct OscParams {
     float fmDepth = 0, fmRatio = 1, amDepth = 0, amRatio = 1, pulseWidth = .5f, pwmDepth = 0,
           pwmRate = .5f, stretch = 1;
     int stretchMode = 0, interpolation = 0;
+    int fmSource = 0, amSource = 0, pwmDivision = 7;
+    bool pwmSync = false;
+    float kickAttack = 25;
     const SourceData *data = nullptr;
     GranularParams gran;
 };
@@ -27,6 +30,7 @@ struct PartParams {
     int filterType = 0, input = 0, slope = 0;
 };
 struct Params {
+    SpectralBank *spectralBank = nullptr;
     std::array<OscParams, 4> osc{};
     std::array<PartParams, 2> part{};
     std::array<EnvelopeParams, 2> envelopes{};
@@ -80,6 +84,7 @@ class Engine {
         std::array<double, 4> phaseOffset{};
         std::array<std::array<double, 8>, 4> fmPhase{}, amPhase{};
         std::array<double, 4> pwmPhase{};
+        std::array<float, 4> modulationSignal{};
         std::array<std::array<float, 7>, 4> oscillatorControls{};
         struct NoiseState {
             std::array<float, 7> pink{};
@@ -432,7 +437,15 @@ class Engine {
         return n;
     }
     void render(float *left, float *right, int count, const Params &p, float *distortion = nullptr,
-                float *phaser = nullptr, float *partA = nullptr, float *partB = nullptr) {
+                float *phaser = nullptr, float *partA = nullptr, float *partB = nullptr,
+                const std::array<float *, 4> &oscScopes = {}) {
+        std::array<bool, 4> needed{};
+        for (const auto &o : p.osc) {
+            if (o.fmSource > 0)
+                needed[size_t(o.fmSource - 1)] = true;
+            if (o.amSource > 0)
+                needed[size_t(o.amSource - 1)] = true;
+        }
         pictures = {};
         std::array<uint64_t, 4> pictureAges{};
         const float smoothing = float(1 - std::exp(-1 / (.01 * sr)));
@@ -443,6 +456,7 @@ class Engine {
         for (int s = 0; s < count; ++s) {
             float out[2]{};
             float parts[2]{};
+            std::array<float, 4> traces{};
 
             float fxDrive = 0, fxPhaser = 0;
             uint64_t fxAge = 0;
@@ -484,6 +498,8 @@ class Engine {
                     fxPhaser = mods.get(Destination::PhaserFrequency);
                 }
                 float oscillators[2][2]{};
+                const auto previousSignals = v.modulationSignal;
+                v.modulationSignal = {};
                 for (int osc = 0; osc < 4; ++osc) {
                     const int part = osc / 2;
                     const auto &op = p.osc[size_t(osc)];
@@ -519,7 +535,7 @@ class Engine {
                         clamp(op.level + mods.pair(Destination::VolumeA, part), 0, 2) *
                         (op.envelopeEnabled ? sourceEnvelope : 1.f);
                     const int n = std::clamp(op.unison, 0, 8);
-                    if (n == 0 || level <= 0)
+                    if (n == 0 || (level <= 0 && !needed[size_t(osc)]))
                         continue;
                     const float pitch = bend[size_t(v.channel - 1)] * p.bendRange +
                                         mods.pair(Destination::PitchA, part) * 48;
@@ -535,7 +551,9 @@ class Engine {
                         clamp(control[4] + mods.osc(Destination::WidthA1, osc) +
                                   control[5] * float(std::sin(2 * pi * v.pwmPhase[size_t(osc)])),
                               .01f, .99f);
-                    v.pwmPhase[size_t(osc)] += control[6] / sr;
+                    const float pwmRate =
+                        op.pwmSync ? float(p.bpm / (60 * beatLength(op.pwmDivision))) : control[6];
+                    v.pwmPhase[size_t(osc)] += pwmRate / sr;
                     v.pwmPhase[size_t(osc)] -= std::floor(v.pwmPhase[size_t(osc)]);
                     for (int u = 0; u < n; ++u) {
                         const float spread = n == 1 ? 0 : 2.f * u / (n - 1) - 1;
@@ -546,24 +564,51 @@ class Engine {
                         auto &phase = v.phases[size_t(osc)][size_t(u)];
                         auto &fmPhase = v.fmPhase[size_t(osc)][size_t(u)];
                         auto &amPhase = v.amPhase[size_t(osc)][size_t(u)];
-                        double t = phase + offset + mods.pair(Destination::PhaseA, part) +
-                                   (fm > 0 ? fm / (2 * pi) * std::sin(2 * pi * fmPhase) : 0);
+                        const double fmInput =
+                            fm > 0 ? (op.fmSource > 0 ? previousSignals[size_t(op.fmSource - 1)]
+                                                      : std::sin(2 * pi * fmPhase))
+                                   : 0;
+                        const double phaseMod = fm > 0 ? fm / (2 * pi) * fmInput : 0;
+                        double t = phase + offset + mods.pair(Destination::PhaseA, part) + phaseMod;
                         fmPhase += dt * control[1];
                         fmPhase -= std::floor(fmPhase);
-                        double amGain = am > 0 ? 1 - am * .5 * (1 - std::sin(2 * pi * amPhase)) : 1;
+                        const double amInput =
+                            am > 0 ? (op.amSource > 0 ? previousSignals[size_t(op.amSource - 1)]
+                                                      : std::sin(2 * pi * amPhase))
+                                   : 0;
+                        double amGain =
+                            am > 0 ? 1 - am * .5 * (1 - std::clamp(amInput, -1., 1.)) : 1;
                         amPhase += dt * control[3];
                         amPhase -= std::floor(amPhase);
                         t -= std::floor(t);
                         std::array<float, 2> signal{};
-                        if (op.engine == 0)
-                            signal.fill(
-                                wave(t, dt, op.wave, v.noiseState[size_t(osc)][size_t(u)], duty));
-                        else if (op.data) {
+                        if (op.engine == 0) {
+                            bool pulse = op.wave == 2 || op.wave == 5 || op.wave == 6;
+                            bool noiseWave = op.wave == 4 || op.wave == 8 || op.wave == 9;
+                            signal.fill(wave(pulse || noiseWave ? t : phaseWidth(t, duty), dt,
+                                             op.wave, v.noiseState[size_t(osc)][size_t(u)], duty));
+                            if (noiseWave) {
+                                float strength =
+                                    clamp(std::abs(control[4] - .5f) * 2 + control[5] * 2 +
+                                              std::abs(mods.osc(Destination::WidthA1, osc)) * 2,
+                                          0, 1);
+                                double gatePhase = op.pwmSync ? v.pwmPhase[size_t(osc)] : t;
+                                const double edge =
+                                    std::min(.02, std::min(double(duty), 1 - double(duty)) * .25);
+                                double gate = std::clamp((double(duty) - gatePhase) / edge, 0., 1.);
+                                gate *= std::clamp(gatePhase / edge, 0., 1.);
+                                for (auto &x : signal)
+                                    x *= 1 - strength * float(1 - gate);
+                            }
+                        } else if (op.data) {
                             if (op.engine == 1) {
+                                t = phaseWidth(t, duty);
                                 t += op.warp * .15 * std::sin(2 * pi * t);
                                 t -= std::floor(t);
                                 signal.fill(op.data->table(t, position, dt));
                             } else {
+                                const double samplePhase =
+                                    phaseMod * op.data->sampleRate / std::max(20., hz);
                                 double ratio = std::exp2((v.pitch - op.root + pitch + op.semitone +
                                                           spread * op.detune * .01) /
                                                          12.);
@@ -573,8 +618,14 @@ class Engine {
                                         op.reverse, v.note, op.root, p.bpm,
                                         std::exp2(
                                             clamp(mods.pair(Destination::GrainSizeA, part), -4, 4) *
-                                            4));
-                                } else
+                                            4),
+                                        duty, samplePhase);
+                                } else {
+                                    if (p.spectralBank)
+                                        v.playback[size_t(osc)][size_t(u)].setSpectral(
+                                            p.spectralBank->get(int(&v - voices.data()), osc, u, 0),
+                                            p.spectralBank->get(int(&v - voices.data()), osc, u, 1),
+                                            v.age);
                                     signal = v.playback[size_t(osc)][size_t(u)].tick(
                                         *op.data, op.engine, ratio, sr, position, op.end, op.loop,
                                         op.reverse,
@@ -587,13 +638,19 @@ class Engine {
                                                 v.playback[size_t(osc)][size_t(u)].untilGrain <= 0
                                             ? noise()
                                             : 0,
-                                        op.stretchMode, op.stretch, op.interpolation);
+                                        op.stretchMode, op.stretch, op.interpolation, duty,
+                                        samplePhase, op.kickAttack, op.gran.trimStart);
+                                }
                             }
                         }
+                        v.modulationSignal[size_t(osc)] += (signal[0] + signal[1]) * .5f / float(n);
                         if (u == 0 && op.data && v.age >= pictureAges[size_t(osc)]) {
                             pictureAges[size_t(osc)] = v.age;
                             auto &view = pictures[size_t(osc)];
                             view = {};
+                            view.width = duty;
+                            view.fm = fm;
+                            view.am = am;
                             view.active = true;
                             view.revision = op.data->revision;
                             double length = std::max(2., double(op.data->samples[0].size()));
@@ -630,6 +687,8 @@ class Engine {
                         }
                         const float gain =
                             float(amGain) * level * (op.invert ? -1.f : 1.f) / std::sqrt(float(n));
+                        traces[size_t(osc)] +=
+                            (signal[0] + signal[1]) * .5f * gain * amps[part] * v.velocity;
                         phase += dt;
                         phase -= std::floor(phase);
                         const float pan =
@@ -639,6 +698,8 @@ class Engine {
                         oscillators[part][1] += signal[1] * gain * std::sqrt((1 + pan) * .5f);
                     }
                 }
+                for (auto &x : v.modulationSignal)
+                    x = std::clamp(x, -1.f, 1.f);
                 for (int part = 0; part < 2; ++part) {
                     const auto &pp = p.part[size_t(part)];
                     const float key = (v.note - 60) * p.keytrack;
@@ -671,6 +732,9 @@ class Engine {
                     }
                 }
             }
+            for (int osc = 0; osc < 4; ++osc)
+                if (oscScopes[size_t(osc)])
+                    oscScopes[size_t(osc)][s] = traces[size_t(osc)];
             left[s] = out[0] * engineOutputCalibration;
             right[s] = out[1] * engineOutputCalibration;
             if (partA)

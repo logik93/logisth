@@ -7,7 +7,7 @@ struct LogisthColours {
         muted{0xff667268}, green{0xff406f5d}, mint{0xffbdd8bb}, screen{0xff243430},
         screenLine{0xff41514b}, screenText{0xffe6ece1};
     juce::Colour knobColour{0xff62acff}, knobTrack{0xff283a50};
-    juce::String fontFamily = "Open Sans";
+    juce::String fontFamily = "Open Sans", skin;
     int backgroundStyle = 0, knobStyle = 0;
     juce::Font font(float size, bool bold = false) const;
     void drawCaption(juce::Graphics &, const juce::String &, juce::Rectangle<int>, float,

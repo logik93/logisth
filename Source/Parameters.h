@@ -638,6 +638,83 @@ enum class Param : size_t {
     eqband7,
     eqband8,
     eqband9,
+    o1fmsource,
+    o1amsource,
+    o1pwmsync,
+    o1pwmdivision,
+    o1kickattack,
+    o2fmsource,
+    o2amsource,
+    o2pwmsync,
+    o2pwmdivision,
+    o2kickattack,
+    o3fmsource,
+    o3amsource,
+    o3pwmsync,
+    o3pwmdivision,
+    o3kickattack,
+    o4fmsource,
+    o4amsource,
+    o4pwmsync,
+    o4pwmdivision,
+    o4kickattack,
+    macro1,
+    m1target1,
+    m1low1,
+    m1high1,
+    m1target2,
+    m1low2,
+    m1high2,
+    m1target3,
+    m1low3,
+    m1high3,
+    m1target4,
+    m1low4,
+    m1high4,
+    macro2,
+    m2target1,
+    m2low1,
+    m2high1,
+    m2target2,
+    m2low2,
+    m2high2,
+    m2target3,
+    m2low3,
+    m2high3,
+    m2target4,
+    m2low4,
+    m2high4,
+    macro3,
+    m3target1,
+    m3low1,
+    m3high1,
+    m3target2,
+    m3low2,
+    m3high2,
+    m3target3,
+    m3low3,
+    m3high3,
+    m3target4,
+    m3low4,
+    m3high4,
+    macro4,
+    m4target1,
+    m4low1,
+    m4high1,
+    m4target2,
+    m4low2,
+    m4high2,
+    m4target3,
+    m4low3,
+    m4high3,
+    m4target4,
+    m4low4,
+    m4high4,
+    mutateamount,
+    o1trimstart,
+    o2trimstart,
+    o3trimstart,
+    o4trimstart,
     Count
 };
 constexpr size_t parameterCount = size_t(Param::Count);
@@ -1454,7 +1531,8 @@ inline const std::array<ParameterSpec, parameterCount> parameterSpecs{{
     {"o1pulsewidth", "Pulse width", 5, "SOURCE 1", 0.01f, 0.99f, 0.5f, 1, "", false},
     {"o1pwmdepth", "PWM depth", 5, "SOURCE 1", 0, 0.45f, 0, 1, "", false},
     {"o1pwmrate", "PWM / Hz", 5, "SOURCE 1", 0.01f, 20, 0.5f, 0.4f, "", false},
-    {"o1stretchmode", "Stretch", 5, "SOURCE 1", 0, 3, 0, 1, "Off|Tape|Granular|WSOLA", false},
+    {"o1stretchmode", "Stretch", 5, "SOURCE 1", 0, 7, 0, 1,
+     "Off|Tape|Granular|WSOLA|Tonal|Transient|Kick|Spectral", false},
     {"o1stretch", "Time factor", 5, "SOURCE 1", 0.125f, 8, 1, 0.5f, "", false},
     {"o1interpolation", "Interpolation", 5, "SOURCE 1", 0, 3, 0, 1, "Linear|Cubic|Sinc 16|Sinc 32",
      false},
@@ -1465,7 +1543,8 @@ inline const std::array<ParameterSpec, parameterCount> parameterSpecs{{
     {"o2pulsewidth", "Pulse width", 5, "SOURCE 2", 0.01f, 0.99f, 0.5f, 1, "", false},
     {"o2pwmdepth", "PWM depth", 5, "SOURCE 2", 0, 0.45f, 0, 1, "", false},
     {"o2pwmrate", "PWM / Hz", 5, "SOURCE 2", 0.01f, 20, 0.5f, 0.4f, "", false},
-    {"o2stretchmode", "Stretch", 5, "SOURCE 2", 0, 3, 0, 1, "Off|Tape|Granular|WSOLA", false},
+    {"o2stretchmode", "Stretch", 5, "SOURCE 2", 0, 7, 0, 1,
+     "Off|Tape|Granular|WSOLA|Tonal|Transient|Kick|Spectral", false},
     {"o2stretch", "Time factor", 5, "SOURCE 2", 0.125f, 8, 1, 0.5f, "", false},
     {"o2interpolation", "Interpolation", 5, "SOURCE 2", 0, 3, 0, 1, "Linear|Cubic|Sinc 16|Sinc 32",
      false},
@@ -1476,7 +1555,8 @@ inline const std::array<ParameterSpec, parameterCount> parameterSpecs{{
     {"o3pulsewidth", "Pulse width", 5, "SOURCE 3", 0.01f, 0.99f, 0.5f, 1, "", false},
     {"o3pwmdepth", "PWM depth", 5, "SOURCE 3", 0, 0.45f, 0, 1, "", false},
     {"o3pwmrate", "PWM / Hz", 5, "SOURCE 3", 0.01f, 20, 0.5f, 0.4f, "", false},
-    {"o3stretchmode", "Stretch", 5, "SOURCE 3", 0, 3, 0, 1, "Off|Tape|Granular|WSOLA", false},
+    {"o3stretchmode", "Stretch", 5, "SOURCE 3", 0, 7, 0, 1,
+     "Off|Tape|Granular|WSOLA|Tonal|Transient|Kick|Spectral", false},
     {"o3stretch", "Time factor", 5, "SOURCE 3", 0.125f, 8, 1, 0.5f, "", false},
     {"o3interpolation", "Interpolation", 5, "SOURCE 3", 0, 3, 0, 1, "Linear|Cubic|Sinc 16|Sinc 32",
      false},
@@ -1487,7 +1567,8 @@ inline const std::array<ParameterSpec, parameterCount> parameterSpecs{{
     {"o4pulsewidth", "Pulse width", 5, "SOURCE 4", 0.01f, 0.99f, 0.5f, 1, "", false},
     {"o4pwmdepth", "PWM depth", 5, "SOURCE 4", 0, 0.45f, 0, 1, "", false},
     {"o4pwmrate", "PWM / Hz", 5, "SOURCE 4", 0.01f, 20, 0.5f, 0.4f, "", false},
-    {"o4stretchmode", "Stretch", 5, "SOURCE 4", 0, 3, 0, 1, "Off|Tape|Granular|WSOLA", false},
+    {"o4stretchmode", "Stretch", 5, "SOURCE 4", 0, 7, 0, 1,
+     "Off|Tape|Granular|WSOLA|Tonal|Transient|Kick|Spectral", false},
     {"o4stretch", "Time factor", 5, "SOURCE 4", 0.125f, 8, 1, 0.5f, "", false},
     {"o4interpolation", "Interpolation", 5, "SOURCE 4", 0, 3, 0, 1, "Linear|Cubic|Sinc 16|Sinc 32",
      false},
@@ -1505,5 +1586,166 @@ inline const std::array<ParameterSpec, parameterCount> parameterSpecs{{
     {"eqband7", "4000 Hz / dB", 3, "EQUALIZER", -18, 18, 0, 1, "", false},
     {"eqband8", "8000 Hz / dB", 3, "EQUALIZER", -18, 18, 0, 1, "", false},
     {"eqband9", "16000 Hz / dB", 3, "EQUALIZER", -18, 18, 0, 1, "", false},
+    {"o1fmsource", "FM source", 5, "SOURCE 1", 0, 4, 0, 1, "Sine|A1|A2|B1|B2", false},
+    {"o1amsource", "AM source", 5, "SOURCE 1", 0, 4, 0, 1, "Sine|A1|A2|B1|B2", false},
+    {"o1pwmsync", "PWM sync", 5, "SOURCE 1", 0, 1, 0, 1, "Off|On", false},
+    {"o1pwmdivision", "PWM division", 5, "SOURCE 1", 0, 15, 7, 1,
+     "1/64|1/32T|1/32|1/16T|1/16|1/16D|1/8T|1/8|1/8D|1/4T|1/4|1/4D|1/2|1 bar|2 bars|4 bars", false},
+    {"o1kickattack", "Kick attack / ms", 5, "SOURCE 1", 0, 100, 25, 1, "", false},
+    {"o2fmsource", "FM source", 5, "SOURCE 2", 0, 4, 0, 1, "Sine|A1|A2|B1|B2", false},
+    {"o2amsource", "AM source", 5, "SOURCE 2", 0, 4, 0, 1, "Sine|A1|A2|B1|B2", false},
+    {"o2pwmsync", "PWM sync", 5, "SOURCE 2", 0, 1, 0, 1, "Off|On", false},
+    {"o2pwmdivision", "PWM division", 5, "SOURCE 2", 0, 15, 7, 1,
+     "1/64|1/32T|1/32|1/16T|1/16|1/16D|1/8T|1/8|1/8D|1/4T|1/4|1/4D|1/2|1 bar|2 bars|4 bars", false},
+    {"o2kickattack", "Kick attack / ms", 5, "SOURCE 2", 0, 100, 25, 1, "", false},
+    {"o3fmsource", "FM source", 5, "SOURCE 3", 0, 4, 0, 1, "Sine|A1|A2|B1|B2", false},
+    {"o3amsource", "AM source", 5, "SOURCE 3", 0, 4, 0, 1, "Sine|A1|A2|B1|B2", false},
+    {"o3pwmsync", "PWM sync", 5, "SOURCE 3", 0, 1, 0, 1, "Off|On", false},
+    {"o3pwmdivision", "PWM division", 5, "SOURCE 3", 0, 15, 7, 1,
+     "1/64|1/32T|1/32|1/16T|1/16|1/16D|1/8T|1/8|1/8D|1/4T|1/4|1/4D|1/2|1 bar|2 bars|4 bars", false},
+    {"o3kickattack", "Kick attack / ms", 5, "SOURCE 3", 0, 100, 25, 1, "", false},
+    {"o4fmsource", "FM source", 5, "SOURCE 4", 0, 4, 0, 1, "Sine|A1|A2|B1|B2", false},
+    {"o4amsource", "AM source", 5, "SOURCE 4", 0, 4, 0, 1, "Sine|A1|A2|B1|B2", false},
+    {"o4pwmsync", "PWM sync", 5, "SOURCE 4", 0, 1, 0, 1, "Off|On", false},
+    {"o4pwmdivision", "PWM division", 5, "SOURCE 4", 0, 15, 7, 1,
+     "1/64|1/32T|1/32|1/16T|1/16|1/16D|1/8T|1/8|1/8D|1/4T|1/4|1/4D|1/2|1 bar|2 bars|4 bars", false},
+    {"o4kickattack", "Kick attack / ms", 5, "SOURCE 4", 0, 100, 25, 1, "", false},
+    {"macro1", "Macro 1", 5, "MORPH", 0, 1, 0, 1, "", false},
+    {"m1target1", "Target", 5, "MORPH", 0, 30, 0, 1,
+     "None|Filter cutoff|Filter resonance|Filter keytrack|WT Pos / Start A1|WT Pos / Start A2|WT "
+     "Pos / Start B1|WT Pos / Start B2|Width A1|Width A2|Width B1|Width B2|FM A1|FM A2|FM B1|FM "
+     "B2|AM A1|AM A2|AM B1|AM B2|Reverb mix|Reverb decay|Delay mix|Distortion amount|EQ "
+     "output|Stretch A1|Stretch A2|Stretch B1|Stretch B2|LFO1 rate|LFO2 rate",
+     false},
+    {"m1low1", "From / %", 5, "MORPH", 0, 1, 0, 1, "", false},
+    {"m1high1", "To / %", 5, "MORPH", 0, 1, 1, 1, "", false},
+    {"m1target2", "Target", 5, "MORPH", 0, 30, 0, 1,
+     "None|Filter cutoff|Filter resonance|Filter keytrack|WT Pos / Start A1|WT Pos / Start A2|WT "
+     "Pos / Start B1|WT Pos / Start B2|Width A1|Width A2|Width B1|Width B2|FM A1|FM A2|FM B1|FM "
+     "B2|AM A1|AM A2|AM B1|AM B2|Reverb mix|Reverb decay|Delay mix|Distortion amount|EQ "
+     "output|Stretch A1|Stretch A2|Stretch B1|Stretch B2|LFO1 rate|LFO2 rate",
+     false},
+    {"m1low2", "From / %", 5, "MORPH", 0, 1, 0, 1, "", false},
+    {"m1high2", "To / %", 5, "MORPH", 0, 1, 1, 1, "", false},
+    {"m1target3", "Target", 5, "MORPH", 0, 30, 0, 1,
+     "None|Filter cutoff|Filter resonance|Filter keytrack|WT Pos / Start A1|WT Pos / Start A2|WT "
+     "Pos / Start B1|WT Pos / Start B2|Width A1|Width A2|Width B1|Width B2|FM A1|FM A2|FM B1|FM "
+     "B2|AM A1|AM A2|AM B1|AM B2|Reverb mix|Reverb decay|Delay mix|Distortion amount|EQ "
+     "output|Stretch A1|Stretch A2|Stretch B1|Stretch B2|LFO1 rate|LFO2 rate",
+     false},
+    {"m1low3", "From / %", 5, "MORPH", 0, 1, 0, 1, "", false},
+    {"m1high3", "To / %", 5, "MORPH", 0, 1, 1, 1, "", false},
+    {"m1target4", "Target", 5, "MORPH", 0, 30, 0, 1,
+     "None|Filter cutoff|Filter resonance|Filter keytrack|WT Pos / Start A1|WT Pos / Start A2|WT "
+     "Pos / Start B1|WT Pos / Start B2|Width A1|Width A2|Width B1|Width B2|FM A1|FM A2|FM B1|FM "
+     "B2|AM A1|AM A2|AM B1|AM B2|Reverb mix|Reverb decay|Delay mix|Distortion amount|EQ "
+     "output|Stretch A1|Stretch A2|Stretch B1|Stretch B2|LFO1 rate|LFO2 rate",
+     false},
+    {"m1low4", "From / %", 5, "MORPH", 0, 1, 0, 1, "", false},
+    {"m1high4", "To / %", 5, "MORPH", 0, 1, 1, 1, "", false},
+    {"macro2", "Macro 2", 5, "MORPH", 0, 1, 0, 1, "", false},
+    {"m2target1", "Target", 5, "MORPH", 0, 30, 0, 1,
+     "None|Filter cutoff|Filter resonance|Filter keytrack|WT Pos / Start A1|WT Pos / Start A2|WT "
+     "Pos / Start B1|WT Pos / Start B2|Width A1|Width A2|Width B1|Width B2|FM A1|FM A2|FM B1|FM "
+     "B2|AM A1|AM A2|AM B1|AM B2|Reverb mix|Reverb decay|Delay mix|Distortion amount|EQ "
+     "output|Stretch A1|Stretch A2|Stretch B1|Stretch B2|LFO1 rate|LFO2 rate",
+     false},
+    {"m2low1", "From / %", 5, "MORPH", 0, 1, 0, 1, "", false},
+    {"m2high1", "To / %", 5, "MORPH", 0, 1, 1, 1, "", false},
+    {"m2target2", "Target", 5, "MORPH", 0, 30, 0, 1,
+     "None|Filter cutoff|Filter resonance|Filter keytrack|WT Pos / Start A1|WT Pos / Start A2|WT "
+     "Pos / Start B1|WT Pos / Start B2|Width A1|Width A2|Width B1|Width B2|FM A1|FM A2|FM B1|FM "
+     "B2|AM A1|AM A2|AM B1|AM B2|Reverb mix|Reverb decay|Delay mix|Distortion amount|EQ "
+     "output|Stretch A1|Stretch A2|Stretch B1|Stretch B2|LFO1 rate|LFO2 rate",
+     false},
+    {"m2low2", "From / %", 5, "MORPH", 0, 1, 0, 1, "", false},
+    {"m2high2", "To / %", 5, "MORPH", 0, 1, 1, 1, "", false},
+    {"m2target3", "Target", 5, "MORPH", 0, 30, 0, 1,
+     "None|Filter cutoff|Filter resonance|Filter keytrack|WT Pos / Start A1|WT Pos / Start A2|WT "
+     "Pos / Start B1|WT Pos / Start B2|Width A1|Width A2|Width B1|Width B2|FM A1|FM A2|FM B1|FM "
+     "B2|AM A1|AM A2|AM B1|AM B2|Reverb mix|Reverb decay|Delay mix|Distortion amount|EQ "
+     "output|Stretch A1|Stretch A2|Stretch B1|Stretch B2|LFO1 rate|LFO2 rate",
+     false},
+    {"m2low3", "From / %", 5, "MORPH", 0, 1, 0, 1, "", false},
+    {"m2high3", "To / %", 5, "MORPH", 0, 1, 1, 1, "", false},
+    {"m2target4", "Target", 5, "MORPH", 0, 30, 0, 1,
+     "None|Filter cutoff|Filter resonance|Filter keytrack|WT Pos / Start A1|WT Pos / Start A2|WT "
+     "Pos / Start B1|WT Pos / Start B2|Width A1|Width A2|Width B1|Width B2|FM A1|FM A2|FM B1|FM "
+     "B2|AM A1|AM A2|AM B1|AM B2|Reverb mix|Reverb decay|Delay mix|Distortion amount|EQ "
+     "output|Stretch A1|Stretch A2|Stretch B1|Stretch B2|LFO1 rate|LFO2 rate",
+     false},
+    {"m2low4", "From / %", 5, "MORPH", 0, 1, 0, 1, "", false},
+    {"m2high4", "To / %", 5, "MORPH", 0, 1, 1, 1, "", false},
+    {"macro3", "Macro 3", 5, "MORPH", 0, 1, 0, 1, "", false},
+    {"m3target1", "Target", 5, "MORPH", 0, 30, 0, 1,
+     "None|Filter cutoff|Filter resonance|Filter keytrack|WT Pos / Start A1|WT Pos / Start A2|WT "
+     "Pos / Start B1|WT Pos / Start B2|Width A1|Width A2|Width B1|Width B2|FM A1|FM A2|FM B1|FM "
+     "B2|AM A1|AM A2|AM B1|AM B2|Reverb mix|Reverb decay|Delay mix|Distortion amount|EQ "
+     "output|Stretch A1|Stretch A2|Stretch B1|Stretch B2|LFO1 rate|LFO2 rate",
+     false},
+    {"m3low1", "From / %", 5, "MORPH", 0, 1, 0, 1, "", false},
+    {"m3high1", "To / %", 5, "MORPH", 0, 1, 1, 1, "", false},
+    {"m3target2", "Target", 5, "MORPH", 0, 30, 0, 1,
+     "None|Filter cutoff|Filter resonance|Filter keytrack|WT Pos / Start A1|WT Pos / Start A2|WT "
+     "Pos / Start B1|WT Pos / Start B2|Width A1|Width A2|Width B1|Width B2|FM A1|FM A2|FM B1|FM "
+     "B2|AM A1|AM A2|AM B1|AM B2|Reverb mix|Reverb decay|Delay mix|Distortion amount|EQ "
+     "output|Stretch A1|Stretch A2|Stretch B1|Stretch B2|LFO1 rate|LFO2 rate",
+     false},
+    {"m3low2", "From / %", 5, "MORPH", 0, 1, 0, 1, "", false},
+    {"m3high2", "To / %", 5, "MORPH", 0, 1, 1, 1, "", false},
+    {"m3target3", "Target", 5, "MORPH", 0, 30, 0, 1,
+     "None|Filter cutoff|Filter resonance|Filter keytrack|WT Pos / Start A1|WT Pos / Start A2|WT "
+     "Pos / Start B1|WT Pos / Start B2|Width A1|Width A2|Width B1|Width B2|FM A1|FM A2|FM B1|FM "
+     "B2|AM A1|AM A2|AM B1|AM B2|Reverb mix|Reverb decay|Delay mix|Distortion amount|EQ "
+     "output|Stretch A1|Stretch A2|Stretch B1|Stretch B2|LFO1 rate|LFO2 rate",
+     false},
+    {"m3low3", "From / %", 5, "MORPH", 0, 1, 0, 1, "", false},
+    {"m3high3", "To / %", 5, "MORPH", 0, 1, 1, 1, "", false},
+    {"m3target4", "Target", 5, "MORPH", 0, 30, 0, 1,
+     "None|Filter cutoff|Filter resonance|Filter keytrack|WT Pos / Start A1|WT Pos / Start A2|WT "
+     "Pos / Start B1|WT Pos / Start B2|Width A1|Width A2|Width B1|Width B2|FM A1|FM A2|FM B1|FM "
+     "B2|AM A1|AM A2|AM B1|AM B2|Reverb mix|Reverb decay|Delay mix|Distortion amount|EQ "
+     "output|Stretch A1|Stretch A2|Stretch B1|Stretch B2|LFO1 rate|LFO2 rate",
+     false},
+    {"m3low4", "From / %", 5, "MORPH", 0, 1, 0, 1, "", false},
+    {"m3high4", "To / %", 5, "MORPH", 0, 1, 1, 1, "", false},
+    {"macro4", "Macro 4", 5, "MORPH", 0, 1, 0, 1, "", false},
+    {"m4target1", "Target", 5, "MORPH", 0, 30, 0, 1,
+     "None|Filter cutoff|Filter resonance|Filter keytrack|WT Pos / Start A1|WT Pos / Start A2|WT "
+     "Pos / Start B1|WT Pos / Start B2|Width A1|Width A2|Width B1|Width B2|FM A1|FM A2|FM B1|FM "
+     "B2|AM A1|AM A2|AM B1|AM B2|Reverb mix|Reverb decay|Delay mix|Distortion amount|EQ "
+     "output|Stretch A1|Stretch A2|Stretch B1|Stretch B2|LFO1 rate|LFO2 rate",
+     false},
+    {"m4low1", "From / %", 5, "MORPH", 0, 1, 0, 1, "", false},
+    {"m4high1", "To / %", 5, "MORPH", 0, 1, 1, 1, "", false},
+    {"m4target2", "Target", 5, "MORPH", 0, 30, 0, 1,
+     "None|Filter cutoff|Filter resonance|Filter keytrack|WT Pos / Start A1|WT Pos / Start A2|WT "
+     "Pos / Start B1|WT Pos / Start B2|Width A1|Width A2|Width B1|Width B2|FM A1|FM A2|FM B1|FM "
+     "B2|AM A1|AM A2|AM B1|AM B2|Reverb mix|Reverb decay|Delay mix|Distortion amount|EQ "
+     "output|Stretch A1|Stretch A2|Stretch B1|Stretch B2|LFO1 rate|LFO2 rate",
+     false},
+    {"m4low2", "From / %", 5, "MORPH", 0, 1, 0, 1, "", false},
+    {"m4high2", "To / %", 5, "MORPH", 0, 1, 1, 1, "", false},
+    {"m4target3", "Target", 5, "MORPH", 0, 30, 0, 1,
+     "None|Filter cutoff|Filter resonance|Filter keytrack|WT Pos / Start A1|WT Pos / Start A2|WT "
+     "Pos / Start B1|WT Pos / Start B2|Width A1|Width A2|Width B1|Width B2|FM A1|FM A2|FM B1|FM "
+     "B2|AM A1|AM A2|AM B1|AM B2|Reverb mix|Reverb decay|Delay mix|Distortion amount|EQ "
+     "output|Stretch A1|Stretch A2|Stretch B1|Stretch B2|LFO1 rate|LFO2 rate",
+     false},
+    {"m4low3", "From / %", 5, "MORPH", 0, 1, 0, 1, "", false},
+    {"m4high3", "To / %", 5, "MORPH", 0, 1, 1, 1, "", false},
+    {"m4target4", "Target", 5, "MORPH", 0, 30, 0, 1,
+     "None|Filter cutoff|Filter resonance|Filter keytrack|WT Pos / Start A1|WT Pos / Start A2|WT "
+     "Pos / Start B1|WT Pos / Start B2|Width A1|Width A2|Width B1|Width B2|FM A1|FM A2|FM B1|FM "
+     "B2|AM A1|AM A2|AM B1|AM B2|Reverb mix|Reverb decay|Delay mix|Distortion amount|EQ "
+     "output|Stretch A1|Stretch A2|Stretch B1|Stretch B2|LFO1 rate|LFO2 rate",
+     false},
+    {"m4low4", "From / %", 5, "MORPH", 0, 1, 0, 1, "", false},
+    {"m4high4", "To / %", 5, "MORPH", 0, 1, 1, 1, "", false},
+    {"mutateamount", "Mutation depth", 5, "MORPH", 0, 1, 0.2f, 1, "", false},
+    {"o1trimstart", "Trim start", 5, "SOURCE 1", 0, 1, 0, 1, "", false},
+    {"o2trimstart", "Trim start", 5, "SOURCE 2", 0, 1, 0, 1, "", false},
+    {"o3trimstart", "Trim start", 5, "SOURCE 3", 0, 1, 0, 1, "", false},
+    {"o4trimstart", "Trim start", 5, "SOURCE 4", 0, 1, 0, 1, "", false},
 }};
 } // namespace logisth
