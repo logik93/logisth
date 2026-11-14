@@ -3,8 +3,38 @@
   "automation_commit": "deaffb93eaf1aedd5892d8f34a2f731d2b8b9fba",
   "run_id": "43650950217",
   "run_url": "https://github.com/logik93/logisth/actions/runs/43650950217",
-  "phase": "building",
-  "pipeline_phase": "building",
-  "stage": "",
-  "recorded_at": "2026-11-14T23:00:10.270316+00:00"
+  "phase": "failed",
+  "pipeline_phase": "failed",
+  "stage": "windows-linux",
+  "recorded_at": "2026-11-14T23:09:06.890460+00:00",
+  "jobs": {
+    "started": {
+      "result": "success",
+      "outputs": {}
+    },
+    "plugins": {
+      "result": "failure",
+      "outputs": {}
+    },
+    "publish": {
+      "result": "skipped",
+      "outputs": {}
+    }
+  },
+  "failures": [
+    {
+      "log": "ci-artifacts/native-windows-x86_64/logs/build.log",
+      "errors": [
+        "D:\\a\\logisth\\logisth\\tests\\PerformanceTests.cpp(197,25): error C2513: 'double': no variable declared before '=' [D:\\a\\logisth\\logisth\\build\\Performance_tests.vcxproj]",
+        "D:\\a\\logisth\\logisth\\tests\\PerformanceTests.cpp(197,28): error C2143: syntax error: missing ';' before ',' [D:\\a\\logisth\\logisth\\build\\Performance_tests.vcxproj]",
+        "D:\\a\\logisth\\logisth\\tests\\PerformanceTests.cpp(197,28): error C2059: syntax error: ',' [D:\\a\\logisth\\logisth\\build\\Performance_tests.vcxproj]",
+        "D:\\a\\logisth\\logisth\\tests\\PerformanceTests.cpp(199,22): error C2059: syntax error: '+=' [D:\\a\\logisth\\logisth\\build\\Performance_tests.vcxproj]",
+        "D:\\a\\logisth\\logisth\\tests\\PerformanceTests.cpp(201,17): error C2065: 'wrong': undeclared identifier [D:\\a\\logisth\\logisth\\build\\Performance_tests.vcxproj]",
+        "D:\\a\\logisth\\logisth\\tests\\PerformanceTests.cpp(202,24): error C2143: syntax error: missing ')' before '>' [D:\\a\\logisth\\logisth\\build\\Performance_tests.vcxproj]",
+        "D:\\a\\logisth\\logisth\\tests\\PerformanceTests.cpp(202,13): error C2660: 'check': function does not take 0 arguments [D:\\a\\logisth\\logisth\\build\\Performance_tests.vcxproj]",
+        "D:\\a\\logisth\\logisth\\tests\\PerformanceTests.cpp(202,26): error C2065: 'wrong': undeclared identifier [D:\\a\\logisth\\logisth\\build\\Performance_tests.vcxproj]",
+        "D:\\a\\logisth\\logisth\\tests\\PerformanceTests.cpp(203,88): error C2059: syntax error: ')' [D:\\a\\logisth\\logisth\\build\\Performance_tests.vcxproj]"
+      ]
+    }
+  ]
 }
