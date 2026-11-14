@@ -12,7 +12,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: v0.9.3
+          ref: 451a8e7f98e660ee338e0f733d3946c9ed565964
           fetch-depth: 0
       - name: Add diagnostic breadcrumbs to the test runner
         shell: bash
@@ -67,6 +67,12 @@ jobs:
                       failures.append({'test':test.attrib,'xml':ET.tostring(test,encoding='unicode')[-22000:]})
           logs={p.name:p.read_text(errors='replace')[-25000:] for p in Path('native-out/logs').glob('*.log') if p.name in ['tests.log','build.log','configure.log']}
           Path('native-release-result.json').write_text(json.dumps({'diagnostic_failures':failures,'diagnostic_logs':logs}))
+          PY
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('scripts/write_ci_status.py')
+          s=p.read_text().replace("branch = ('ci-build-' + tag + '-' + platform) if platform else ('ci-release-' + tag)", "branch = 'ci-diagnostic-v0.9.3-windows-x86_64'")
+          p.write_text(s)
           PY
           python scripts/write_ci_status.py
       - uses: actions/upload-artifact@v4
