@@ -30,6 +30,13 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add tests/ProcessorTests.cpp
           git commit -m "Local Windows crash instrumentation"
+      - name: Make the MSVC sanitizer runtime available to build tools
+        shell: pwsh
+        run: |
+          $compilerRoot = & "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" -latest -property installationPath
+          $runtime = Get-ChildItem "$compilerRoot\VC\Tools\MSVC\*\bin\Hostx64\x64\clang_rt.asan_dynamic-x86_64.dll" | Select-Object -Last 1
+          if (-not $runtime) { throw "MSVC AddressSanitizer runtime not installed" }
+          $runtime.DirectoryName | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
       - name: Build with native address diagnostics
         env:
           CXXFLAGS: /fsanitize=address /Zi
