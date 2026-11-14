@@ -23,7 +23,9 @@ jobs:
           p=Path('tests/ProcessorTests.cpp')
           s=p.read_text(encoding='utf-8')
           s=s.replace('int main(int argc, char **argv) {','int main(int argc, char **argv) {\n    std::cout << std::unitbuf; std::cerr << std::unitbuf;')
-          s=re.sub(r'^(        )(\w+(?:::\w+)?\([^;\n]*\);)$',lambda m:m[1]+'std::cout << "ENTER '+m[2].replace('"','')+'\\n";\n'+m[0],s,flags=re.M)
+          prefix, main=s.split('int main(',1)
+          main=re.sub(r'^(        )((?:\w+_test::run|check\w+)\([^;\n]*\);)$',lambda m:m[1]+'std::cout << "ENTER '+m[2].replace('"','')+'\\n";\n'+m[0],main,flags=re.M)
+          s=prefix+'int main('+main
           p.write_text(s,encoding='utf-8')
           PY
           git config user.name "github-actions[bot]"
