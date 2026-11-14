@@ -1,21 +1,21 @@
 {
   "tag": "v0.9.3",
-  "automation_commit": "cd07f63eb5ef324fdea16dce3afbe1f7b6d7a225",
-  "run_id": "43647870669",
-  "run_url": "https://github.com/logik93/logisth/actions/runs/43647870669",
+  "automation_commit": "deaffb93eaf1aedd5892d8f34a2f731d2b8b9fba",
+  "run_id": "43650950217",
+  "run_url": "https://github.com/logik93/logisth/actions/runs/43650950217",
   "phase": "passed",
   "pipeline_phase": "passed",
   "stage": "",
-  "recorded_at": "2026-11-14T22:33:06.832154+00:00",
+  "recorded_at": "2026-11-14T23:08:54.586097+00:00",
   "platform": "linux-x86_64",
   "build": {
     "version": "0.9.3",
     "platform": "linux-x86_64",
-    "source_commit": "cd07f63eb5ef324fdea16dce3afbe1f7b6d7a225",
+    "source_commit": "deaffb93eaf1aedd5892d8f34a2f731d2b8b9fba",
     "source_fingerprint": {
-      "Source": "a4810a63a2155d70b568b6dfc5452f4c14a1fb26",
-      "CMakeLists.txt": "3f05ed55301fb234b86429897a922e7cde0c3e81",
-      "tests": "a2f4d4d3d9f1ff6283bb8f29af10ba2604bf6539",
+      "Source": "9818cfddb60efc69fb35616f83f02c082076d778",
+      "CMakeLists.txt": "ee3b1a369c00768ff5241ec9fd8512e413fbd7f5",
+      "tests": "402e7540cef6c6f21d8955c1acb1e93a201872b9",
       "assets": "09772e535138e7d7d5cd8cba0cbad0e6760d2fc4"
     },
     "tests": {
@@ -29,21 +29,21 @@
         "architectures": [
           "x86_64"
         ],
-        "sha256": "7dfac7e772f818da4a09713cc1682a14abaa66c603cfdef7e2ea31136eacfa55"
+        "sha256": "95e434d22c2986c8a09a17da1bb9ceaa00bdfb38467f2d757ad4f02b50a961de"
       },
       {
         "path": "CLAP/logisth.clap",
         "architectures": [
           "x86_64"
         ],
-        "sha256": "86913e9c351ddbc82ae97c87e7faca210e3293146854ea824cd632c0d5d4e54f"
+        "sha256": "b177f361aa28c8ad93d9280325e785fc47142d3cd382e5c835327f218eea8a6a"
       },
       {
         "path": "Standalone/logisth",
         "architectures": [
           "x86_64"
         ],
-        "sha256": "d00e66fb19f177e05b90a55ac1e8cb3272c3ff2a960454b1335a7c66e8712a8b"
+        "sha256": "80d9ed4232464cefe4387eab7284f05a80c04942188a92b80838e8225fb9866e"
       }
     ],
     "formats": [
@@ -51,10 +51,10 @@
       "CLAP",
       "Standalone"
     ],
-    "run_url": "https://github.com/logik93/logisth/actions/runs/43647870669",
+    "run_url": "https://github.com/logik93/logisth/actions/runs/43650950217",
     "signing": "unsigned",
     "minimum_glibc": "2.35",
     "archive": "logisth-0.9.3-linux-x86_64.tar.gz",
-    "archive_sha256": "d67e7287fae24605b8fcbf86264b639aa4d8c0de2adbaef2d6e09b747fbd369c"
+    "archive_sha256": "064418dae09cb6dfb7a87237489dbce0f966e830dc03eed29ed9f64dacb87bec"
   }
 }
