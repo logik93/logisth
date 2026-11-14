@@ -1,0 +1,19 @@
+{
+  "tag": "v0.9.3",
+  "automation_commit": "cd07f63eb5ef324fdea16dce3afbe1f7b6d7a225",
+  "run_id": "43647870669",
+  "run_url": "https://github.com/logik93/logisth/actions/runs/43647870669",
+  "phase": "failed",
+  "pipeline_phase": "failed",
+  "stage": "",
+  "recorded_at": "2026-11-14T22:29:36.399728+00:00",
+  "platform": "windows-x86_64",
+  "failures": [
+    {
+      "log": "native-out\\logs\\tests.log",
+      "errors": [
+        "The following tests FAILED:"
+      ]
+    }
+  ]
+}
