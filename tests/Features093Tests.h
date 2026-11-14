@@ -64,6 +64,16 @@ inline void run() {
     editor->snapshotPage(19);
     auto *view = console->findChildWithID("sample.waveform");
     check(view && view->isVisible(), "sample range editor is visible");
+    gain_test::set(p, "o1stretchmode", 6);
+    Thread::sleep(70);
+    Timer::callPendingTimersSynchronously();
+    check(console->findChildWithID("o1kickattack")->isVisible(),
+          "host-selected Kick mode reveals its attack control after refresh");
+    gain_test::set(p, "o1stretchmode", 0);
+    Thread::sleep(70);
+    Timer::callPendingTimersSynchronously();
+    check(!console->findChildWithID("o1kickattack")->isVisible(),
+          "leaving Kick mode hides its unused attack control");
     auto event = [&](Point<float> at, bool right = false) {
         return MouseEvent(Desktop::getInstance().getMainMouseSource(), at,
                           ModifierKeys(right ? ModifierKeys::rightButtonModifier

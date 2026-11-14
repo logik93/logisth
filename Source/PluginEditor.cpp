@@ -2538,8 +2538,8 @@ class LogisthEditor::Console : public Component,
             b->repaint();
         layoutStamp = currentLayoutState();
     }
-    std::array<int, 19> currentLayoutState() const {
-        std::array<int, 19> state{int(value(Param::sync)), int(value(Param::lfo1free)),
+    std::array<int, 23> currentLayoutState() const {
+        std::array<int, 23> state{int(value(Param::sync)), int(value(Param::lfo1free)),
                                   int(value(Param::lfo2free)), int(value(Param::arpmode) >= 8),
                                   int(value(Param::arppattern))};
         for (int o = 0; o < 4; ++o) {
@@ -2550,6 +2550,9 @@ class LogisthEditor::Console : public Component,
         state[14] = int(value(Param::eqmode));
         for (int i = 0; i < 4; ++i)
             state[size_t(15 + i)] = int(value(Param(size_t(Param::o1wave) + size_t(i) * 12)));
+        for (int i = 0; i < 4; ++i)
+            state[size_t(19 + i)] =
+                int(value(Param(size_t(Param::o1stretchmode) + size_t(i) * 10)));
         return state;
     }
     void timerCallback() override {
@@ -2899,7 +2902,7 @@ class LogisthEditor::Console : public Component,
     TooltipWindow tooltips;
     String readout, lastStatus;
     std::array<uint64_t, 4> displayedRevisions{};
-    std::array<int, 19> layoutStamp{};
+    std::array<int, 23> layoutStamp{};
     int selectedPart = 0, rack = 0, stepPage = 0, previewSync = -1;
 };
 LogisthEditor::LogisthEditor(LogisthProcessor &p) : AudioProcessorEditor(p) {
