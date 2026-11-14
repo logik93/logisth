@@ -46,6 +46,7 @@ inline void run() {
     for (size_t i = 0; i < parameterCount; ++i)
         check(std::abs(p.state.getParameter(parameterSpecs[i].id)->getValue() - before[i]) < 1e-6,
               "Undo restores every changed parameter");
+    gain_test::set(p, "o1engine", 2);
     std::unique_ptr<AudioProcessorEditor> ui(p.createEditor());
     auto *editor = dynamic_cast<LogisthEditor *>(ui.get());
     auto *console = ui->getChildComponent(0);
@@ -64,14 +65,25 @@ inline void run() {
     editor->snapshotPage(19);
     auto *view = console->findChildWithID("sample.waveform");
     check(view && view->isVisible(), "sample range editor is visible");
+    auto waitForKickControl = [&](bool visible) {
+        for (int retry = 0; retry < 50; ++retry) {
+            Timer::callPendingTimersSynchronously();
+            if (console->findChildWithID("o1kickattack")->isVisible() == visible)
+                return;
+            Thread::sleep(20);
+        }
+    };
     gain_test::set(p, "o1stretchmode", 6);
-    Thread::sleep(70);
-    Timer::callPendingTimersSynchronously();
+    waitForKickControl(true);
+    if (!console->findChildWithID("o1kickattack")->isVisible()) {
+        auto *page = dynamic_cast<ComboBox *>(console->findChildWithID("source.view.0"));
+        std::cerr << "Kick UI diagnostic: page " << page->getSelectedId() << " mode "
+                  << p.state.getRawParameterValue("o1stretchmode")->load() << '\n';
+    }
     check(console->findChildWithID("o1kickattack")->isVisible(),
           "host-selected Kick mode reveals its attack control after refresh");
     gain_test::set(p, "o1stretchmode", 0);
-    Thread::sleep(70);
-    Timer::callPendingTimersSynchronously();
+    waitForKickControl(false);
     check(!console->findChildWithID("o1kickattack")->isVisible(),
           "leaving Kick mode hides its unused attack control");
     auto event = [&](Point<float> at, bool right = false) {
@@ -116,6 +128,17 @@ inline void run() {
               decoded.skin == "ap-flexin",
           "AP skin property survives theme encoding");
     ui.reset();
+    {
+        LogisthProcessor closed;
+        gain_test::set(closed, "o1engine", 2);
+        gain_test::set(closed, "o1stretchmode", 7);
+        for (int retry = 0; retry < 200 && !closed.spectralReady(0); ++retry)
+            Thread::sleep(10);
+        check(closed.spectralReady(0),
+              "Spectral preparation works with no editor or message-loop dispatch");
+        closed.prepareToPlay(96000, 256);
+        check(closed.spectralReady(0), "sample-rate preparation supersedes stale background jobs");
+    }
     gain_test::cleanSine(p);
     gain_test::set(p, "o1engine", 2);
     gain_test::set(p, "o1stretchmode", 6);

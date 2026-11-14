@@ -201,6 +201,25 @@ int main() {
             check(near > wrong * 100 + 1e-5,
                   "spectral pitch accuracy persists at all supported test sample rates");
         }
+        {
+            SpectralStream stream(48000);
+            SamplerPlayer player;
+            for (int i = 0; i < 5000; ++i)
+                player.tick(data, 2, 48000, 0, 1, true, false, 7, 1, 0);
+            player.spectral = &stream;
+            watchAlloc = true;
+            float previous = 0;
+            for (int i = 0; i < 10000; ++i) {
+                auto x = player.tick(data, 2, 48000, 0, 1, true, false, 7, 1, 0)[0];
+                check(std::isfinite(x) && std::abs(x) < 2,
+                      "background-ready spectral handoff remains finite");
+                if (i > 0)
+                    check(std::abs(x - previous) < .25f,
+                          "late spectral readiness crossfades without a hard step");
+                previous = x;
+            }
+            watchAlloc = false;
+        }
         SourceData cropped;
         cropped.sampleRate = 48000;
         for (auto &ch : cropped.samples) {

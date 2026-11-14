@@ -35,6 +35,7 @@ class LogisthProcessor : public juce::AudioProcessor {
     void randomisePattern();
     void serviceAssets();
     void ensureSpectral(bool synchronous = false);
+    bool spectralReady(int slot) const;
     std::atomic<int> arpPlayhead{-1};
     logisth::ScopeBuffer scope;
     std::array<logisth::ScopeBuffer, 4> playerScopes;
@@ -152,6 +153,7 @@ class LogisthProcessor : public juce::AudioProcessor {
     std::vector<std::shared_ptr<logisth::SpectralBank>> retiredSpectral;
     std::atomic<logisth::SpectralBank *> spectralPointer{nullptr};
     std::atomic<bool> spectralPending{false};
+    std::atomic<uint64_t> spectralGeneration{0};
     std::atomic<double> spectralRate{44100};
     std::array<std::shared_ptr<const logisth::SourceData>, 4> sourceOwners;
     std::array<std::atomic<const logisth::SourceData *>, 4> sourcePointers{};
@@ -179,6 +181,20 @@ class LogisthProcessor : public juce::AudioProcessor {
     std::array<std::array<float, 512>, 4> playerTraces{};
     std::array<float, 512> driveMod{}, phaserMod{}, partScopeA{}, partScopeB{};
     std::atomic<int> uiChanges{0};
+    class PreparationThread final : public juce::Thread {
+        LogisthProcessor &owner;
+
+      public:
+        explicit PreparationThread(LogisthProcessor &p)
+            : juce::Thread("logisth preparation"), owner(p) {}
+        void run() override {
+            while (!threadShouldExit()) {
+                owner.serviceAssets();
+                wait(100);
+            }
+        }
+    };
+    PreparationThread preparation{*this};
     float masterSmooth = 0;
     double bpm = 120;
     bool wasPlaying = false, clockAvailable = false;

@@ -260,7 +260,9 @@ at 44.1/48/96 kHz); pitch mapping spans ±8 octaves. Unison buffers are prepared
 only for the spectral players and unison counts requested. Signalsmith buffers
 are prepared on the control/import thread, never allocated
 inside sample processing. On first selection a status message indicates preparation;
-the existing time-domain path continues until ready. Spectral quality costs more
+the existing time-domain path continues until ready, then crossfades over 20 ms.
+Preparation runs with the editor closed as well; changes in host sample rate
+supersede stale preparation jobs. Spectral quality costs more
 CPU and memory; extreme factors can create audible artifacts. Test your own kicks
 before committing a track; the included synthetic benchmark is a regression fixture.
 

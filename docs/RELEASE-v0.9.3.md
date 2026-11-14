@@ -12,7 +12,9 @@ Kick retains 0–100 ms of original attack (25 ms default), then crossfades over
 8 ms to its pitched/stretched tail. Time Factor remains independent from note
 pitch. This is an independent hybrid, not Nimble Kick's Time Machine algorithm.
 Analysis-window duration scales with host sample rate; prepared unison capacity
-grows as needed. Processing buffers are prepared outside the audio callback. Sinc resampling,
+grows as needed. Processing buffers are prepared outside the audio callback, including with the
+editor closed. Preparation jobs have generation checks, and late readiness
+crossfades from the existing path. Sinc resampling,
 20 ms algorithm switches and one-shot end fades remain available.
 
 The SAMPLE view supports pointer-anchored wheel zoom, Shift-wheel pan, drag

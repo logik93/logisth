@@ -55,7 +55,8 @@ struct SamplerPlayer {
     double elapsedSamples = 0;
     SpectralStream *spectral = nullptr;
     uint64_t token = 0;
-    bool spectralReset = true;
+    bool spectralReset = true, spectralWasReady = false;
+    float spectralBlend = 1;
     int algorithm = -1;
     bool finished = false, started = false;
     void reset() {
@@ -105,6 +106,27 @@ struct SamplerPlayer {
             auto out = spectral->tick(read, cursor, step, float(ratio), timeFactor, token,
                                       data.revision, spectralReset);
             spectralReset = false;
+            if (!spectralWasReady) {
+                spectralWasReady = true;
+                spectralBlend = started ? 0.f : 1.f;
+            }
+            if (spectralBlend < 1) {
+                auto *savedStream = spectral;
+                double savedCursor = cursor, savedElapsed = elapsedSamples, savedStretch = stretch;
+                bool savedFinished = finished;
+                spectral = nullptr;
+                auto old = tick(data, ratio, sr, begin, end, loop, reverse, mode, factor,
+                                interpolation, width, fmOffset, kickAttack);
+                spectral = savedStream;
+                cursor = savedCursor;
+                elapsedSamples = savedElapsed;
+                stretch = savedStretch;
+                finished = savedFinished;
+                spectralBlend = std::min(1.f, spectralBlend + float(1 / (sr * .02)));
+                for (int ch = 0; ch < 2; ++ch)
+                    out[size_t(ch)] =
+                        old[size_t(ch)] + (out[size_t(ch)] - old[size_t(ch)]) * spectralBlend;
+            }
             if (mode == 6) {
                 float mix = float(std::clamp((elapsedSamples - attack) / (sr * .008), 0., 1.));
                 for (int ch = 0; ch < 2; ++ch)

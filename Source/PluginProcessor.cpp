@@ -37,6 +37,7 @@ LogisthProcessor::LogisthProcessor()
         map->set(i, 1);
     publishChords(map);
     loadPreset(0);
+    preparation.startThread();
 }
 Params LogisthProcessor::snapshot() const {
     Params p;

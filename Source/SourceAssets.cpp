@@ -2,6 +2,7 @@
 using namespace juce;
 using namespace logisth;
 LogisthProcessor::~LogisthProcessor() {
+    preparation.stopThread(-1);
     importWorkers.removeAllJobs(true, -1);
 }
 void LogisthProcessor::serviceAssets() {
@@ -479,20 +480,22 @@ bool LogisthProcessor::restoreAssets(const ValueTree &tree) {
 void LogisthProcessor::ensureSpectral(bool synchronous) {
     unsigned wanted = 0;
     std::array<int, 4> unisons{};
-    for (int i = 0; i < 4; ++i) {
-        auto prefix = "o" + String(i + 1);
-        unisons[size_t(i)] =
-            jlimit(1, 8, int(state.getRawParameterValue(prefix + "voices")->load()));
-        int mode = int(state.getRawParameterValue(prefix + "stretchmode")->load());
-        if (state.getRawParameterValue(prefix + "engine")->load() == 2 && (mode == 6 || mode == 7))
-            wanted |= 1u << i;
-    }
-    if (!wanted)
-        return;
-    double rate = spectralRate.load();
+    double rate = 0;
+    uint64_t generation = 0;
     std::shared_ptr<SpectralBank> previous;
     {
         const ScopedLock lock(assetLock);
+        for (int i = 0; i < 4; ++i) {
+            unisons[size_t(i)] =
+                jlimit(1, 8, int(raw[size_t(Param::o1voices) + size_t(i) * 12]->load()));
+            int mode = int(raw[size_t(Param::o1stretchmode) + size_t(i) * 10]->load());
+            if (raw[size_t(Param::o1engine) + size_t(i) * 16]->load() == 2 &&
+                (mode == 6 || mode == 7))
+                wanted |= 1u << i;
+        }
+        if (!wanted)
+            return;
+        rate = spectralRate.load();
         previous = spectralOwner;
         if (previous && previous->rate == rate) {
             bool enough = (previous->mask & wanted) == wanted;
@@ -505,18 +508,18 @@ void LogisthProcessor::ensureSpectral(bool synchronous) {
                 return;
             wanted |= previous->mask;
         }
-    }
-    if (spectralPending.exchange(true))
-        return;
-    {
-        const ScopedLock lock(assetLock);
+        if (!synchronous && spectralPending.exchange(true))
+            return;
+        if (synchronous)
+            spectralPending = true;
+        generation = ++spectralGeneration;
         assetStatus = "Preparing spectral processing buffers...";
     }
-    auto build = [this, previous, wanted, rate, unisons] {
+    auto build = [this, previous, wanted, rate, unisons, generation] {
         try {
             auto next = std::make_shared<SpectralBank>(rate, wanted, unisons, previous);
             const ScopedLock lock(assetLock);
-            if (spectralRate.load() == rate) {
+            if (spectralRate.load() == rate && spectralGeneration.load() == generation) {
                 if (spectralOwner)
                     retiredSpectral.push_back(spectralOwner);
                 spectralOwner = std::move(next);
@@ -525,12 +528,22 @@ void LogisthProcessor::ensureSpectral(bool synchronous) {
             }
         } catch (const std::bad_alloc &) {
             const ScopedLock lock(assetLock);
-            assetStatus = "Spectral engine could not allocate its processing buffers.";
+            if (spectralGeneration.load() == generation)
+                assetStatus = "Spectral engine could not allocate its processing buffers.";
         }
-        spectralPending = false;
+        if (spectralGeneration.load() == generation)
+            spectralPending = false;
     };
     if (synchronous)
         build();
     else
         importWorkers.addJob(std::move(build));
+}
+
+bool LogisthProcessor::spectralReady(int slot) const {
+    const ScopedLock lock(assetLock);
+    return slot >= 0 && slot < 4 && spectralOwner && spectralOwner->rate == spectralRate.load() &&
+           (spectralOwner->mask & (1u << slot)) &&
+           spectralOwner->capacity[size_t(slot)] >=
+               jlimit(1, 8, int(raw[size_t(Param::o1voices) + size_t(slot) * 12]->load()));
 }
