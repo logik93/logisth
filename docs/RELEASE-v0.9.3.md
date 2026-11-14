@@ -34,7 +34,7 @@ violet accents and the white AP mark. The handwritten signature is removed at
 the project owner's request. The skin and logo are embedded/packaged; no extra
 font software is required. Five previous standard palettes remain available.
 
-Voice resets reconstruct their prepared storage in place, removing large stack
+Voice resets copy a prepared heap-backed template in place, removing large stack
 temporaries from note-on, voice stealing, mono, polyphony changes and All Sound
 Off. This fixes a Windows integration-test stack overflow; a dedicated 128 KiB
 thread regression now covers those paths with every source engine.

@@ -6,7 +6,8 @@
 #include "SourceData.h"
 #include "Telemetry.h"
 #include <cstdint>
-#include <new>
+#include <cstring>
+#include <type_traits>
 namespace logisth {
 struct OscParams {
     int wave = 1, unison = 1;
@@ -103,17 +104,19 @@ class Engine {
         std::array<float, 2> cutoff{5000, 5000};
         std::array<LfoState, 2> lfo{};
         ModValues previous{};
-        void reset() noexcept {
-            // Reconstruct in place: a whole-Voice temporary can exhaust an audio
-            // thread's small Windows stack. Placement new does not allocate.
-            this->~Voice();
-            ::new (static_cast<void *>(this)) Voice{};
-        }
         bool active() const {
             return amp[0].active() || amp[1].active();
         }
     };
+    static_assert(std::is_trivially_copyable_v<Voice>,
+                  "Voice resets must remain allocation-free copies of prepared storage");
     std::vector<Voice> voices = std::vector<Voice>(16);
+    const std::unique_ptr<const Voice> initialVoice = std::make_unique<Voice>();
+    void clearVoice(Voice &voice) const noexcept {
+        // MSVC can materialize nested aggregate initializers on the audio stack,
+        // even for placement construction. Copy an already prepared heap object.
+        std::memcpy(&voice, initialVoice.get(), sizeof(Voice));
+    }
     std::array<PlaybackPicture, 4> pictures{};
     std::array<float, 16> bend{}, wheel{}, pressure{};
     std::array<bool, 16> sustain{};
@@ -259,7 +262,7 @@ class Engine {
     }
     void reset() {
         for (auto &voice : voices)
-            voice.reset();
+            clearVoice(voice);
         bend = {};
         wheel = {};
         pressure = {};
@@ -303,7 +306,7 @@ class Engine {
         if (p.monoLegato) {
             selected = &voices[0];
             for (size_t i = 1; i < voices.size(); ++i)
-                voices[i].reset();
+                clearVoice(voices[i]);
             if (selected->active() && overlap) {
                 selected->glideStep = std::abs(float(note) - selected->pitch) /
                                       float(std::max(1., p.portamento * sr));
@@ -326,7 +329,7 @@ class Engine {
             selected = &*std::min_element(voices.begin(), voices.begin() + limit,
                                           [](auto &a, auto &b) { return a.age < b.age; });
         auto &v = *selected;
-        v.reset();
+        clearVoice(v);
         v.note = note;
         v.channel = channel;
         v.held = true;
@@ -425,7 +428,7 @@ class Engine {
             for (auto &v : voices)
                 if (v.channel == channel) {
                     if (cc == 120)
-                        v.reset();
+                        clearVoice(v);
                     else
                         releaseVoice(v, p);
                 }
@@ -460,7 +463,7 @@ class Engine {
         const double phaseSmoothing = 1 - std::exp(-1 / (.005 * sr));
         const int limit = p.monoLegato ? 1 : std::clamp(p.polyphony, 1, 16);
         for (size_t i = size_t(limit); i < voices.size(); ++i)
-            voices[i].reset();
+            clearVoice(voices[i]);
         for (int s = 0; s < count; ++s) {
             float out[2]{};
             float parts[2]{};

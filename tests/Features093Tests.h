@@ -8,7 +8,8 @@ inline void run() {
         if (!ok)
             throw std::runtime_error(message);
     };
-    LogisthProcessor p;
+    auto processor = std::make_unique<LogisthProcessor>();
+    auto &p = *processor;
     gain_test::set(p, "m1target1", 1);
     gain_test::set(p, "m1low1", .2f);
     gain_test::set(p, "m1high1", .8f);
@@ -19,7 +20,8 @@ inline void run() {
     p.setMutationLocks(5);
     TemporaryFile preset(".logisth");
     check(p.savePresetFile(preset.getFile()).wasOk(), "MORPH preset saves");
-    LogisthProcessor restored;
+    auto restoredProcessor = std::make_unique<LogisthProcessor>();
+    auto &restored = *restoredProcessor;
     check(restored.loadPresetFile(preset.getFile()).wasOk(), "MORPH preset loads");
     check(restored.macroName(0) == p.macroName(0) && restored.mutationLocks() == 5,
           "macro names and mutation locks persist in presets");
@@ -129,7 +131,8 @@ inline void run() {
           "AP skin property survives theme encoding");
     ui.reset();
     {
-        LogisthProcessor closed;
+        auto closedProcessor = std::make_unique<LogisthProcessor>();
+        auto &closed = *closedProcessor;
         gain_test::set(closed, "o1engine", 2);
         gain_test::set(closed, "o1stretchmode", 7);
         for (int retry = 0; retry < 200 && !closed.spectralReady(0); ++retry)

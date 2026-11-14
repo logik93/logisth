@@ -249,6 +249,22 @@ int main() {
         }
         check(allocations.load() == 0,
               "prepared spectral and time-domain engines do not allocate during processing");
+        {
+            Engine realtime;
+            auto params = clean();
+            realtime.prepare(48000);
+            float left[64]{}, right[64]{};
+            watchAlloc = true;
+            for (int note = 48; note < 80; ++note) {
+                realtime.noteOn(note, .8f, 1, params);
+                realtime.render(left, right, 64, params);
+                realtime.controller(1, 120, 0, params);
+                realtime.reset();
+            }
+            watchAlloc = false;
+            check(allocations.load() == 0,
+                  "prepared note-on, All Sound Off and voice resets never allocate");
+        }
         check(small_stack_test::check(),
               "note-on, stealing, mono, polyphony changes and reset fit a 128 KiB audio stack");
         std::array<float, parameterCount> values{};
