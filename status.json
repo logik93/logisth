@@ -1,12 +1,12 @@
 {
   "tag": "v0.9.3",
-  "automation_commit": "7421b97c5d45e605df0e79e663ff62e95a75eeec",
-  "run_id": "43648545185",
-  "run_url": "https://github.com/logik93/logisth/actions/runs/43648545185",
+  "automation_commit": "e1bb2852b6304328e1e5bf57d68a9258d694481c",
+  "run_id": "43648628032",
+  "run_url": "https://github.com/logik93/logisth/actions/runs/43648628032",
   "phase": "failed",
   "pipeline_phase": "failed",
   "stage": "",
-  "recorded_at": "2026-11-14T22:31:47.920413+00:00",
+  "recorded_at": "2026-11-14T22:32:41.221266+00:00",
   "platform": "windows-x86_64",
   "failures": [
     {
@@ -34,7 +34,8 @@
         "time": "4.75404",
         "status": "fail"
       },
-      "output": "\n\t\t\n\t\t\n\t\t\n\t"
+      "xml": "<testcase name=\"processor\" classname=\"processor\" time=\"4.75404\" status=\"fail\">\n\t\t<failure message=\"SEGFAULT\" />\n\t\t<properties />\n\t\t<system-out />\n\t</testcase>\n"
     }
-  ]
+  ],
+  "diagnostic_log": "Internal ctest changing into directory: D:/a/logisth/logisth/build\nTest project D:/a/logisth/logisth/build\n    Start 1: engine\n1/9 Test #1: engine ...........................   Passed    1.93 sec\n    Start 2: Modulation\n2/9 Test #2: Modulation .......................   Passed    0.26 sec\n    Start 3: Arpeggiator\n3/9 Test #3: Arpeggiator ......................   Passed    0.01 sec\n    Start 4: Hybrid\n4/9 Test #4: Hybrid ...........................   Passed    6.54 sec\n    Start 5: Studio\n5/9 Test #5: Studio ...........................   Passed    0.01 sec\n    Start 6: Reverb\n6/9 Test #6: Reverb ...........................   Passed   11.09 sec\n    Start 7: Advanced\n7/9 Test #7: Advanced .........................   Passed    0.70 sec\n    Start 8: Performance\n8/9 Test #8: Performance ......................   Passed    0.68 sec\n    Start 9: processor\n9/9 Test #9: processor ........................***Exception: SegFault  4.75 sec\n\n\n89% tests passed, 1 tests failed out of 9\n\nTotal Test time (real) =  26.01 sec\n\nThe following tests FAILED:\n\t  9 - processor (SEGFAULT)\nErrors while running CTest\n"
 }
