@@ -55,7 +55,8 @@ inline void run() {
     for (auto &stock : ThemeSettings::defaults())
         check(directory.getChildFile(stock.key + ".json").existsAsFile(),
               "chosen theme folder contains the six standard files");
-    LogisthProcessor p;
+    auto pInstance = std::make_unique<LogisthProcessor>();
+    auto &p = *pInstance;
     std::unique_ptr<AudioProcessorEditor> ui(p.createEditor());
     auto *console = ui->getChildComponent(0);
     dynamic_cast<Button *>(console->findChildWithID("ui.settings"))->onClick();

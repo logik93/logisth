@@ -46,7 +46,8 @@ inline void run() {
     check(ThemeSettings::choose(2) && ThemeSettings::window().width == 1705,
           "theme changes retain the saved window size");
     {
-        LogisthProcessor p;
+        auto pInstance = std::make_unique<LogisthProcessor>();
+        auto &p = *pInstance;
         std::unique_ptr<AudioProcessorEditor> ui(p.createEditor());
         auto *editor = dynamic_cast<LogisthEditor *>(ui.get());
         check(editor != nullptr, "appearance fixture editor");
@@ -60,7 +61,8 @@ inline void run() {
         check(scale && scale->getText() == "137.5%",
               "Settings displays the last scale and allows typed values");
         {
-            LogisthProcessor peer;
+            auto peerInstance = std::make_unique<LogisthProcessor>();
+            auto &peer = *peerInstance;
             std::unique_ptr<AudioProcessorEditor> peerUi(peer.createEditor());
             scale->setText("142.25%", sendNotificationSync);
             check(editor->uiScale() == 142.25 && ui->getWidth() == 1764 && ui->getHeight() == 1223,
@@ -143,7 +145,8 @@ inline void run() {
         ui->setSize(1550, 1075);
     }
     {
-        LogisthProcessor p;
+        auto pInstance = std::make_unique<LogisthProcessor>();
+        auto &p = *pInstance;
         std::unique_ptr<AudioProcessorEditor> ui(p.createEditor());
         check(ui->getWidth() == 1550 && ui->getHeight() == 1075,
               "closing after a host resize saves the exact last size");
@@ -161,7 +164,8 @@ inline void run() {
 }
 inline void preview(const File &folder) {
     folder.createDirectory();
-    LogisthProcessor p;
+    auto pInstance = std::make_unique<LogisthProcessor>();
+    auto &p = *pInstance;
     std::unique_ptr<AudioProcessorEditor> ui(p.createEditor());
     auto *editor = dynamic_cast<LogisthEditor *>(ui.get());
     check(editor != nullptr, "preview editor");

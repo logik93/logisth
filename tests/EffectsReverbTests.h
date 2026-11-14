@@ -10,7 +10,8 @@ inline void run() {
             throw std::runtime_error(text);
     };
     std::vector<float> previous;
-    LogisthProcessor processor;
+    auto processorInstance = std::make_unique<LogisthProcessor>();
+    auto &processor = *processorInstance;
     for (int type = 0; type < 5; ++type) {
         gain_test::cleanSine(processor);
         gain_test::set(processor, "reverbon", 1);
@@ -80,7 +81,8 @@ inline void run() {
     TemporaryFile preset(".logisth");
     check(processor.savePresetFile(preset.getFile()).wasOk(),
           "new reverb settings save in user presets");
-    LogisthProcessor restored;
+    auto restoredInstance = std::make_unique<LogisthProcessor>();
+    auto &restored = *restoredInstance;
     check(restored.loadPresetFile(preset.getFile()).wasOk(),
           "new reverb settings load from user presets");
     for (auto v : values)

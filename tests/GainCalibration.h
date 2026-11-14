@@ -104,7 +104,8 @@ inline void run(bool verify, const juce::File &folder = {}) {
                   << " dBFS RMS\n";
     };
     for (double rate : {44100., 48000., 96000.}) {
-        LogisthProcessor p;
+        auto pInstance = std::make_unique<LogisthProcessor>();
+        auto &p = *pInstance;
         cleanSine(p);
         juce::AudioBuffer<float> audio;
         auto r = measure(p, rate, {69}, 1, 2, folder == juce::File{} ? nullptr : &audio);
@@ -145,7 +146,8 @@ inline void run(bool verify, const juce::File &folder = {}) {
     }
     // Linear faders, MIDI velocity, pan law and coherent summing must stay predictable.
     {
-        LogisthProcessor p;
+        auto pInstance = std::make_unique<LogisthProcessor>();
+        auto &p = *pInstance;
         auto test = [&](const char *name, double expected) {
             auto result = measure(p, 48000);
             row(name, 48000, result);
@@ -253,7 +255,8 @@ inline void run(bool verify, const juce::File &folder = {}) {
                                   "Sequence", "Wavetable", "Sampler", "Grains",     "Chord pulse"};
     for (double rate : {44100., 48000., 96000.})
         for (int i = 0; i < 10; ++i) {
-            LogisthProcessor p;
+            auto pInstance = std::make_unique<LogisthProcessor>();
+            auto &p = *pInstance;
             p.loadPreset(i);
             auto result = measure(p, rate, {48, 55, 60, 64}, .8f, 6, nullptr, false);
             row(names[i], rate, result);

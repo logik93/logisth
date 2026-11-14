@@ -81,10 +81,49 @@ jobs:
           REPORT_PHASE: ${{ job.status == 'success' && 'passed' || 'failed' }}
         run: python scripts/write_ci_status.py
 
+  windows_asan:
+    name: Windows AddressSanitizer regression
+    runs-on: windows-2022
+    timeout-minutes: 45
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.release_tag || github.ref }}
+          fetch-depth: 0
+      - name: Locate the MSVC AddressSanitizer runtime
+        shell: pwsh
+        run: |
+          $compilerRoot = & "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" -latest -property installationPath
+          $runtime = Get-ChildItem "$compilerRoot\VC\Tools\MSVC\*\bin\Hostx64\x64\clang_rt.asan_dynamic-x86_64.dll" | Select-Object -Last 1
+          if (-not $runtime) { throw "MSVC AddressSanitizer runtime not installed" }
+          $runtime.DirectoryName | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+      - name: Build and run native memory regressions
+        env:
+          CXXFLAGS: /fsanitize=address /Zi
+          LDFLAGS: /INCREMENTAL:NO /DEBUG
+        run: python scripts/build_native.py --platform windows-x86_64 --output native-out --parallel 2
+      - name: Retain memory diagnostics only
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-windows-asan-logs
+          path: native-out/logs/
+          if-no-files-found: error
+          retention-days: 14
+      - name: Record memory regression result separately
+        if: always() && github.event_name != 'pull_request'
+        env:
+          REPORT_PLATFORM: windows-x86_64
+          REPORT_CHECK: windows-asan
+          REPORT_PHASE: ${{ job.status == 'success' && 'passed' || 'failed' }}
+        run: python scripts/write_ci_status.py
+
   publish:
     name: Publish Windows and Linux
     if: github.event_name != 'pull_request'
-    needs: plugins
+    needs: [plugins, windows_asan]
     runs-on: ubuntu-22.04
     permissions:
       contents: write
@@ -110,7 +149,7 @@ jobs:
   report_initial:
     name: Report available Windows and Linux downloads
     if: always() && github.event_name != 'pull_request'
-    needs: [started, plugins, publish]
+    needs: [started, plugins, windows_asan, publish]
     runs-on: ubuntu-22.04
     permissions:
       contents: write
@@ -193,7 +232,7 @@ jobs:
   report_final:
     name: Report complete release or pending macOS
     if: always() && github.event_name != 'pull_request'
-    needs: [started, plugins, publish, report_initial, macos, publish_macos]
+    needs: [started, plugins, windows_asan, publish, report_initial, macos, publish_macos]
     runs-on: ubuntu-22.04
     permissions:
       contents: write

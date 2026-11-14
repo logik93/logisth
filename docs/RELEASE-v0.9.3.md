@@ -48,6 +48,9 @@ and attack-error/peak readings. It is a repeatable fixture, not a substitute for
 listening to the user's own hardstyle material before a future 1.0.0 release.
 
 Build configuration requires 11 passing Linux suites and 9 on Windows/macOS.
+A separate Windows AddressSanitizer build gates publication too. Integration
+fixtures are heap allocated to model DAW instances without exhausting a Windows
+test thread's stack. Sanitizer binaries are excluded from release downloads.
 Native formats remain VST3, CLAP and Standalone; VST2 needs a separately licensed
 SDK and is excluded. Platform packages are published only after their own native
 build/test/architecture checks. Windows and Linux are published first; the

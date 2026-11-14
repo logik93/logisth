@@ -25,7 +25,8 @@ void checkEnvelopeMidiEdges() {
                 for (int blockSize : {1, 31, 257, 512}) {
                     // Fresh instances share the same initial RNG state, so even
                     // the noise waveform can be compared sample for sample.
-                    LogisthProcessor p;
+                    auto pInstance = std::make_unique<LogisthProcessor>();
+                    auto &p = *pInstance;
                     gain_test::cleanSine(p);
                     gain_test::set(p, "o1wave", float(wave));
                     gain_test::set(p, "o1phase", 90);
@@ -181,7 +182,8 @@ void checkHybridProcessor() {
         check(writer->writeFromAudioSampleBuffer(sample, 0, sample.getNumSamples()),
               "hybrid test WAV file");
     }
-    LogisthProcessor original;
+    auto originalInstance = std::make_unique<LogisthProcessor>();
+    auto &original = *originalInstance;
     auto result = original.loadSource(0, temporary.getFile(), 512);
     if (result.failed())
         throw std::runtime_error(result.getErrorMessage().toStdString());
@@ -230,7 +232,8 @@ void checkHybridProcessor() {
     MemoryBlock state;
     original.getStateInformation(state);
     temporary.getFile().deleteFile();
-    LogisthProcessor restored;
+    auto restoredInstance = std::make_unique<LogisthProcessor>();
+    auto &restored = *restoredInstance;
     restored.setStateInformation(state.getData(), int(state.getSize()));
     check(restored.sourceData(0)->samples == source->samples &&
               restored.sourceData(0)->frameSize == 512,
@@ -327,7 +330,8 @@ void checkHybridProcessor() {
 
 void checkStudioProcessor() {
     using namespace juce;
-    LogisthProcessor p;
+    auto pInstance = std::make_unique<LogisthProcessor>();
+    auto &p = *pInstance;
     auto set = [&](const String &id, float value) {
         auto *param = p.state.getParameter(id);
         check(param != nullptr, "studio parameter exists");
@@ -398,7 +402,8 @@ void checkStudioProcessor() {
 void checkWavetableAndModeViews() {
     using namespace juce;
     using namespace logisth;
-    LogisthProcessor p;
+    auto pInstance = std::make_unique<LogisthProcessor>();
+    auto &p = *pInstance;
     TemporaryFile file(".wav");
     auto writeBank = [&](int frames, int size, bool metadata) {
         {
@@ -511,7 +516,8 @@ void checkWavetableAndModeViews() {
 void checkWavetableRoutingAndDetune() {
     using namespace juce;
     using namespace logisth;
-    LogisthProcessor p;
+    auto pInstance = std::make_unique<LogisthProcessor>();
+    auto &p = *pInstance;
     std::unique_ptr<AudioProcessorEditor> editor(p.createEditor());
     auto *console = editor->getChildComponent(0);
     auto widget = [&](const String &id, bool menu) -> Component * {
@@ -592,7 +598,8 @@ void checkWavetableRoutingAndDetune() {
             ->setValue(100, sendNotificationSync);
     MemoryBlock saved;
     p.getStateInformation(saved);
-    LogisthProcessor restored;
+    auto restoredInstance = std::make_unique<LogisthProcessor>();
+    auto &restored = *restoredInstance;
     restored.setStateInformation(saved.getData(), int(saved.getSize()));
     for (int slot = 1; slot <= 4; ++slot)
         check(restored.state.getRawParameterValue("o" + String(slot) + "detune")->load() == 100,
@@ -603,7 +610,8 @@ void checkWavetableRoutingAndDetune() {
 void checkStartupCommentsAndThemes() {
     using namespace juce;
     using namespace logisth;
-    LogisthProcessor p;
+    auto pInstance = std::make_unique<LogisthProcessor>();
+    auto &p = *pInstance;
     auto get = [&](const String &id) { return p.state.getRawParameterValue(id)->load(); };
     check(p.currentPresetName() == "Init / saw" && get("master") == .65f,
           "new instances select the clean saw preset at Main 65 percent");
@@ -664,7 +672,8 @@ void checkStartupCommentsAndThemes() {
           "user preset round-trip retains comment, Main and individual WT routing");
     MemoryBlock project;
     p.getStateInformation(project);
-    LogisthProcessor restored;
+    auto restoredInstance = std::make_unique<LogisthProcessor>();
+    auto &restored = *restoredInstance;
     restored.setStateInformation(project.getData(), int(project.getSize()));
     check(restored.presetComment() == comment &&
               std::abs(restored.state.getRawParameterValue("master")->load() - .29f) < .00001,
@@ -705,7 +714,8 @@ void checkStartupCommentsAndThemes() {
         auto image = editor->snapshotTheme(choice);
         check(image.isValid() && editor->selectedTheme() == choice,
               "every theme and About panel renders without changing the selection");
-        LogisthProcessor next;
+        auto nextInstance = std::make_unique<LogisthProcessor>();
+        auto &next = *nextInstance;
         std::unique_ptr<AudioProcessorEditor> fresh(next.createEditor());
         auto *other = dynamic_cast<LogisthEditor *>(fresh.get());
         check(other && other->selectedTheme() == choice &&
@@ -718,7 +728,8 @@ void checkStartupCommentsAndThemes() {
               "user-preset loading also keeps the current theme");
     }
     {
-        LogisthProcessor peer;
+        auto peerInstance = std::make_unique<LogisthProcessor>();
+        auto &peer = *peerInstance;
         std::unique_ptr<AudioProcessorEditor> peerUi(peer.createEditor());
         auto *peerEditor = dynamic_cast<LogisthEditor *>(peerUi.get());
         editor->setTheme(2);
@@ -731,7 +742,8 @@ void checkStartupCommentsAndThemes() {
 }
 void checkPointerInteraction() {
     using namespace juce;
-    LogisthProcessor p;
+    auto pInstance = std::make_unique<LogisthProcessor>();
+    auto &p = *pInstance;
     p.loadPreset(0);
     std::unique_ptr<AudioProcessorEditor> ui(p.createEditor());
     ui->setSize(1240, 860);
@@ -844,7 +856,8 @@ void checkLongSourceAndDrop() {
         for (int second = 0; second < 60; ++second)
             check(writer->writeFromAudioSampleBuffer(block, 0, 48000), "long sample fixture write");
     }
-    LogisthProcessor p;
+    auto pInstance = std::make_unique<LogisthProcessor>();
+    auto &p = *pInstance;
     std::unique_ptr<AudioProcessorEditor> ui(p.createEditor());
     auto *editor = dynamic_cast<LogisthEditor *>(ui.get());
     editor->snapshotPage(8);
@@ -929,6 +942,8 @@ void checkLongSourceAndDrop() {
 }
 
 int main(int argc, char **argv) {
+    std::cout << std::unitbuf;
+    std::cerr << std::unitbuf;
     try {
         juce::ScopedJuceInitialiser_GUI gui;
         juce::TemporaryFile themePreferences(".json");
@@ -991,7 +1006,8 @@ int main(int argc, char **argv) {
         checkWavetableRoutingAndDetune();
         checkStartupCommentsAndThemes();
         checkLongSourceAndDrop();
-        LogisthProcessor p;
+        auto pInstance = std::make_unique<LogisthProcessor>();
+        auto &p = *pInstance;
         p.setRateAndBufferSizeDetails(48000, 512);
         p.prepareToPlay(48000, 512);
         juce::AudioBuffer<float> audio(2, 512);
@@ -1005,7 +1021,8 @@ int main(int argc, char **argv) {
         parameter->setValueNotifyingHost(parameter->convertTo0to1(1234));
         juce::MemoryBlock saved;
         p.getStateInformation(saved);
-        LogisthProcessor restored;
+        auto restoredInstance = std::make_unique<LogisthProcessor>();
+        auto &restored = *restoredInstance;
         restored.setStateInformation(saved.getData(), int(saved.getSize()));
         check(std::abs(restored.state.getRawParameterValue("p1cutoff")->load() - 1234) < .01f,
               "state round trip");

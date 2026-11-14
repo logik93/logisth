@@ -62,7 +62,8 @@ inline void run() {
                 check(difference > 1,
                       "host PHASE parameter produces an audible change while RETRIG is off or on");
             }
-    LogisthProcessor p;
+    auto pInstance = std::make_unique<LogisthProcessor>();
+    auto &p = *pInstance;
     std::unique_ptr<AudioProcessorEditor> ui(p.createEditor());
     auto *editor = dynamic_cast<LogisthEditor *>(ui.get());
     check(editor != nullptr, "phase GUI fixture");

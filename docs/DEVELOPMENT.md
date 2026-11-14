@@ -28,6 +28,8 @@ A later explicit instruction to wait or avoid publishing overrides this default.
    IDs and bytes; only SHA256SUMS and the release description are cumulative.
    Wait for every native build/test/architecture check and publication to finish.
    Current minimum suites: Linux 11, Windows/macOS 9, with no failures or skips.
+   A separate Windows AddressSanitizer build must also pass before publication;
+   its binaries are diagnostic only. Its receipt is `ci-check-v<version>-windows-asan`.
    Read the status branches `ci-build-v<version>-<platform>` and
    `ci-release-v<version>`. If branch HTTP responses are stale, resolve their
    current Git SHA and read status.json at that immutable revision.

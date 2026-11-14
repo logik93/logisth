@@ -8,7 +8,8 @@ inline void run() {
         if (!v)
             throw std::runtime_error(text);
     };
-    LogisthProcessor p;
+    auto pInstance = std::make_unique<LogisthProcessor>();
+    auto &p = *pInstance;
     for (int env = 1; env <= 2; ++env)
         for (auto suffix : {"a", "d", "s", "r", "amt1", "amt2", "dest1", "dest2"})
             check(p.state.getRawParameterValue("env" + String(env) + suffix)->load() == 0,
@@ -48,7 +49,8 @@ inline void run() {
         gain_test::set(p, v.first, v.second);
     TemporaryFile preset(".logisth");
     check(p.savePresetFile(preset.getFile()).wasOk(), "new feature preset saves");
-    LogisthProcessor restored;
+    auto restoredInstance = std::make_unique<LogisthProcessor>();
+    auto &restored = *restoredInstance;
     check(restored.loadPresetFile(preset.getFile()).wasOk(), "new feature preset loads");
     for (auto &v : settings)
         check(std::abs(restored.state.getRawParameterValue(v.first)->load() - v.second) < 1e-4,
