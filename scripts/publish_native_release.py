@@ -95,6 +95,27 @@ def build_notes(authored, records, tag, commit):
     return text, pending
 
 
+def find_release(repository, tag):
+    # The REST tag endpoint is for published releases. gh release view also
+    # resolves drafts through GraphQL; then the REST ID endpoint is reliable.
+    result = subprocess.run(['gh', 'api', f'repos/{repository}/releases/tags/{tag}'],
+                            capture_output=True, text=True)
+    if result.returncode == 0:
+        return json.loads(result.stdout)
+    if 'HTTP 404' not in result.stderr:
+        raise RuntimeError(result.stderr)
+    draft = subprocess.run(['gh', 'release', 'view', tag, '--json', 'databaseId',
+                            '--repo', repository], capture_output=True, text=True)
+    if draft.returncode:
+        if 'release not found' in draft.stderr.lower():
+            return None
+        raise RuntimeError(draft.stderr)
+    identity = json.loads(draft.stdout)['databaseId']
+    if not isinstance(identity, int) or identity <= 0:
+        raise ValueError('Invalid release identity')
+    return json.loads(command('gh', 'api', f'repos/{repository}/releases/{identity}'))
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--tag', required=True)
@@ -121,19 +142,17 @@ def main():
         archive = info.parent / record['archive']
         validate_record(record, archive, platform, version, fingerprint, commit)
         selected[platform] = (record, archive, info)
-    release = subprocess.run(['gh', 'api', f'repos/{repository}/releases/tags/{args.tag}'],
-                             capture_output=True, text=True)
-    if release.returncode:
-        if 'HTTP 404' not in release.stderr:
-            raise RuntimeError(release.stderr)
+    release_info = find_release(repository, args.tag)
+    if release_info is None:
         if set(args.platforms) != set(PLATFORMS[:2]):
             raise ValueError('Publish Windows/Linux together before appending macOS')
         subprocess.run(['gh', 'release', 'create', args.tag, '--draft', '--verify-tag', '--title',
                         f'wavelogik logisth {version}', '--notes-file', f'docs/RELEASE-{args.tag}.md',
                         '--repo', repository], check=True)
-        release_info = json.loads(command('gh', 'api', f'repos/{repository}/releases/tags/{args.tag}'))
-    else:
-        release_info = json.loads(release.stdout)
+        release_info = find_release(repository, args.tag)
+        if release_info is None:
+            raise ValueError('Created draft release could not be found')
+    release_endpoint = f'repos/{repository}/releases/{release_info["id"]}'
     with tempfile.TemporaryDirectory(prefix='logisth-release-') as directory:
         existing = Path(directory)
         published = {a['name']: a for a in release_info.get('assets', [])}
@@ -175,7 +194,7 @@ def main():
         notes_file.write_text(notes)
         subprocess.run(['gh', 'release', 'edit', args.tag, '--notes-file', str(notes_file),
                         '--repo', repository], check=True)
-        verified = json.loads(command('gh', 'api', f'repos/{repository}/releases/tags/{args.tag}'))
+        verified = json.loads(command('gh', 'api', release_endpoint))
         assets = {a['name']: a for a in verified['assets']}
         for path in uploads:
             if path.name not in assets or assets[path.name]['size'] != path.stat().st_size:
@@ -187,10 +206,11 @@ def main():
         if verified.get('draft'):
             subprocess.run(['gh', 'release', 'edit', args.tag, '--draft=false', '--latest',
                             '--repo', repository], check=True)
-            verified = json.loads(command('gh', 'api', f'repos/{repository}/releases/tags/{args.tag}'))
+            verified = json.loads(command('gh', 'api', release_endpoint))
             assets = {a['name']: a for a in verified['assets']}
         args.result.write_text(json.dumps({
             'phase': 'published', 'tag': args.tag, 'release_url': verified['html_url'],
+            'release_id': verified['id'],
             'release_commit': commit, 'published_at': verified.get('published_at'),
             'publication_stage': 'complete' if not pending else 'windows-linux',
             'pending_platforms': pending,

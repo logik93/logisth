@@ -34,12 +34,16 @@ class FakeGitHub:
         if args[:2] == ['git', 'rev-parse']:
             return subprocess.CompletedProcess(args, 0, 'abc123\n', '')
         if args[:2] == ['gh', 'api']:
-            if self.release is None:
+            if self.release is None or ('/tags/' in args[2] and self.release['draft']):
                 return subprocess.CompletedProcess(args, 1, '', 'HTTP 404')
             return subprocess.CompletedProcess(args, 0, json.dumps(self.api()), '')
         action = args[2]
+        if action == 'view':
+            if self.release is None:
+                return subprocess.CompletedProcess(args, 1, '', 'release not found')
+            return subprocess.CompletedProcess(args, 0, json.dumps({'databaseId': 101}), '')
         if action == 'create':
-            self.release = {'draft': True, 'html_url': 'https://example.test/v0.9.3',
+            self.release = {'id': 101, 'draft': True, 'html_url': 'https://example.test/v0.9.3',
                             'published_at': None}
         elif action == 'download':
             folder = Path(args[args.index('--dir') + 1])
@@ -199,6 +203,7 @@ class PublisherTests(unittest.TestCase):
             self.assertEqual(complete['publication_stage'], 'complete')
             self.assertEqual(len(complete['platforms']), 3)
             self.assertEqual(complete['release_url'], first['release_url'])
+            self.assertEqual(complete['release_id'], first['release_id'])
             for name, asset in first_files.items():
                 if name != 'SHA256SUMS':
                     self.assertEqual(github.files[name], asset, name)
