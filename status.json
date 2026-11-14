@@ -1,44 +1,10 @@
 {
   "tag": "v0.9.3",
-  "automation_commit": "451a8e7f98e660ee338e0f733d3946c9ed565964",
-  "run_id": "43651569620",
-  "run_url": "https://github.com/logik93/logisth/actions/runs/43651569620",
-  "phase": "failed",
-  "pipeline_phase": "failed",
-  "stage": "final",
-  "recorded_at": "2026-11-14T23:18:50.335039+00:00",
-  "jobs": {
-    "started": {
-      "result": "success",
-      "outputs": {}
-    },
-    "plugins": {
-      "result": "failure",
-      "outputs": {}
-    },
-    "publish": {
-      "result": "skipped",
-      "outputs": {}
-    },
-    "report_initial": {
-      "result": "success",
-      "outputs": {}
-    },
-    "macos": {
-      "result": "skipped",
-      "outputs": {}
-    },
-    "publish_macos": {
-      "result": "skipped",
-      "outputs": {}
-    }
-  },
-  "failures": [
-    {
-      "log": "ci-artifacts/native-windows-x86_64/logs/tests.log",
-      "errors": [
-        "The following tests FAILED:"
-      ]
-    }
-  ]
+  "automation_commit": "51eb9b2693b9f11517d79f0bbae24ea586394b4e",
+  "run_id": "43653511744",
+  "run_url": "https://github.com/logik93/logisth/actions/runs/43653511744",
+  "phase": "building",
+  "pipeline_phase": "building",
+  "stage": "",
+  "recorded_at": "2026-11-14T23:29:50.652960+00:00"
 }
