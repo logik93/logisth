@@ -243,8 +243,10 @@ For optional VST2, pass `-DLOGISTH_VST2=ON -DVST2_SDK_PATH=/path/to/licensed/sdk
 the SDK must contain `pluginterfaces/vst2.x/aeffect.h` and `aeffectx.h`.
 VST2 has not been validated.
 
-The native release workflow builds/tests on Windows, Linux and macOS, checks
-binary architectures and source identity, then publishes all three packages.
+The native release workflow builds/tests Windows and Linux, checks binary
+architectures and source identity, and publishes both packages first. It then
+builds/tests macOS Universal and appends it to the same release, preserving
+the existing downloads and updating the cumulative checksum manifest.
 Tag a new version matching CMake; pull requests run validation without publishing.
 CI receipts are recorded on `ci-release-v<version>` branches.
 

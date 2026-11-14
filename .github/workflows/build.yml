@@ -1,4 +1,4 @@
-name: Native builds and release
+name: Native builds and staged release
 
 on:
   push:
@@ -31,6 +31,8 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.release_tag || github.ref }}
       - name: Record build start
         env:
           REPORT_PHASE: building
@@ -51,17 +53,17 @@ jobs:
           - os: windows-2022
             platform: windows-x86_64
             parallel: 2
-          - os: macos-15-intel
-            platform: macos-universal
-            parallel: 4
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
         with:
+          ref: ${{ inputs.release_tag || github.ref }}
           fetch-depth: 0
       - name: Linux dependencies
         if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y libasound2-dev libx11-dev libxext-dev libxinerama-dev libxrandr-dev libxcursor-dev libfreetype6-dev libfontconfig1-dev libgl1-mesa-dev
+      - name: Verify release publisher regressions
+        run: python -m unittest discover -s scripts/tests
       - name: Build, test, verify architecture and package
         run: python scripts/build_native.py --platform ${{ matrix.platform }} --output native-out --parallel ${{ matrix.parallel }} --reuse
       - name: Retain binaries and diagnostic logs
@@ -80,6 +82,7 @@ jobs:
         run: python scripts/write_ci_status.py
 
   publish:
+    name: Publish Windows and Linux
     if: github.event_name != 'pull_request'
     needs: plugins
     runs-on: ubuntu-22.04
@@ -88,22 +91,24 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
+          ref: ${{ inputs.release_tag || github.ref }}
           fetch-depth: 0
       - uses: actions/download-artifact@v4
         with:
           pattern: native-*
           path: ci-artifacts
-      - name: Verify source identity and upload all native builds
+      - name: Publish both tested platforms before starting macOS
         env:
           GH_TOKEN: ${{ github.token }}
-        run: python3 scripts/publish_native_release.py --tag "$RELEASE_TAG" --artifacts ci-artifacts --result native-release-result.json
+        run: python3 scripts/publish_native_release.py --tag "$RELEASE_TAG" --artifacts ci-artifacts --platforms linux-x86_64 windows-x86_64 --result native-release-result.json
       - uses: actions/upload-artifact@v4
         with:
-          name: native-release-receipt
+          name: native-release-receipt-windows-linux
           path: native-release-result.json
           if-no-files-found: error
 
-  report:
+  report_initial:
+    name: Report available Windows and Linux downloads
     if: always() && github.event_name != 'pull_request'
     needs: [started, plugins, publish]
     runs-on: ubuntu-22.04
@@ -111,15 +116,104 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.release_tag || github.ref }}
       - uses: actions/download-artifact@v4
         with:
           pattern: native-*
           path: ci-artifacts
-      - name: Locate publication receipt
+      - name: Locate first publication receipt
         if: needs.publish.result == 'success'
-        run: cp ci-artifacts/native-release-receipt/native-release-result.json native-release-result.json
-      - name: Record outcome and verified download links
+        run: cp ci-artifacts/native-release-receipt-windows-linux/native-release-result.json native-release-result.json
+      - name: Record first publication
         env:
           REPORT_PHASE: ${{ needs.publish.result == 'success' && 'published' || 'failed' }}
+          REPORT_STAGE: windows-linux
+          JOB_RESULTS: ${{ toJSON(needs) }}
+        run: python3 scripts/write_ci_status.py
+
+  macos:
+    name: Build macos-universal after first publication
+    needs: [plugins, publish]
+    if: always() && ((github.event_name == 'pull_request' && needs.plugins.result == 'success') || (github.event_name != 'pull_request' && needs.publish.result == 'success'))
+    runs-on: macos-15-intel
+    timeout-minutes: 45
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.release_tag || github.ref }}
+          fetch-depth: 0
+      - name: Verify release publisher regressions
+        run: python3 -m unittest discover -s scripts/tests
+      - name: Build, test, verify both architectures and package
+        run: python3 scripts/build_native.py --platform macos-universal --output native-out --parallel 4 --reuse
+      - name: Retain binaries and diagnostic logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-macos-universal
+          path: native-out/
+          if-no-files-found: error
+          retention-days: 14
+      - name: Record macOS result
+        if: always() && github.event_name != 'pull_request'
+        env:
+          REPORT_PLATFORM: macos-universal
+          REPORT_PHASE: ${{ job.status == 'success' && 'passed' || 'failed' }}
+        run: python3 scripts/write_ci_status.py
+
+  publish_macos:
+    name: Add macOS to the existing release
+    if: github.event_name != 'pull_request'
+    needs: [publish, macos]
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.release_tag || github.ref }}
+          fetch-depth: 0
+      - uses: actions/download-artifact@v4
+        with:
+          name: native-macos-universal
+          path: ci-artifacts/native-macos-universal
+      - name: Preserve Windows/Linux and append verified macOS files
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 scripts/publish_native_release.py --tag "$RELEASE_TAG" --artifacts ci-artifacts --platforms macos-universal --result native-release-result.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: native-release-receipt-complete
+          path: native-release-result.json
+          if-no-files-found: error
+
+  report_final:
+    name: Report complete release or pending macOS
+    if: always() && github.event_name != 'pull_request'
+    needs: [started, plugins, publish, report_initial, macos, publish_macos]
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.release_tag || github.ref }}
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: native-*
+          path: ci-artifacts
+      - name: Locate complete publication receipt
+        if: needs.publish_macos.result == 'success'
+        run: cp ci-artifacts/native-release-receipt-complete/native-release-result.json native-release-result.json
+      - name: Keep first-stage downloads available if macOS fails
+        if: needs.publish.result == 'success' && needs.publish_macos.result != 'success'
+        run: cp ci-artifacts/native-release-receipt-windows-linux/native-release-result.json native-release-result.json
+      - name: Record final result and verified links
+        env:
+          REPORT_PHASE: ${{ needs.publish_macos.result == 'success' && 'published' || (needs.publish.result == 'success' && 'macos-failed' || 'failed') }}
+          REPORT_STAGE: final
           JOB_RESULTS: ${{ toJSON(needs) }}
         run: python3 scripts/write_ci_status.py

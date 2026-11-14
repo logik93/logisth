@@ -45,5 +45,7 @@ listening to the user's own hardstyle material before a future 1.0.0 release.
 Build configuration requires 11 passing Linux suites and 9 on Windows/macOS.
 Native formats remain VST3, CLAP and Standalone; VST2 needs a separately licensed
 SDK and is excluded. Platform packages are published only after their own native
-build/test/architecture checks. Original code is MIT; Signalsmith, JUCE/CLAP,
+build/test/architecture checks. Windows and Linux are published first; the
+macOS Universal build then starts and is added to this same release.
+Original code is MIT; Signalsmith, JUCE/CLAP,
 fonts and supplied artwork retain their notices.

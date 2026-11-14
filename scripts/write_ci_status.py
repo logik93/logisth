@@ -5,6 +5,7 @@ import os
 import re
 import subprocess
 from pathlib import Path
+from datetime import datetime, timezone
 
 
 def git(*args, data=None):
@@ -22,7 +23,10 @@ def main():
     report = {'tag': tag, 'automation_commit': os.environ['GITHUB_SHA'],
               'run_id': os.environ['GITHUB_RUN_ID'],
               'run_url': os.environ['LOGISTH_RUN_URL'],
-              'phase': os.environ.get('REPORT_PHASE', 'building')}
+              'phase': os.environ.get('REPORT_PHASE', 'building'),
+              'pipeline_phase': os.environ.get('REPORT_PHASE', 'building'),
+              'stage': os.environ.get('REPORT_STAGE', ''),
+              'recorded_at': datetime.now(timezone.utc).isoformat()}
     if os.environ.get('JOB_RESULTS'):
         report['jobs'] = json.loads(os.environ['JOB_RESULTS'])
     if platform:

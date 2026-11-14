@@ -20,20 +20,22 @@ A later explicit instruction to wait or avoid publishing overrides this default.
 6. Commit the new release asset folder, create an annotated unused `v<version>`
    tag, and push the branch/tag atomically. The existing native workflow builds
    VST3, CLAP and Standalone on Windows x64, Linux x64 and macOS Universal.
-7. Wait for every native build/test/architecture check and publication to finish.
+7. Publish the tested Windows x64 and Linux x64 packages together first. Only
+   after that public release exists, start the macOS Universal build and append
+   its package and build metadata to the same release. Preserve existing download
+   IDs and bytes; only SHA256SUMS and the release description are cumulative.
+   Wait for every native build/test/architecture check and publication to finish.
    Current minimum suites: Linux 11, Windows/macOS 9, with no failures or skips.
    Read the status branches `ci-build-v<version>-<platform>` and
    `ci-release-v<version>`. If branch HTTP responses are stale, resolve their
    current Git SHA and read status.json at that immutable revision.
 8. Download the public release assets, check SHA256SUMS and binary/build metadata,
-   both macOS architectures, English manual, MIT/third-party notices and all five
+   both macOS architectures, English manual, MIT/third-party notices and all six
    theme templates. Report completion with the release link only after verification.
 
 VST2 remains optional and requires a separately licensed SDK. macOS packages are
 ad-hoc signed, not notarized; Windows builds are unsigned. Preserve upstream
 library/SDK/font licenses independently of the original-code MIT license.
 
-Current 0.9.3 work resumes the saved implementation after an environment change.
-The owner's later instruction to avoid publication remains the publication gate;
-prepare reviewable local artifacts before requesting authorization to push/tag
-and run the Windows/macOS release workflow. Do not duplicate saved changes.
+The owner authorized the 0.9.3 release with Windows/Linux first and macOS added
+afterward. Do not repeat previously completed feature changes.
