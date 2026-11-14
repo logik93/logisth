@@ -6,6 +6,7 @@
 #include "SourceData.h"
 #include "Telemetry.h"
 #include <cstdint>
+#include <new>
 namespace logisth {
 struct OscParams {
     int wave = 1, unison = 1;
@@ -102,6 +103,12 @@ class Engine {
         std::array<float, 2> cutoff{5000, 5000};
         std::array<LfoState, 2> lfo{};
         ModValues previous{};
+        void reset() noexcept {
+            // Reconstruct in place: a whole-Voice temporary can exhaust an audio
+            // thread's small Windows stack. Placement new does not allocate.
+            this->~Voice();
+            ::new (static_cast<void *>(this)) Voice{};
+        }
         bool active() const {
             return amp[0].active() || amp[1].active();
         }
@@ -251,7 +258,8 @@ class Engine {
         reset();
     }
     void reset() {
-        std::fill(voices.begin(), voices.end(), Voice{});
+        for (auto &voice : voices)
+            voice.reset();
         bend = {};
         wheel = {};
         pressure = {};
@@ -295,7 +303,7 @@ class Engine {
         if (p.monoLegato) {
             selected = &voices[0];
             for (size_t i = 1; i < voices.size(); ++i)
-                voices[i] = Voice{};
+                voices[i].reset();
             if (selected->active() && overlap) {
                 selected->glideStep = std::abs(float(note) - selected->pitch) /
                                       float(std::max(1., p.portamento * sr));
@@ -318,7 +326,7 @@ class Engine {
             selected = &*std::min_element(voices.begin(), voices.begin() + limit,
                                           [](auto &a, auto &b) { return a.age < b.age; });
         auto &v = *selected;
-        v = Voice{};
+        v.reset();
         v.note = note;
         v.channel = channel;
         v.held = true;
@@ -417,7 +425,7 @@ class Engine {
             for (auto &v : voices)
                 if (v.channel == channel) {
                     if (cc == 120)
-                        v = Voice{};
+                        v.reset();
                     else
                         releaseVoice(v, p);
                 }
@@ -452,7 +460,7 @@ class Engine {
         const double phaseSmoothing = 1 - std::exp(-1 / (.005 * sr));
         const int limit = p.monoLegato ? 1 : std::clamp(p.polyphony, 1, 16);
         for (size_t i = size_t(limit); i < voices.size(); ++i)
-            voices[i] = Voice{};
+            voices[i].reset();
         for (int s = 0; s < count; ++s) {
             float out[2]{};
             float parts[2]{};

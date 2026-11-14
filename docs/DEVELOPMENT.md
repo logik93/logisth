@@ -8,7 +8,9 @@ A later explicit instruction to wait or avoid publishing overrides this default.
 1. Finish the changes and appropriate regression checks. Keep producer wavelogik,
    product logisth, original-code MIT licensing and third-party notices consistent.
 2. Set the next unused CMake version and update README/manual/release notes in
-   English. Never replace an existing version tag or published release assets.
+   English. Never replace a published version tag or published release assets. A failed,
+   unpublished candidate may be repaired only after verifying no public release
+   exists, retaining its original commit and using a lease on the exact tag ref.
 3. Build locally and verify the change. Export current preview/demo assets with
    `build/processor_tests /absolute/preview-folder` and calibration materials with
    `build/processor_tests --gain-check /absolute/calibration-folder`.

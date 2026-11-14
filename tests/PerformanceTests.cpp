@@ -1,5 +1,6 @@
 #include "Engine.h"
 #include "Morph.h"
+#include "SmallStackRegression.h"
 #include <atomic>
 #include <cstdlib>
 #include <iostream>
@@ -248,6 +249,8 @@ int main() {
         }
         check(allocations.load() == 0,
               "prepared spectral and time-domain engines do not allocate during processing");
+        check(small_stack_test::check(),
+              "note-on, stealing, mono, polyphony changes and reset fit a 128 KiB audio stack");
         std::array<float, parameterCount> values{};
         for (size_t i = 0; i < parameterCount; ++i)
             values[i] = parameterSpecs[i].initial;

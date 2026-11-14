@@ -12,6 +12,31 @@ def git(*args, data=None):
     return subprocess.check_output(['git', *args], input=data, text=True).strip()
 
 
+def native_test_failures(folder):
+    """Retain assertion/exception details even when the build cannot be packaged."""
+    import xml.etree.ElementTree as ET
+    path = folder / 'logs' / 'test-results.xml'
+    if not path.is_file():
+        return []
+    try:
+        root = ET.parse(path).getroot()
+    except ET.ParseError:
+        return [{'name': 'CTest report', 'message': 'Incomplete test-results.xml'}]
+    failures = []
+    for case in root.iter('testcase'):
+        failure = case.find('failure')
+        if failure is None:
+            failure = case.find('error')
+        if failure is not None:
+            output = ''.join(case.itertext())[-12000:]
+            output = re.sub(r'https?://[^/@ ]+@', 'https://[redacted]@', output)
+            output = re.sub(r'(gh[pousr]_[A-Za-z0-9_]+|github_pat_[A-Za-z0-9_]+)',
+                            '[redacted]', output)
+            failures.append({'name': case.get('name', ''),
+                             'message': failure.get('message', ''), 'output': output})
+    return failures
+
+
 def main():
     tag = os.environ['RELEASE_TAG']
     if not re.fullmatch(r'v\d+\.\d+\.\d+', tag):
@@ -44,6 +69,9 @@ def main():
                 messages.append(line[:400])
         if messages:failures.append({'log':str(log),'errors':messages[-12:]})
     if failures:report['failures']=failures
+    test_failures = native_test_failures(Path('native-out')) if platform else []
+    if test_failures:
+        report['test_failures'] = test_failures
     result = Path('native-release-result.json')
     if result.is_file():
         report.update(json.loads(result.read_text()))

@@ -34,6 +34,11 @@ violet accents and the white AP mark. The handwritten signature is removed at
 the project owner's request. The skin and logo are embedded/packaged; no extra
 font software is required. Five previous standard palettes remain available.
 
+Voice resets reconstruct their prepared storage in place, removing large stack
+temporaries from note-on, voice stealing, mono, polyphony changes and All Sound
+Off. This fixes a Windows integration-test stack overflow; a dedicated 128 KiB
+thread regression now covers those paths with every source engine.
+
 712 automatable parameters. New regression coverage checks all-engine width,
 muted/cyclic cross-modulation, independent pitch/duration, protected Kick attack,
 zero allocations inside prepared sample processing, granular crop boundaries,
