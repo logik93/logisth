@@ -33,7 +33,7 @@ jobs:
           failures = []
           for test in root.iter('testcase'):
               if test.find('failure') is not None or test.find('error') is not None:
-                  failures.append({'test': test.attrib, 'output': ''.join(test.itertext())[-18000:]})
-          Path('native-release-result.json').write_text(json.dumps({'diagnostic_tests':root.attrib,'diagnostic_failures':failures}))
+                  failures.append({'test': test.attrib, 'xml': ET.tostring(test,encoding='unicode')[-18000:]})
+          Path('native-release-result.json').write_text(json.dumps({'diagnostic_tests':root.attrib,'diagnostic_failures':failures,'diagnostic_log':Path('native-out/logs/tests.log').read_text()[-22000:]}))
           PY
           python3 scripts/write_ci_status.py
