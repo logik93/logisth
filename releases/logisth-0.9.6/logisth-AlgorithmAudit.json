@@ -1,0 +1,28 @@
+{
+  "components": [
+    {
+      "component": "Signalsmith Stretch 1.3.2",
+      "commit": "88061fd4eda56a2353c5d65c74aa3f4ccf76f9da",
+      "files_verified": 3,
+      "sha256_manifest": "passed",
+      "direct_upstream_comparison": "passed"
+    },
+    {
+      "component": "Signalsmith Linear 0.6.6",
+      "commit": "7bb1c8f36794d6980080ce817c91f8da8fe56a66",
+      "files_verified": 18,
+      "sha256_manifest": "passed",
+      "direct_upstream_comparison": "passed"
+    }
+  ],
+  "processing_parity": "StretchControls CTest compares stereo output with upstream at 44.1/48/96 kHz",
+  "independent_models": [
+    "Kick attack/tail hybrid",
+    "WSOLA/Tonal/Transient sampler paths",
+    "granular sample engine",
+    "three-part subtractive engine",
+    "chord and pattern sequencer",
+    "five character reverbs and equalizers"
+  ],
+  "scope": "Source identity and DSP adapter parity do not assert equivalence to proprietary plug-in binaries."
+}
