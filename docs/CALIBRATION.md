@@ -100,3 +100,7 @@ The CSV files in docs/calibration record the measured before/after readings.
 The release ZIP contains both WAVs, the calibration preset, these CSVs and this
 report. For a DAW check, load the preset, play MIDI note 69 at velocity 127, set
 the DAW track fader to unity, and bypass track effects.
+
+Stereo width and reverb return measurements for v0.9.6.1 are documented in
+[STEREO_REVERB_CALIBRATION.md](STEREO_REVERB_CALIBRATION.md), with before/after CSVs.
+These changes leave the dry full-scale sine reference unchanged.

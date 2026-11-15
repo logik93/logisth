@@ -22,7 +22,7 @@ functional submenus with symmetric A/B/C and paired scopes. Hover for tooltips a
 Numeric values support units such as kHz, ms and percent. Sync displays musical
 divisions instead of free time/rate controls. Arp steps use 01–08 and 09–16 views.
 
-The current engine exposes 1053 audio parameters. Tests check access, bounds, click
+The current engine exposes 1055 audio parameters. Tests check access, bounds, click
 targets, view changes, bindings, scaling and independent theme persistence.
 See [the English user manual](MANUAL.md) for full operation.
 
@@ -111,3 +111,8 @@ an optional fixed-maximum velocity switch. About scrolls through project credits
 Graphic EQ shows separate axes and a selected-band inspector with type/frequency/
 Q/gain/enable, a 16-slot selector and Add/Remove buttons. Eight filter types are
 available; original ten-band presets retain their Bell settings.
+
+0.9.6.1 adds small Copy/Paste buttons at the bottom-left of all six oscillator
+panels. MORPH target menus group every part by function. REVERB / CONVOLUTION
+shows Load IR, Reset IR, IR metadata, Normalise, Mix, Predelay, Width and Wet Gain;
+model-specific algorithmic controls hide. The existing single rack window is used.

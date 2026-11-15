@@ -443,6 +443,8 @@ class LogisthEditor::Console : public Component,
                         menu.getRootMenu()->addSubMenu("Part C / A+B+C", cChoices);
                     if (String(spec.id).contains("dest"))
                         buildRoutingMenu(menu, choices);
+                    if (String(spec.id).startsWith("m") && String(spec.id).contains("target"))
+                        buildMacroMenu(menu, choices);
                     if (extension != Param::Count)
                         bindComposite(extension, false);
                     else
@@ -741,6 +743,78 @@ class LogisthEditor::Console : public Component,
                                  : i == 11 ? "Width / PWM"
                                            : families[i],
                                  menus[size_t(i)]);
+        }
+        static void buildMacroMenu(ComboBox &box, const StringArray &choices) {
+            std::array<PopupMenu, 11> menus;
+            std::array<std::vector<std::pair<String, int>>, 11> groups;
+            const StringArray players{"A1", "A2", "B1", "B2", "C1", "C2", "A", "B", "C"};
+            for (int i = 1; i < choices.size(); ++i) {
+                String name = choices[i], scope;
+                int family = 10;
+                if (name.startsWith("WT Pos / Start")) {
+                    family = 0;
+                    scope = name.fromFirstOccurrenceOf("WT Pos / Start", false, false).trim();
+                    name = "WT Pos " + scope;
+                } else if (name.startsWith("Width ") || name.startsWith("Pulse width ")) {
+                    family = 1;
+                    scope = name.fromLastOccurrenceOf(" ", false, false);
+                    name = "Width " + scope;
+                } else if (name.startsWith("FM ")) {
+                    family = 2;
+                    scope = name.substring(3);
+                } else if (name.startsWith("AM ")) {
+                    family = 3;
+                    scope = name.substring(3);
+                } else if (name.startsWith("Stretch ") || name.startsWith("Time factor ")) {
+                    family = 4;
+                    scope = name.fromLastOccurrenceOf(" ", false, false);
+                    name = "Stretch " + scope;
+                } else if (name.startsWith("Cutoff ")) {
+                    family = 5;
+                    scope = name.substring(7);
+                } else if (name.startsWith("Resonance ")) {
+                    family = 6;
+                    scope = name.substring(10);
+                    name = "Reso " + scope;
+                } else if (name.startsWith("Mix ")) {
+                    family = 7;
+                    scope = name.substring(4);
+                } else if (name.startsWith("Filter "))
+                    family = 8;
+                else if (name.startsWith("LFO"))
+                    family = 9;
+                groups[size_t(family)].emplace_back(name, i + 1);
+            }
+            for (size_t i = 0; i < groups.size(); ++i) {
+                auto &entries = groups[i];
+                std::stable_sort(entries.begin(), entries.end(), [&](const auto &a, const auto &b) {
+                    auto rank = [&](const String &label) {
+                        int n = players.indexOf(label.fromLastOccurrenceOf(" ", false, false));
+                        return n < 0 ? 99 : n;
+                    };
+                    return rank(a.first) < rank(b.first);
+                });
+                for (auto &entry : entries)
+                    menus[i].addItem(entry.second, entry.first);
+            }
+            box.clear(dontSendNotification);
+            auto *root = box.getRootMenu();
+            root->addItem(1, "None");
+            root->addSeparator();
+            root->addSubMenu("Filter control", menus[8]);
+            PopupMenu sources;
+            const StringArray families{"WT position / sample start", "Width / PWM", "FM index",
+                                       "AM depth", "Stretch"};
+            for (int i = 0; i < 5; ++i)
+                sources.addSubMenu(families[i], menus[size_t(i)]);
+            root->addSubMenu("Oscillators", sources);
+            PopupMenu filters;
+            filters.addSubMenu("Cutoff", menus[5]);
+            filters.addSubMenu("Resonance", menus[6]);
+            root->addSubMenu("Filters", filters);
+            root->addSubMenu("Mixer", menus[7]);
+            root->addSubMenu("Effects", menus[10]);
+            root->addSubMenu("LFO", menus[9]);
         }
         void bindComposite(Param extra, bool detune) {
             compositeId = extra;
@@ -1236,6 +1310,62 @@ class LogisthEditor::Console : public Component,
             sourceWave[size_t(i)].setTooltip("Open source waveform / wavetable bank");
             addChildComponent(sourceWave[size_t(i)]);
         }
+        for (int slot = 0; slot < playerCount; ++slot) {
+            auto &copy = oscCopy[size_t(slot)], &paste = oscPaste[size_t(slot)];
+            copy.setButtonText("Copy");
+            paste.setButtonText("Paste");
+            copy.setComponentID("osc.copy." + String(slot));
+            paste.setComponentID("osc.paste." + String(slot));
+            copy.setTooltip("Copy this oscillator, including its source audio and envelope.");
+            paste.setTooltip("Paste the copied oscillator settings and source audio.");
+            copy.onClick = [this, slot] {
+                auto result = processor.copyOscillator(slot);
+                readout = result.wasOk() ? "Copied oscillator " +
+                                               StringArray{"A1", "A2", "B1", "B2", "C1", "C2"}[slot]
+                                         : result.getErrorMessage();
+                for (auto &button : oscPaste)
+                    button.setEnabled(LogisthProcessor::hasOscillatorClipboard());
+                repaint();
+            };
+            paste.onClick = [this, slot] {
+                auto result = processor.pasteOscillator(slot);
+                readout = result.wasOk() ? "Pasted oscillator " +
+                                               StringArray{"A1", "A2", "B1", "B2", "C1", "C2"}[slot]
+                                         : result.getErrorMessage();
+                layout();
+                repaint();
+            };
+            paste.setEnabled(LogisthProcessor::hasOscillatorClipboard());
+            addChildComponent(copy);
+            addChildComponent(paste);
+        }
+        impulseLoad.setButtonText("LOAD IR");
+        impulseReset.setButtonText("RESET IR");
+        impulseLoad.setComponentID("reverb.ir.load");
+        impulseReset.setComponentID("reverb.ir.reset");
+        impulseName.setComponentID("reverb.ir.name");
+        impulseLoad.setTooltip("Load a mono/stereo WAV, AIFF or FLAC impulse response.");
+        impulseLoad.onClick = [this] {
+            impulseChooser = std::make_unique<FileChooser>("Load impulse response", File{},
+                                                           "*.wav;*.aif;*.aiff;*.flac");
+            SafePointer<Console> safe(this);
+            impulseChooser->launchAsync(
+                FileBrowserComponent::openMode | FileBrowserComponent::canSelectFiles,
+                [safe](const FileChooser &chooser) {
+                    if (safe && chooser.getResult().existsAsFile())
+                        safe->processor.loadImpulseAsync(chooser.getResult());
+                });
+        };
+        impulseReset.onClick = [this] {
+            processor.clearImpulse();
+            refreshImpulseLabel();
+            repaint();
+        };
+        impulseName.setFont(font(10));
+        impulseName.setJustificationType(Justification::centredLeft);
+        addChildComponent(impulseLoad);
+        addChildComponent(impulseReset);
+        addChildComponent(impulseName);
         waveView.onFileDropped = [this](int slot, const File &file) {
             importDroppedSource(slot, file);
         };
@@ -1558,6 +1688,16 @@ class LogisthEditor::Console : public Component,
     void showScenario(int index) {
         if (index != 28)
             showPresetSearch(false);
+        if (index == 34) {
+            settingsOpen = false;
+            rack = 5;
+            previewReverb = 5;
+            previewEq = previewSource = -1;
+            selectedPart = 0;
+            layout();
+            repaint();
+            return;
+        }
         if (index == 31 || index == 32 || index == 33) {
             previewPattern = previewGran = previewSource = previewWave = previewStretch =
                 previewReverb = -1;
@@ -1742,7 +1882,7 @@ class LogisthEditor::Console : public Component,
         for (auto &v : sourceViews)
             v.setSelectedId(1, dontSendNotification);
         rack = 5;
-        for (int mode = 0; mode < 5; ++mode) {
+        for (int mode = 0; mode < 6; ++mode) {
             previewReverb = mode;
             inspect();
         }
@@ -2525,6 +2665,11 @@ class LogisthEditor::Console : public Component,
     void oscillator(int number, Rectangle<int> b) {
         String id = "o" + String(number);
         const size_t slot = size_t(number - 1);
+        oscCopy[slot].setBounds(b.getX() + 12, b.getY() + 149, 62, 15);
+        oscCopy[slot].setVisible(true);
+        oscPaste[slot].setBounds(b.getX() + 12, b.getY() + 167, 62, 15);
+        oscPaste[slot].setVisible(true);
+        oscPaste[slot].setEnabled(LogisthProcessor::hasOscillatorClipboard());
         control(id + "engine", {b.getX() + 300, b.getY() + 6, 146, 24}, Style::Menu);
         sourceViews[slot].setBounds(b.getX() + 191, b.getY() + 6, 99, 24);
         sourceViews[slot].setVisible(true);
@@ -2809,6 +2954,23 @@ class LogisthEditor::Console : public Component,
             settingsPanel.toFront(false);
             return;
         }
+        if (rack == 5 && int(value(Param::reverbtype)) == 5) {
+            put(Param::reverbtype, {414, 289, 180, 25}, Style::Menu, {}, true);
+            impulseLoad.setBounds(608, 289, 108, 25);
+            impulseLoad.setVisible(true);
+            impulseReset.setBounds(728, 289, 108, 25);
+            impulseReset.setVisible(true);
+            impulseName.setBounds(414, 326, 520, 38);
+            impulseName.setVisible(true);
+            refreshImpulseLabel();
+            put(Param::irnormalize, {414, 368, 190, 24}, Style::Toggle, "NORMALIZE IR", true);
+            for (int i = 0; i < 4; ++i)
+                put(std::array<Param, 4>{Param::reverb, Param::reverbpredelay, Param::reverbwidth,
+                                         Param::reverbout}[size_t(i)],
+                    {414 + i * 130, 404, 122, 106}, Style::Knob,
+                    StringArray{"MIX", "PREDELAY", "WIDTH", "WET GAIN"}[i], true);
+            return;
+        }
         if (rack == 10) {
             layoutMorph();
             return;
@@ -2978,7 +3140,8 @@ class LogisthEditor::Console : public Component,
                 int reverbType = int(value(Param::reverbtype));
                 if (((id == "shimmeramount" || id == "shimmerpitch") && reverbType != 4) ||
                     (id == "springdispersion" && reverbType != 2) ||
-                    (id == "vintagemod" && reverbType != 3))
+                    (id == "vintagemod" && reverbType != 3) ||
+                    (id == "irnormalize" && reverbType != 5))
                     continue;
                 list.push_back(i);
             }
@@ -3036,6 +3199,13 @@ class LogisthEditor::Console : public Component,
             button.setVisible(false);
         for (auto &w : sourceViews)
             w.setVisible(false);
+        for (auto &w : oscCopy)
+            w.setVisible(false);
+        for (auto &w : oscPaste)
+            w.setVisible(false);
+        impulseLoad.setVisible(false);
+        impulseReset.setVisible(false);
+        impulseName.setVisible(false);
         for (auto &w : sourceLoad)
             w.setVisible(false);
         for (auto &w : sourceClear)
@@ -3143,7 +3313,22 @@ class LogisthEditor::Console : public Component,
         state.back() = mask + 65536 * int(value(eqBandTypes[size_t(selectedEqBand)]));
         return state;
     }
+    void refreshImpulseLabel() {
+        auto data = processor.impulseData();
+        if (!data)
+            return;
+        impulseName.setText(data->name + "\n" + String(data->channels == 1 ? "Mono" : "Stereo") +
+                                " / " + String(data->sampleRate / 1000, 1) + " kHz / " +
+                                String(double(data->samples[0].size()) / data->sampleRate, 2) +
+                                " s" + (processor.impulseReady() ? "" : " / preparing..."),
+                            dontSendNotification);
+        impulseName.setColour(Label::textColourId, screenText);
+    }
     void timerCallback() override {
+        for (auto &button : oscPaste)
+            button.setEnabled(LogisthProcessor::hasOscillatorClipboard());
+        if (impulseName.isVisible())
+            refreshImpulseLabel();
         auto now = Time::getMillisecondCounter();
         if (ThemeSettings::scanDue(now, lastThemeScan)) {
             ThemeSettings::scan();
@@ -3415,9 +3600,7 @@ class LogisthEditor::Console : public Component,
             drawCaption(g, "VELOCITY", {414, 460, 37, 14}, 7.5f, mint.withAlpha(.65f));
             drawCaption(g, "TRANSPOSE  /  VELOCITY  /  HOLD", {414, 512, 520, 14}, 7,
                         mint.withAlpha(.38f), Justification::centredRight);
-        } else if (rack != 4)
-            drawCaption(g, "DIST  /  PHASE  /  CHORUS  /  EQ  /  REVERB  /  DELAY  /  COMP",
-                        {414, 513, 520, 13}, 7, mint.withAlpha(.38f), Justification::centredRight);
+        }
         shell(g, {16, 548, 152, 208}, "MOD ENV 1");
         shell(g, {176, 548, 152, 208}, "MOD ENV 2");
         shell(g, {336, 548, 200, 208}, "LFO 1");
@@ -3444,7 +3627,10 @@ class LogisthEditor::Console : public Component,
     std::array<std::unique_ptr<RackButton>, 11> rackButtons;
     std::array<ComboBox, playerCount> sourceViews, sourceFrame;
     std::array<int, playerCount> sourceMenuStates{-1, -1, -1, -1, -1, -1};
-    std::array<TextButton, playerCount> sourceLoad, sourceClear;
+    std::array<TextButton, playerCount> sourceLoad, sourceClear, oscCopy, oscPaste;
+    TextButton impulseLoad, impulseReset;
+    Label impulseName;
+    std::unique_ptr<FileChooser> impulseChooser;
     ComboBox patternSlot, chordTrigger, chordType;
     TextButton patternSave, patternRandom, chordLearn, chordCopy;
     std::array<Slider, 8> chordNotes;

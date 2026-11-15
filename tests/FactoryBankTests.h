@@ -8,7 +8,14 @@ inline void require(bool ok, const char *message) {
     if (!ok)
         throw std::runtime_error(message);
 }
-inline AudioBuffer<float> render(LogisthProcessor &p, int group, int seconds = 3) {
+inline AudioBuffer<float> render(LogisthProcessor &source, int group, int seconds = 3) {
+    // Independent initial random phases make every profile reproducible, including
+    // when the fast test auditions only one sound from each category.
+    auto instance = std::make_unique<LogisthProcessor>();
+    MemoryBlock state;
+    source.getStateInformation(state);
+    instance->setStateInformation(state.getData(), int(state.getSize()));
+    auto &p = *instance;
     constexpr int rate = 48000, blockSize = 512;
     p.prepareToPlay(rate, blockSize);
     AudioBuffer<float> result(2, seconds * rate), block(2, blockSize);
@@ -106,8 +113,7 @@ inline void run(bool exportAll = false, const File &folder = {}) {
                     for (int ch = 0; ch < 2; ++ch)
                         demo.copyFrom(ch, group * 72000, audio, ch, 0, 72000);
                 }
-                if (!exportAll)
-                    require(peak < .95, "calibrated factory audition retains output headroom");
+                require(peak < .708, "default and maximum macros retain at least 3 dB headroom");
             }
         }
         if (exportAll) {

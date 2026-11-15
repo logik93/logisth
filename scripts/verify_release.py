@@ -74,6 +74,14 @@ def verify(tag: str) -> None:
             for file in (root / 'assets/fonts/ioskeley').iterdir():
                 if file.is_file() and archive.read('fonts/ioskeley/' + file.name) != file.read_bytes():
                     raise ValueError(f'Bundled theme font mismatch: {file.name}')
+    if tuple(map(int, version.split('.'))) >= (0, 9, 6, 1):
+        name = f'logisth-{version}-stereo-reverb-calibration.zip'
+        if name not in names:
+            raise ValueError('Missing stereo/reverb calibration bundle')
+        with zipfile.ZipFile(folder / name) as archive:
+            for file in ('stereo-before.csv', 'stereo-after.csv', 'reverb-before.csv', 'reverb-after.csv', 'README.md'):
+                if not archive.read(file):
+                    raise ValueError('Empty stereo/reverb measurements')
     print(f"Verified {len(names)} release assets for {tag}")
 
 

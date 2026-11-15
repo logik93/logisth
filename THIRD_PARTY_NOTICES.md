@@ -14,6 +14,10 @@ remove their distribution requirements.
 | VST3 SDK bundled with the pinned JUCE dependency | Retains its upstream SDK licensing; see the SDK LICENSE.txt under JUCE's VST3_SDK directory. |
 | Optional VST2 SDK | Separately obtained licensed SDK; not included in this repository or binary packages. |
 
+Convolution reverb uses JUCE's dsp::Convolution (non-uniform partitioned FFT,
+zero added latency), under the same JUCE terms above. Its IR adapter and the
+synthetic factory chamber response are original wavelogik code/material.
+
 JUCE's notice lists further bundled third-party components and their licenses.
 Binary distribution must satisfy the applicable JUCE/SDK terms as well as the
 notices above; the original-code MIT grant remains available independently.

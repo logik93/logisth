@@ -48,3 +48,16 @@ Version 0.9.4.1 uses a fourth release component. Tags and scripts support either
 three or four numeric parts. Keep full plug-in strings; Apple marketing versions
 use major.minor.patch, and build versions use (major*100+minor).patch.revision.
 Always verify theme/font provenance with `python scripts/verify_theme_assets.py`.
+
+## v0.9.6.1 compatibility baseline
+
+The stereo mapping and algorithmic reverb output/mix law intentionally change in
+this release. Reverb type and macro companion choice ranges extend. The new full
+host contract is tests/fixtures/parameters-0.9.6.1.json (1055 entries). Subsequent
+releases must retain its IDs, host order, ranges, defaults, integer flags and choices.
+Old mono A/B capture regression remains active; deliberate stereo changes have
+separate correlation, Mid/Side, level and full-pan tests across all six players.
+PreparedImpulse owns JUCE convolution; ImpulseRack crossfades and publishes only
+prepared engines. Host sample-rate changes reprepare outside processing. Imported
+IR data is immutable, bounded and embedded; retired engines are destroyed outside
+the audio callback. Thread-local allocation guards cover actual processing.

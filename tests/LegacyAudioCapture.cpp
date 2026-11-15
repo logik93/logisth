@@ -14,6 +14,8 @@ int main(int argc, char **argv) {
         for (int i = 0; i < 4; ++i) {
             auto &o = p.osc[size_t(i)];
             o.data = SourceData::factory().get();
+            o.stereo =
+                0; // 0.9.6.1 deliberately recalibrates stereo; retain mono regression coverage.
             o.level = i < 2 ? .35f : .17f;
             o.unison = fixture % 4 + 1;
             o.detune = fixture % 2 ? 100 : 35;

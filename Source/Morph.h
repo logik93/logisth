@@ -3,7 +3,7 @@
 #include <algorithm>
 #include <cmath>
 namespace logisth {
-inline constexpr std::array<Param, 44> macroTargets{
+inline constexpr std::array<Param, 50> macroTargets{
     Param::Count,        Param::filtercutoff, Param::filterres,    Param::keytrack,
     Param::o1position,   Param::o2position,   Param::o3position,   Param::o4position,
     Param::o1pulsewidth, Param::o2pulsewidth, Param::o3pulsewidth, Param::o4pulsewidth,
@@ -14,7 +14,9 @@ inline constexpr std::array<Param, 44> macroTargets{
     Param::o4stretch,    Param::lfo1rate,     Param::lfo2rate,     Param::o5position,
     Param::o6position,   Param::o5pulsewidth, Param::o6pulsewidth, Param::o5fmdepth,
     Param::o6fmdepth,    Param::o5amdepth,    Param::o6amdepth,    Param::o5stretch,
-    Param::o6stretch,    Param::p3cutoff,     Param::p3res,        Param::mixC};
+    Param::o6stretch,    Param::p3cutoff,     Param::p3res,        Param::mixC,
+    Param::p1cutoff,     Param::p2cutoff,     Param::p1res,        Param::p2res,
+    Param::mixA,         Param::mixB};
 template <class Reader> float morphedValue(Param id, Reader read) {
     float value = read(size_t(id));
     if (std::find(macroTargets.begin() + 1, macroTargets.end(), id) == macroTargets.end())

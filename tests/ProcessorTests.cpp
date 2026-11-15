@@ -1,13 +1,17 @@
+#include "AllocationProbe.h"
 #include "AppearanceTests.h"
+#include "ConvolutionTests.h"
 #include "EffectsReverbTests.h"
 #include "FactoryBankTests.h"
 #include "Features092Tests.h"
 #include "Features093Tests.h"
 #include "Features094Tests.h"
 #include "Features095Tests.h"
+#include "Features0961Tests.h"
 #include "Features096Tests.h"
 #include "GainCalibration.h"
 #include "KickBenchmark.h"
+#include "OscillatorClipboardTests.h"
 #include "PluginEditor.h"
 #include "PluginProcessor.h"
 #include "ProcessorPhaseTests.h"
@@ -982,6 +986,12 @@ int main(int argc, char **argv) {
             factorybank_test::search();
             return 0;
         }
+        if (argc > 1 && juce::String(argv[1]) == "--features0961-check") {
+            features0961_test::run();
+            convolution_test::run();
+            oscillator_clipboard_test::run();
+            return 0;
+        }
         if (argc > 1 && juce::String(argv[1]) == "--features096-check") {
             features096_test::run();
             return 0;
@@ -1035,6 +1045,9 @@ int main(int argc, char **argv) {
         features094_test::run();
         features095_test::run();
         features096_test::run();
+        features0961_test::run();
+        convolution_test::run();
+        oscillator_clipboard_test::run();
         factorybank_test::run();
         factorybank_test::search();
         processor_phase_test::run();

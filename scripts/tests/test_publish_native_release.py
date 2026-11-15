@@ -86,7 +86,7 @@ class PublisherTests(unittest.TestCase):
         architectures = ['arm64', 'x86_64'] if platform.startswith('macos') else ['x86_64']
         record = dict(version=version, platform=platform, source_commit='abc123',
                       source_fingerprint='fingerprint', formats=['VST3', 'CLAP', 'Standalone'],
-                      tests=dict(passed=17 if platform.startswith('linux') else 15,
+                      tests=dict(passed=18 if platform.startswith('linux') else 16,
                                  failed=0, skipped=0),
                       archive=archive.name, archive_sha256=publisher.checksum(archive),
                       binaries=[dict(architectures=architectures) for _ in range(3)],
@@ -108,7 +108,7 @@ class PublisherTests(unittest.TestCase):
                 changed = dict(record, **{field: value})
                 with self.assertRaises(ValueError):
                     self.validate(changed, archive)
-        for field, value in [('failed', 1), ('skipped', 1), ('passed', 16)]:
+        for field, value in [('failed', 1), ('skipped', 1), ('passed', 17)]:
             with self.subTest(test=field):
                 changed = dict(record, tests=dict(record['tests'], **{field: value}))
                 with self.assertRaises(ValueError):

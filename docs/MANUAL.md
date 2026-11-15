@@ -1,4 +1,4 @@
-# logisth 0.9.6 — User Manual
+# logisth 0.9.6.1 — User Manual
 
 wavelogik logisth is a three-part polyphonic subtractive synthesizer for VST3, CLAP and standalone use.
 This manual describes logisth's controls, sound engines and preset workflow.
@@ -52,7 +52,7 @@ VST2 is not included: building it requires a separately licensed VST2 SDK.
 
 ## 2. The single-window console
 
-All sections occupy one console. No page needs vertical scrolling. Select A or B
+All sections occupy one console. No page needs vertical scrolling. Select A, B or C
 at the top to edit that part's two oscillators, filter and amplitude envelope.
 This selects the editing view; it does not mute the other part. Use SOLO for
 listening to one part. The central rack changes its controls when you select a
@@ -146,7 +146,7 @@ fine tuning, phase, detune, stereo width, pan, retrigger and invert.
 | Phase / Retrig | Phase is a live 0–360-degree offset. Retrig gives fixed note starts; off keeps random starts while the Phase offset remains active. |
 | Detune | 0–400 cents of unison spread. At 400 ct the outer voices are four semitones below/above the note. The knob midpoint is 100 ct for finer small adjustments. With one voice, detune has no effect. |
 | Blend | Sets the level of additional unison voices. 100% preserves the previous unison sound; 0% retains a single tuned center. One voice is unaffected. |
-| Stereo | Spreads unison voices across the stereo field. |
+| Stereo | 0% is mono; 100% fully separates left/right unison groups. The intermediate setting controls Side/Mid amplitude. |
 | Pan | Positions the oscillator output left or right. |
 | Invert | Inverts oscillator polarity; it can affect cancellation when sources mix. |
 
@@ -157,6 +157,20 @@ power compensation as added voices fade. Odd counts retain their center voice;
 even counts crossfade toward an additional center stream. Its preparation is
 included in the spectral memory guard. BLEND changes are smoothed and work with
 all four source engines. Find DETUNE and BLEND beside each other in VOICE.
+
+STEREO requires more than one active unison voice. A single voice, or identical
+zero-detune retriggered voices, remains mono: the control does not add phase
+inversion or an artificial decorrelator. With independent detuned voices, 100%
+gives equal Mid/Side power and approximately zero L/R correlation. Center PAN
+preserves the full width; moving PAN collapses the complete oscillator toward
+that side. With BLEND at zero, the remaining single center is mono.
+
+Small **Copy / Paste** buttons at the lower-left of every oscillator panel copy
+all its controls, source envelope, FM/AM source choices, wavetable slicing and
+sample audio. Paste applies them to the selected destination player. The private
+clipboard is shared between open instances and does not replace the operating
+system clipboard. Global modulation, filters and part envelopes are separate.
+The source file is unnecessary after copying; memory limits still apply to Paste.
 
 PHASE applies to all unison voices in the selected oscillator and can be changed
 while notes are held or automated by the host. The offset is independent of
@@ -494,7 +508,9 @@ are supported. Skewed targets use their normal host scaling. Routes act on the
 DSP value without overwriting the target's saved base knob. If multiple routes
 address the same target, the last route in macro/slot order takes precedence.
 Unassigned targets keep their base value. Macro names, assignments, ranges and
-amounts are stored in presets and DAW state.
+amounts are stored in presets and DAW state. Target menus group sources, filters,
+mixer, effects and LFO controls by function. Every source family includes
+A1/A2/B1/B2/C1/C2; local cutoff, resonance and mix include A, B and C together.
 
 MUTATE makes small random offsets to continuous timbre controls. MUTATE DEPTH
 sets their size. OSC/FILTER/MOD/FX are section locks; enabled locks protect that
@@ -609,14 +625,14 @@ the latest type. Both EQ modes and every band setting are saved with presets.
 
 ### Reverb types
 
-TYPE selects five algorithms. All now use denser 16-line feedback delay networks
+TYPE selects Hall, Room, Spring, Vintage, Shimmer or Convolution. The first five use 16-line feedback delay networks
 with stereo input diffusion (eight stages per channel, four for Spring). Hall
 is rebuilt for a spacious diffuse tail. Room adds early reflections; Spring uses
 frequency-dependent all-pass dispersion. Vintage adds dark filtering, saturated
 feedback and modulated delay lengths. Shimmer uses four overlapping pitch-shift
 windows in its excitation and feedback for rising/falling harmonics.
 
-Size, Damp, Predelay (0–200 ms), Width, Dry/Wet and Diffusion are shared.
+Size, Damp and Diffusion belong to the five algorithmic models. Predelay (0–200 ms), Width, Dry/Wet and Wet Gain are common to all six.
 Diffusion controls the input all-pass scattering. All five modes expose Decay (0.2–20 seconds, nominal; damping changes
 frequency-dependent decay). Spring adds Dispersion. Vintage adds Wow / Flutter.
 Shimmer adds Shimmer amount and Pitch (-12 to +24 semitones); +12 shifts up an
@@ -627,9 +643,48 @@ Type changes crossfade over approximately 100 ms, with storage prepared before
 playback. Presets and DAW state save the type and all model settings, including
 those currently hidden. Main calibration is unchanged.
 
+The five algorithmic returns are calibrated near −1 dB relative to steady pink
+noise at the default Size/Damp/Decay; actual levels depend on the sound/settings.
+Dry/Wet uses equal-power mixing. **Wet Gain** adds −24 to +24 dB to the return,
+outside feedback, so increasing it does not destabilize the tail. Dry plus wet
+can raise peak levels; adjust Mix/Main for the patch. Reverb Off clears its tail.
+
+### Convolution and impulse responses
+
+Select TYPE / CONVOLUTION, then **LOAD IR** to choose a mono or stereo WAV, AIFF
+or FLAC impulse response. **RESET IR** restores the included synthetic chamber.
+The name, channel count, sample rate, duration and preparation status appear in
+the rack. Convolution replaces the algorithmic model; irrelevant controls hide.
+
+The engine uses JUCE's zero-latency non-uniform partitioned convolution. Mono IRs
+apply the same response independently to L/R; stereo IRs use separate channel
+responses. This is stereo convolution, with no four-channel true-stereo matrix.
+The IR retains its original timing; leading silence is not automatically trimmed.
+Predelay adds additional time. Width and Wet Gain act after the convolver.
+
+**Normalise** defaults on: the larger channel's total squared IR energy is
+normalized to one after resampling to the host rate. This preserves the stereo
+channel balance and provides a useful starting level; it is not a loudness
+matcher. Off retains the decoded IR's amplitude. IR preparation, resampling and
+energy measurement run outside audio processing; ready replacements crossfade
+over 100 ms. Loading reports errors in the footer.
+
+Supported IR rates are 8–192 kHz. A 32 MiB decoded-stereo/resampled memory budget
+limits IR size, rather than a fixed duration; a higher host rate can reduce the
+maximum usable duration. Invalid, silent or oversized imports are rejected.
+User IR PCM is embedded losslessly in both presets and DAW project state,
+including when another reverb type is selected. Original file paths are unnecessary
+on another computer. The factory response is embedded when Convolution is selected.
+
+With Convolution enabled, the tail reported to the host includes the IR duration
+plus the existing conservative 60-second instrument/effects release allowance.
+A long-IR regression checks that responses over one minute are retained.
+
+![Convolution reverb](images/logisth-reverb-convolution.png)
+
 When SYNC is on, rate/time fields that support synchronization become division
 menus. Turning SYNC off exposes their independent Hz/time values again. Bypass
-can freeze a section's internal memory; a tail may resume when re-enabled.
+can freeze some sections' internal memory. Reverb instead clears its tail when disabled.
 Delay memory is limited to 16 seconds per channel, including very slow synced
 divisions. Compressor attack/release and some effect delays use milliseconds;
 envelope times use seconds internally. The panel displays suitable units.
@@ -728,15 +783,15 @@ library; it does not relocate files. Load file can open a preset from elsewhere.
 Save/load run on a worker, with completion/errors in the footer. Wait for the
 completion message before closing the instance or moving a newly saved file.
 
-Presets contain all 1053 audio parameters, routing, compressed audio for all six
-slots, WAV regions, chord mappings, twelve named patterns, the preset comment and
+Presets contain all 1055 audio parameters, routing, compressed audio for all six
+slots, the convolution impulse response, WAV regions, chord mappings, twelve named patterns, the preset comment and
 scope selection. Theme and editor size are separate user preferences and are
 retained when sounds change. The original sample files are unnecessary on recall. Saving uses a
 temporary file and atomic replacement. Invalid files leave the current patch
 intact. State/preset files are limited to 1 GiB. These are logisth's own files;
 renaming another format to .logisth does not convert it.
 
-All 1053 parameters are available for host automation. The first 514 parameter
+All 1055 parameters are available for host automation. The first 514 parameter
 IDs and order from 0.4 are retained. Granulizer and global MIDI-only controls
 follow them; the former Graphs parameter block is removed. A/B/C views, rack pages,
 theme and scope source do not change the patch's audio settings. DAW state
@@ -747,8 +802,12 @@ and pulse-width targets for all six players. A+B still means A and B only;
 A+B+C includes C. C is also available as a Misc amplitude-envelope source,
 an FM/AM modulator, a solo source and a macro target.
 
-Version 0.9.6 preserves all 954 parameter IDs, indices, ranges, defaults and
-choice lists from 0.9.5 (including the original 736 from 0.9.4.1). New C choices use appended companion parameters with
+Version 0.9.6.1 deliberately changes the stereo mapping, reverb return levels
+and Dry/Wet law. Older presets can sound different. Convolution extends the
+reverb type range, and local A/B filter/mix targets extend the macro companion
+ranges. The new 1055-parameter contract is frozen for subsequent releases.
+
+C choices use companion parameters with
 an ID ending in **cx**. Original chooses the saved base choice; a C extension
 overrides it. The editor combines both into one menu. For host automation of a
 new C option, automate its companion; set that companion to Original when
@@ -826,8 +885,8 @@ smoke test does not replace testing in your particular DAW. Native macOS tests
 run on Intel; Universal architecture checks establish that arm64 code is present,
 not that it has been auditioned on Apple Silicon hardware.
 
-The filter is an independent SVF design. All five reverb algorithms, including
-the rebuilt Hall, are original wavelogik implementations. Signalsmith Stretch and Kick
+The filter is an independent SVF design. The five algorithmic reverb models, including
+Hall, are original wavelogik implementations. Convolution uses JUCE dsp::Convolution with an original adapter and factory IR. Signalsmith Stretch and Kick
 sampler modes use Signalsmith Stretch 1.3.2 and Signalsmith Linear 0.6.6 (MIT). Modulation
 scales and sequencer behaviour are defined by this manual. Open Sans and Ioskeley Mono font
 notices are included in assets/fonts.

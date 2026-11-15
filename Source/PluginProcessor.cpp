@@ -231,6 +231,9 @@ EffectsParams LogisthProcessor::effectsSnapshot() const {
     p.treble = get(Param::eqtreble);
     p.trebleFreq = get(Param::eqtreblefreq);
     p.reverbType = int(get(Param::reverbtype));
+    p.convolution = &impulseRack;
+    p.irNormalize = get(Param::irnormalize) > 0;
+    p.reverbOutput = get(Param::reverbout);
     p.reverbDecay = get(Param::reverbdecay);
     p.shimmerAmount = get(Param::shimmeramount);
     p.shimmerPitch = get(Param::shimmerpitch);
@@ -297,6 +300,9 @@ ArpParams LogisthProcessor::arpSnapshot() const {
     return p;
 }
 void LogisthProcessor::prepareToPlay(double sampleRate, int) {
+    impulseRate = sampleRate;
+    impulseRack.detach();
+    ensureImpulse(true);
     spectralRate = sampleRate;
     ensureSpectral(true);
     generatedMidi.ensureSize(131072);
@@ -313,6 +319,7 @@ void LogisthProcessor::reset() {
     chordMapper.reset();
     chordsWereEnabled = false;
     effects.reset();
+    impulseRack.reset();
     arp.reset();
     masterSmooth = get(Param::master);
     wasPlaying = false;
@@ -707,6 +714,7 @@ void LogisthProcessor::loadPreset(int index) {
     }
     for (int i = 0; i < playerCount; ++i)
         clearSource(i);
+    clearImpulse();
     auto defaultChords = std::make_shared<ChordMap>();
     for (int key = 0; key < 128; ++key)
         defaultChords->set(key, 1);

@@ -3,6 +3,7 @@
 #include "Chords.h"
 #include "Effects.h"
 #include "Engine.h"
+#include "ImpulseReverb.h"
 #include "Morph.h"
 #include "Parameters.h"
 #include <juce_audio_utils/juce_audio_utils.h>
@@ -20,6 +21,16 @@ class LogisthProcessor : public juce::AudioProcessor {
     void loadSourceAsync(int, const juce::File &, int frameSize = 0,
                          bool switchClassicToSampler = false);
     void clearSource(int);
+    juce::Result loadImpulse(const juce::File &);
+    void loadImpulseAsync(const juce::File &);
+    void clearImpulse();
+    void ensureImpulse(bool synchronous = false);
+    bool impulseReady() const;
+    std::shared_ptr<const logisth::ImpulseData> impulseData() const;
+    std::atomic<uint64_t> impulseRevision{0};
+    juce::Result copyOscillator(int);
+    juce::Result pasteOscillator(int);
+    static bool hasOscillatorClipboard();
     std::shared_ptr<const logisth::SourceData> sourceData(int) const;
     juce::String sourceStatus() const;
     std::shared_ptr<const logisth::ChordMap> chordMap() const;
@@ -84,7 +95,9 @@ class LogisthProcessor : public juce::AudioProcessor {
         return false;
     }
     double getTailLengthSeconds() const override {
-        return 60;
+        const bool convolution = raw[size_t(logisth::Param::reverbon)]->load() > 0 &&
+                                 raw[size_t(logisth::Param::reverbtype)]->load() == 5;
+        return 60 + (convolution ? impulseDuration.load() : 0);
     }
     int getNumPrograms() override {
         return 1;
@@ -148,6 +161,21 @@ class LogisthProcessor : public juce::AudioProcessor {
     std::array<std::atomic<float> *, logisth::parameterCount> raw{};
     bool publishSource(int, std::shared_ptr<const logisth::SourceData>);
     void publishChords(std::shared_ptr<const logisth::ChordMap>);
+    void publishImpulse(std::shared_ptr<const logisth::ImpulseData>);
+    juce::Result loadImpulseRequested(const juce::File &, uint64_t);
+    uint64_t impulseImportRequest = 0;
+    void serviceImpulse();
+    void saveImpulse(juce::ValueTree &) const;
+    std::shared_ptr<const logisth::ImpulseData> readImpulse(const juce::ValueTree &) const;
+    mutable logisth::ImpulseRack impulseRack;
+    std::shared_ptr<const logisth::ImpulseData> impulseOwner = logisth::ImpulseData::factory();
+    std::vector<std::shared_ptr<logisth::PreparedImpulse>> impulseEngines;
+    std::atomic<double> impulseRate{44100}, impulseDuration{1};
+    std::atomic<uint64_t> impulseGeneration{0};
+    uint64_t impulsePendingGeneration = 0, impulseRejectedGeneration = 0,
+             impulseDesiredRevision = 0;
+    double impulseDesiredRate = 0;
+    std::atomic<bool> impulsePending{false};
     void saveAssets(juce::ValueTree &);
     void saveMacroMetadata(juce::ValueTree &) const;
     bool restoreAssets(const juce::ValueTree &);

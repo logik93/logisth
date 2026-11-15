@@ -220,8 +220,15 @@ inline void preview(const File &folder) {
         write("theme-" + String(theme), editor->snapshotTheme(theme));
     for (int type = 0; type < 5; ++type)
         write("reverb-" + String(type), editor->snapshotPage(14 + type));
-    for (int page = 19; page <= 33; ++page)
+    for (int page = 19; page <= 34; ++page) {
+        if (page == 34) {
+            editor->snapshotPage(page);
+            auto *type = p.state.getParameter("reverbtype");
+            type->setValueNotifyingHost(type->convertTo0to1(5));
+            p.prepareToPlay(48000, 512);
+        }
         write("feature-" + String(page), editor->snapshotPage(page));
+    }
     for (auto pair : {std::pair<const char *, float>{"o1tailon", 1},
                       {"o1tailstart", .45f},
                       {"o1tailend", .9f}}) {

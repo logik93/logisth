@@ -12,7 +12,7 @@ import zipfile
 from pathlib import Path
 
 
-def package(preview: Path, calibration: Path, kick_benchmark: Path | None = None, factory_bank: Path | None = None) -> Path:
+def package(preview: Path, calibration: Path, kick_benchmark: Path | None = None, factory_bank: Path | None = None, stereo_reverb: Path | None = None) -> Path:
     root = Path(__file__).resolve().parents[1]
     version = re.search(r'project\(Logisth VERSION ([\d.]+)',
                         (root / 'CMakeLists.txt').read_text()).group(1)
@@ -85,6 +85,13 @@ def package(preview: Path, calibration: Path, kick_benchmark: Path | None = None
         files += [(factory_bank / name, name) for name in required]
         files += [(root / 'LICENSE', 'LICENSE'), (root / 'docs/FACTORY_PRESETS.md', 'CATALOGUE.md')]
         bundles.append(('factory-presets', files))
+    if stereo_reverb is not None:
+        files = [(stereo_reverb / name, name) for name in
+                 ('stereo-before.csv', 'stereo-after.csv', 'reverb-before.csv', 'reverb-after.csv')]
+        files += [(root / 'docs/STEREO_REVERB_CALIBRATION.md', 'README.md')]
+        if any(not p.is_file() for p, _ in files):
+            raise ValueError('Stereo/reverb measurements are incomplete')
+        bundles.append(('stereo-reverb-calibration', files))
     folder.mkdir(parents=True)
     for file, name in copies:
         shutil.copyfile(file, folder / name)
@@ -109,9 +116,11 @@ if __name__ == '__main__':
     parser.add_argument('--calibration', type=Path, required=True)
     parser.add_argument('--kick-benchmark', type=Path)
     parser.add_argument('--factory-bank', type=Path)
+    parser.add_argument('--stereo-reverb', type=Path)
     args = parser.parse_args()
     try:
         package(args.preview.resolve(), args.calibration.resolve(), args.kick_benchmark.resolve() if args.kick_benchmark else None,
-                args.factory_bank.resolve() if args.factory_bank else None)
+                args.factory_bank.resolve() if args.factory_bank else None,
+                args.stereo_reverb.resolve() if args.stereo_reverb else None)
     except (OSError, ValueError, subprocess.CalledProcessError) as error:
         raise SystemExit(str(error)) from error

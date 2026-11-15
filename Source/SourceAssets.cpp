@@ -7,6 +7,7 @@ LogisthProcessor::~LogisthProcessor() {
 }
 void LogisthProcessor::serviceAssets() {
     ensureSpectral();
+    serviceImpulse();
     const ScopedLock lock(assetLock);
     if (assetReaders.load() == 0) {
         retiredSources.clear();
@@ -292,6 +293,7 @@ void LogisthProcessor::randomisePattern() {
     }
 }
 void LogisthProcessor::saveAssets(ValueTree &tree) {
+    saveImpulse(tree);
     std::array<std::shared_ptr<const SourceData>, playerCount> owners;
     std::shared_ptr<const ChordMap> chordsSnapshot;
     std::array<ValueTree, 12> patternSnapshot;
@@ -351,6 +353,9 @@ void LogisthProcessor::saveAssets(ValueTree &tree) {
             tree.addChild(pattern.createCopy(), -1, nullptr);
 }
 bool LogisthProcessor::restoreAssets(const ValueTree &tree) {
+    auto restoredImpulse = readImpulse(tree);
+    if (!restoredImpulse)
+        return false;
     std::array<std::shared_ptr<const SourceData>, playerCount> sources;
     sources.fill(SourceData::factory());
     auto map = std::make_shared<ChordMap>();
@@ -459,7 +464,8 @@ bool LogisthProcessor::restoreAssets(const ValueTree &tree) {
     }
     {
         const ScopedLock lock(assetLock);
-        retiredSources.reserve(retiredSources.size() + 4);
+        publishImpulse(std::move(restoredImpulse));
+        retiredSources.reserve(retiredSources.size() + playerCount);
         retiredChords.reserve(retiredChords.size() + 1);
         for (int slot = 0; slot < playerCount; ++slot) {
             retiredSources.push_back(sourceOwners[size_t(slot)]);

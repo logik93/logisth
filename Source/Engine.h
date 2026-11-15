@@ -4,6 +4,7 @@
 #include "Granular.h"
 #include "Modulation.h"
 #include "SourceData.h"
+#include "Stereo.h"
 #include "Telemetry.h"
 #include <cstdint>
 #include <cstring>
@@ -768,9 +769,8 @@ class Engine {
                             (signal[0] + signal[1]) * .5f * gain * amps[part] * v.velocity;
                         phase += dt;
                         phase -= std::floor(phase);
-                        const float pan =
-                            clamp(op.pan + spread * op.stereo + mods.pair(Destination::PanA, part),
-                                  -1, 1);
+                        const float pan = unisonPan(spread, op.stereo,
+                                                    op.pan + mods.pair(Destination::PanA, part));
                         oscillators[part][0] += signal[0] * gain * std::sqrt((1 - pan) * .5f);
                         oscillators[part][1] += signal[1] * gain * std::sqrt((1 + pan) * .5f);
                     }

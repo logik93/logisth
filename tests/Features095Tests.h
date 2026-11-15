@@ -16,14 +16,16 @@ inline void run() {
     for (int i = 0; i < contract.size(); ++i) {
         auto row = contract[i];
         const auto &spec = parameterSpecs[size_t(i)];
+        const bool convolution = String(spec.id) == "reverbtype";
         auto equal = [&](const char *key, float value) {
             return std::abs(double(row[key]) - double(value)) < 1e-6;
         };
         check(int(row["index"]) == i && row["id"].toString() == spec.id &&
                   row["label"].toString() == spec.label && row["group"].toString() == spec.group &&
                   int(row["page"]) == spec.page && equal("low", spec.low) &&
-                  equal("high", spec.high) && equal("initial", spec.initial) &&
-                  equal("skew", spec.skew) && row["choices"].toString() == spec.choices &&
+                  equal("high", spec.high - (convolution ? 1 : 0)) &&
+                  equal("initial", spec.initial) && equal("skew", spec.skew) &&
+                  row["choices"].toString() + (convolution ? "|Convolution" : "") == spec.choices &&
                   bool(row["integer"]) == spec.integer,
               "all 736 original parameter IDs, indices, ranges and choices stay unchanged");
         check(p.getParameters()[i] == p.state.getParameter(spec.id),

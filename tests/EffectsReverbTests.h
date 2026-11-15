@@ -111,6 +111,30 @@ inline void run() {
     Timer::callPendingTimersSynchronously();
     check(!console->findChildWithID("shimmeramount")->isVisible(),
           "host-automated type changes refresh mode-specific control visibility");
+    {
+        auto fx = std::make_unique<Effects>();
+        fx->prepare(48000);
+        EffectsParams settings;
+        settings.reverb = true;
+        settings.reverbMix = 1;
+        settings.reverbPredelay = 150;
+        float left[256]{}, right[256]{}, modulation[256]{};
+        left[0] = right[0] = 1;
+        fx->process(left, right, 256, modulation, modulation, settings);
+        settings.reverb = false;
+        std::fill_n(left, 256, 0);
+        std::fill_n(right, 256, 0);
+        fx->process(left, right, 256, modulation, modulation, settings);
+        settings.reverb = true;
+        for (int b = 0; b < 100; ++b) {
+            std::fill_n(left, 256, 0);
+            std::fill_n(right, 256, 0);
+            fx->process(left, right, 256, modulation, modulation, settings);
+            for (int i = 0; i < 256; ++i)
+                check(left[i] == 0 && right[i] == 0,
+                      "Reverb Off clears the predelay as well as the model tail");
+        }
+    }
     std::cout << "PASS reverb integration: five processor modes, preset persistence, conditional "
                  "UI and host automation\n";
 }

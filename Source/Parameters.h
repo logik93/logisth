@@ -1059,6 +1059,8 @@ enum class Param : size_t {
     eqb15q,
     eqb15on,
     eqband15,
+    reverbout,
+    irnormalize,
     Count
 };
 constexpr size_t parameterCount = size_t(Param::Count);
@@ -1862,7 +1864,8 @@ inline const std::array<ParameterSpec, parameterCount> parameterSpecs{{
     {"o4gsync", "Stretch sync", 5, "GRANULIZER 4", 0, 1, 0, 1, "Off|On", false},
     {"o4gbeats", "Sample beats", 5, "GRANULIZER 4", 0.25f, 64.0f, 4.0f, 0.4f, "", false},
     {"midionly", "MIDI only", 5, "GLOBAL", 0, 1, 0, 1, "Off|On", false},
-    {"reverbtype", "Type", 3, "REVERB", 0, 4, 0, 1, "Hall|Room|Spring|Vintage|Shimmer", false},
+    {"reverbtype", "Type", 3, "REVERB", 0.0f, 5.0f, 0.0f, 1.0f,
+     "Hall|Room|Spring|Vintage|Shimmer|Convolution", false},
     {"reverbdecay", "Decay / s", 3, "REVERB", .2f, 20, 3.5f, .4f, "", false},
     {"shimmeramount", "Shimmer", 3, "REVERB", 0, 1, .45f, 1, "", false},
     {"shimmerpitch", "Pitch / st", 3, "REVERB", -12, 24, 12, 1, "", true},
@@ -2467,69 +2470,85 @@ inline const std::array<ParameterSpec, parameterCount> parameterSpecs{{
      "Original|C1|C2", false},
     {"o4amsourcecx", "AM source / C extension", 5, "SOURCE 4", 0.0f, 2.0f, 0.0f, 1.0f,
      "Original|C1|C2", false},
-    {"m1target1cx", "Target / C extension", 5, "MORPH", 0.0f, 13.0f, 0.0f, 1.0f,
+    {"m1target1cx", "Target / C extension", 5, "MORPH", 0.0f, 19.0f, 0.0f, 1.0f,
      "Original|WT Pos / Start C1|WT Pos / Start C2|Pulse width C1|Pulse width C2|FM C1|FM C2|AM "
-     "C1|AM C2|Time factor C1|Time factor C2|Cutoff C|Resonance C|Mix C",
+     "C1|AM C2|Time factor C1|Time factor C2|Cutoff C|Resonance C|Mix C|Cutoff A|Cutoff "
+     "B|Resonance A|Resonance B|Mix A|Mix B",
      false},
-    {"m1target2cx", "Target / C extension", 5, "MORPH", 0.0f, 13.0f, 0.0f, 1.0f,
+    {"m1target2cx", "Target / C extension", 5, "MORPH", 0.0f, 19.0f, 0.0f, 1.0f,
      "Original|WT Pos / Start C1|WT Pos / Start C2|Pulse width C1|Pulse width C2|FM C1|FM C2|AM "
-     "C1|AM C2|Time factor C1|Time factor C2|Cutoff C|Resonance C|Mix C",
+     "C1|AM C2|Time factor C1|Time factor C2|Cutoff C|Resonance C|Mix C|Cutoff A|Cutoff "
+     "B|Resonance A|Resonance B|Mix A|Mix B",
      false},
-    {"m1target3cx", "Target / C extension", 5, "MORPH", 0.0f, 13.0f, 0.0f, 1.0f,
+    {"m1target3cx", "Target / C extension", 5, "MORPH", 0.0f, 19.0f, 0.0f, 1.0f,
      "Original|WT Pos / Start C1|WT Pos / Start C2|Pulse width C1|Pulse width C2|FM C1|FM C2|AM "
-     "C1|AM C2|Time factor C1|Time factor C2|Cutoff C|Resonance C|Mix C",
+     "C1|AM C2|Time factor C1|Time factor C2|Cutoff C|Resonance C|Mix C|Cutoff A|Cutoff "
+     "B|Resonance A|Resonance B|Mix A|Mix B",
      false},
-    {"m1target4cx", "Target / C extension", 5, "MORPH", 0.0f, 13.0f, 0.0f, 1.0f,
+    {"m1target4cx", "Target / C extension", 5, "MORPH", 0.0f, 19.0f, 0.0f, 1.0f,
      "Original|WT Pos / Start C1|WT Pos / Start C2|Pulse width C1|Pulse width C2|FM C1|FM C2|AM "
-     "C1|AM C2|Time factor C1|Time factor C2|Cutoff C|Resonance C|Mix C",
+     "C1|AM C2|Time factor C1|Time factor C2|Cutoff C|Resonance C|Mix C|Cutoff A|Cutoff "
+     "B|Resonance A|Resonance B|Mix A|Mix B",
      false},
-    {"m2target1cx", "Target / C extension", 5, "MORPH", 0.0f, 13.0f, 0.0f, 1.0f,
+    {"m2target1cx", "Target / C extension", 5, "MORPH", 0.0f, 19.0f, 0.0f, 1.0f,
      "Original|WT Pos / Start C1|WT Pos / Start C2|Pulse width C1|Pulse width C2|FM C1|FM C2|AM "
-     "C1|AM C2|Time factor C1|Time factor C2|Cutoff C|Resonance C|Mix C",
+     "C1|AM C2|Time factor C1|Time factor C2|Cutoff C|Resonance C|Mix C|Cutoff A|Cutoff "
+     "B|Resonance A|Resonance B|Mix A|Mix B",
      false},
-    {"m2target2cx", "Target / C extension", 5, "MORPH", 0.0f, 13.0f, 0.0f, 1.0f,
+    {"m2target2cx", "Target / C extension", 5, "MORPH", 0.0f, 19.0f, 0.0f, 1.0f,
      "Original|WT Pos / Start C1|WT Pos / Start C2|Pulse width C1|Pulse width C2|FM C1|FM C2|AM "
-     "C1|AM C2|Time factor C1|Time factor C2|Cutoff C|Resonance C|Mix C",
+     "C1|AM C2|Time factor C1|Time factor C2|Cutoff C|Resonance C|Mix C|Cutoff A|Cutoff "
+     "B|Resonance A|Resonance B|Mix A|Mix B",
      false},
-    {"m2target3cx", "Target / C extension", 5, "MORPH", 0.0f, 13.0f, 0.0f, 1.0f,
+    {"m2target3cx", "Target / C extension", 5, "MORPH", 0.0f, 19.0f, 0.0f, 1.0f,
      "Original|WT Pos / Start C1|WT Pos / Start C2|Pulse width C1|Pulse width C2|FM C1|FM C2|AM "
-     "C1|AM C2|Time factor C1|Time factor C2|Cutoff C|Resonance C|Mix C",
+     "C1|AM C2|Time factor C1|Time factor C2|Cutoff C|Resonance C|Mix C|Cutoff A|Cutoff "
+     "B|Resonance A|Resonance B|Mix A|Mix B",
      false},
-    {"m2target4cx", "Target / C extension", 5, "MORPH", 0.0f, 13.0f, 0.0f, 1.0f,
+    {"m2target4cx", "Target / C extension", 5, "MORPH", 0.0f, 19.0f, 0.0f, 1.0f,
      "Original|WT Pos / Start C1|WT Pos / Start C2|Pulse width C1|Pulse width C2|FM C1|FM C2|AM "
-     "C1|AM C2|Time factor C1|Time factor C2|Cutoff C|Resonance C|Mix C",
+     "C1|AM C2|Time factor C1|Time factor C2|Cutoff C|Resonance C|Mix C|Cutoff A|Cutoff "
+     "B|Resonance A|Resonance B|Mix A|Mix B",
      false},
-    {"m3target1cx", "Target / C extension", 5, "MORPH", 0.0f, 13.0f, 0.0f, 1.0f,
+    {"m3target1cx", "Target / C extension", 5, "MORPH", 0.0f, 19.0f, 0.0f, 1.0f,
      "Original|WT Pos / Start C1|WT Pos / Start C2|Pulse width C1|Pulse width C2|FM C1|FM C2|AM "
-     "C1|AM C2|Time factor C1|Time factor C2|Cutoff C|Resonance C|Mix C",
+     "C1|AM C2|Time factor C1|Time factor C2|Cutoff C|Resonance C|Mix C|Cutoff A|Cutoff "
+     "B|Resonance A|Resonance B|Mix A|Mix B",
      false},
-    {"m3target2cx", "Target / C extension", 5, "MORPH", 0.0f, 13.0f, 0.0f, 1.0f,
+    {"m3target2cx", "Target / C extension", 5, "MORPH", 0.0f, 19.0f, 0.0f, 1.0f,
      "Original|WT Pos / Start C1|WT Pos / Start C2|Pulse width C1|Pulse width C2|FM C1|FM C2|AM "
-     "C1|AM C2|Time factor C1|Time factor C2|Cutoff C|Resonance C|Mix C",
+     "C1|AM C2|Time factor C1|Time factor C2|Cutoff C|Resonance C|Mix C|Cutoff A|Cutoff "
+     "B|Resonance A|Resonance B|Mix A|Mix B",
      false},
-    {"m3target3cx", "Target / C extension", 5, "MORPH", 0.0f, 13.0f, 0.0f, 1.0f,
+    {"m3target3cx", "Target / C extension", 5, "MORPH", 0.0f, 19.0f, 0.0f, 1.0f,
      "Original|WT Pos / Start C1|WT Pos / Start C2|Pulse width C1|Pulse width C2|FM C1|FM C2|AM "
-     "C1|AM C2|Time factor C1|Time factor C2|Cutoff C|Resonance C|Mix C",
+     "C1|AM C2|Time factor C1|Time factor C2|Cutoff C|Resonance C|Mix C|Cutoff A|Cutoff "
+     "B|Resonance A|Resonance B|Mix A|Mix B",
      false},
-    {"m3target4cx", "Target / C extension", 5, "MORPH", 0.0f, 13.0f, 0.0f, 1.0f,
+    {"m3target4cx", "Target / C extension", 5, "MORPH", 0.0f, 19.0f, 0.0f, 1.0f,
      "Original|WT Pos / Start C1|WT Pos / Start C2|Pulse width C1|Pulse width C2|FM C1|FM C2|AM "
-     "C1|AM C2|Time factor C1|Time factor C2|Cutoff C|Resonance C|Mix C",
+     "C1|AM C2|Time factor C1|Time factor C2|Cutoff C|Resonance C|Mix C|Cutoff A|Cutoff "
+     "B|Resonance A|Resonance B|Mix A|Mix B",
      false},
-    {"m4target1cx", "Target / C extension", 5, "MORPH", 0.0f, 13.0f, 0.0f, 1.0f,
+    {"m4target1cx", "Target / C extension", 5, "MORPH", 0.0f, 19.0f, 0.0f, 1.0f,
      "Original|WT Pos / Start C1|WT Pos / Start C2|Pulse width C1|Pulse width C2|FM C1|FM C2|AM "
-     "C1|AM C2|Time factor C1|Time factor C2|Cutoff C|Resonance C|Mix C",
+     "C1|AM C2|Time factor C1|Time factor C2|Cutoff C|Resonance C|Mix C|Cutoff A|Cutoff "
+     "B|Resonance A|Resonance B|Mix A|Mix B",
      false},
-    {"m4target2cx", "Target / C extension", 5, "MORPH", 0.0f, 13.0f, 0.0f, 1.0f,
+    {"m4target2cx", "Target / C extension", 5, "MORPH", 0.0f, 19.0f, 0.0f, 1.0f,
      "Original|WT Pos / Start C1|WT Pos / Start C2|Pulse width C1|Pulse width C2|FM C1|FM C2|AM "
-     "C1|AM C2|Time factor C1|Time factor C2|Cutoff C|Resonance C|Mix C",
+     "C1|AM C2|Time factor C1|Time factor C2|Cutoff C|Resonance C|Mix C|Cutoff A|Cutoff "
+     "B|Resonance A|Resonance B|Mix A|Mix B",
      false},
-    {"m4target3cx", "Target / C extension", 5, "MORPH", 0.0f, 13.0f, 0.0f, 1.0f,
+    {"m4target3cx", "Target / C extension", 5, "MORPH", 0.0f, 19.0f, 0.0f, 1.0f,
      "Original|WT Pos / Start C1|WT Pos / Start C2|Pulse width C1|Pulse width C2|FM C1|FM C2|AM "
-     "C1|AM C2|Time factor C1|Time factor C2|Cutoff C|Resonance C|Mix C",
+     "C1|AM C2|Time factor C1|Time factor C2|Cutoff C|Resonance C|Mix C|Cutoff A|Cutoff "
+     "B|Resonance A|Resonance B|Mix A|Mix B",
      false},
-    {"m4target4cx", "Target / C extension", 5, "MORPH", 0.0f, 13.0f, 0.0f, 1.0f,
+    {"m4target4cx", "Target / C extension", 5, "MORPH", 0.0f, 19.0f, 0.0f, 1.0f,
      "Original|WT Pos / Start C1|WT Pos / Start C2|Pulse width C1|Pulse width C2|FM C1|FM C2|AM "
-     "C1|AM C2|Time factor C1|Time factor C2|Cutoff C|Resonance C|Mix C",
+     "C1|AM C2|Time factor C1|Time factor C2|Cutoff C|Resonance C|Mix C|Cutoff A|Cutoff "
+     "B|Resonance A|Resonance B|Mix A|Mix B",
      false},
     {"o1detunewide", "Wide detune / cents", 0, "OSC A1", 0.0f, 200.0f, 0.0f, 1.0f, "", false},
     {"o1blend", "Unison blend", 0, "OSC A1", 0.0f, 1.0f, 1.0f, 1.0f, "", false},
@@ -2735,6 +2754,8 @@ inline const std::array<ParameterSpec, parameterCount> parameterSpecs{{
     {"eqb15q", "Q", 3, "EQUALIZER", 0.1f, 20.0f, 1.41421356237f, 0.5f, "", false},
     {"eqb15on", "Band enabled", 3, "EQUALIZER", 0.0f, 1.0f, 0.0f, 1.0f, "Off|On", false},
     {"eqband15", "Gain / dB", 3, "EQUALIZER", -18.0f, 18.0f, 0.0f, 1.0f, "", false},
+    {"reverbout", "Wet gain / dB", 3, "REVERB", -24.0f, 24.0f, 0.0f, 1.0f, "", false},
+    {"irnormalize", "Normalize IR", 3, "REVERB", 0.0f, 1.0f, 1.0f, 1.0f, "Off|On", false},
 }};
 
 inline constexpr size_t legacyParameterCount = 736;

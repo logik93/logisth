@@ -31,4 +31,4 @@ with tempfile.TemporaryDirectory(prefix='logisth-legacy-') as temp:
                 raise ValueError(f'Legacy A/B audio changed: {ref.name}, peak error {error}')
     if len(list((root / 'reference').glob('*.bin'))) != 20:
         raise ValueError('Expected all 20 reference fixtures')
-    print(f'PASS legacy A/B: 20 fixtures, voice lifetimes, max error {maximum:.9g}; {exact}/20 byte-identical')
+    print(f'PASS legacy mono A/B: 20 fixtures, voice lifetimes, max error {maximum:.9g}; {exact}/20 byte-identical')

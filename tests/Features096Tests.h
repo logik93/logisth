@@ -16,16 +16,24 @@ inline void run() {
     for (int i = 0; i < contract.size(); ++i) {
         auto row = contract[i];
         const auto &s = parameterSpecs[size_t(i)];
+        const String id(s.id);
+        const bool conv = id == "reverbtype",
+                   macro = id.startsWith("m") && id.contains("target") && id.endsWith("cx");
+        const String extra = conv    ? "|Convolution"
+                             : macro ? "|Cutoff A|Cutoff B|Resonance A|Resonance B|Mix A|Mix B"
+                                     : "";
         check(row["id"].toString() == s.id && int(row["index"]) == i &&
-                  row["choices"].toString() == s.choices &&
+                  row["choices"].toString() + extra == s.choices &&
                   std::abs(double(row["low"]) - s.low) < 1e-6 &&
-                  std::abs(double(row["high"]) - s.high) < 1e-6 &&
+                  std::abs(double(row["high"]) - (s.high - (conv    ? 1
+                                                            : macro ? 6
+                                                                    : 0))) < 1e-6 &&
                   std::abs(double(row["initial"]) - s.initial) < 1e-6 &&
                   std::abs(double(row["skew"]) - s.skew) < 1e-6 &&
                   p.getParameters()[i] == p.state.getParameter(s.id),
               "all original 954 ranges, choices, defaults and host indices remain intact");
     }
-    check(parameterCount == 1053, "0.9.6 additions are append-only");
+    check(parameterCount == 1055, "0.9.6 additions are append-only");
     std::unique_ptr<AudioProcessorEditor> ui(p.createEditor());
     auto *editor = dynamic_cast<LogisthEditor *>(ui.get());
     auto *console = ui->getChildComponent(0);

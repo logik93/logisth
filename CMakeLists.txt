@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.22)
-project(Logisth VERSION 0.9.6 LANGUAGES C CXX)
+project(Logisth VERSION 0.9.6.1 LANGUAGES C CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 include(CTest)
@@ -11,11 +11,13 @@ if(BUILD_TESTING)
   add_executable(engine_tests tests/EngineTests.cpp)
   target_include_directories(engine_tests PRIVATE Source)
   add_test(NAME engine COMMAND engine_tests)
-  foreach(suite IN ITEMS Modulation Arpeggiator Hybrid Studio Reverb Advanced Performance StretchControls PartC TailLoop Unison FlexibleEQ)
+  foreach(suite IN ITEMS Modulation Arpeggiator Hybrid Studio Reverb Advanced Performance StretchControls PartC TailLoop Unison FlexibleEQ StereoWidth)
     add_executable(${suite}_tests tests/${suite}Tests.cpp)
     target_include_directories(${suite}_tests PRIVATE Source)
     add_test(NAME ${suite} COMMAND ${suite}_tests)
   endforeach()
+  add_executable(stereo_reverb_calibration tests/StereoReverbCalibration.cpp)
+  target_include_directories(stereo_reverb_calibration PRIVATE Source)
   target_sources(Performance_tests PRIVATE tests/SmallStackRegression.cpp)
   target_link_libraries(Performance_tests PRIVATE Threads::Threads)
   find_package(Python3 REQUIRED COMPONENTS Interpreter)
@@ -23,7 +25,7 @@ if(BUILD_TESTING)
   target_include_directories(legacy_audio_capture PRIVATE tests/fixtures/legacy-0.9.4.1 Source)
   add_executable(current_audio_capture tests/LegacyAudioCapture.cpp)
   target_include_directories(current_audio_capture PRIVATE Source)
-  add_test(NAME LegacyAudioCompatibility COMMAND ${Python3_EXECUTABLE}
+  add_test(NAME LegacyMonoAudioCompatibility COMMAND ${Python3_EXECUTABLE}
     ${CMAKE_CURRENT_SOURCE_DIR}/scripts/check_legacy_audio.py
     $<TARGET_FILE:legacy_audio_capture> $<TARGET_FILE:current_audio_capture>)
 
@@ -68,7 +70,7 @@ juce_add_binary_data(LogisthFonts SOURCES
   assets/fonts/ioskeley/IoskeleyMonoTermNerdFontMono-Bold.ttf
   assets/themes/bokkenmmb-Solarized.json "assets/themes/bokkenmmb-Tokyo Night.json"
   "assets/themes/bokkenmmb-Solarized Osaka.json" assets/themes/bokkenmmb-gruvbox.json assets/skins/ap-music-group-white.png)
-target_sources(Logisth PRIVATE Source/PluginProcessor.cpp Source/SourceAssets.cpp Source/PresetLibrary.cpp Source/PluginEditor.cpp Source/ThemeSettings.cpp)
+target_sources(Logisth PRIVATE Source/PluginProcessor.cpp Source/SourceAssets.cpp Source/ImpulseAssets.cpp Source/ImpulseReverb.cpp Source/OscillatorClipboard.cpp Source/PresetLibrary.cpp Source/PluginEditor.cpp Source/ThemeSettings.cpp)
 target_link_libraries(Logisth PRIVATE LogisthFonts)
 target_compile_definitions(Logisth PUBLIC JUCE_WEB_BROWSER=0 JUCE_USE_CURL=0 JUCE_VST3_CAN_REPLACE_VST2=0)
 target_link_libraries(Logisth PRIVATE juce::juce_audio_utils juce::juce_dsp PUBLIC juce::juce_recommended_config_flags)

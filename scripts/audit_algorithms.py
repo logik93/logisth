@@ -29,6 +29,10 @@ def audit(stretch=None, linear=None):
         reports.append({'component':name,'commit':record['commit'],'files_verified':len(record['files']),
                         'sha256_manifest':'passed','direct_upstream_comparison':'passed' if upstream else 'not requested'})
     return {'components':reports,
+            'convolution': {'component':'JUCE 8.0.6 dsp::Convolution',
+                            'commit':'51a8a6d7aeae7326956d747737ccf1575e61e209',
+                            'adapter':'Original non-uniform, zero-latency IR adapter',
+                            'conformance':'Direct stereo FIR parity at 44.1/48/96 kHz and blocks 1/17/256/511'},
             'processing_parity':'StretchControls CTest compares stereo output with upstream at 44.1/48/96 kHz',
             'independent_models':['Kick attack/tail hybrid','WSOLA/Tonal/Transient sampler paths',
                                   'granular sample engine','three-part subtractive engine',
