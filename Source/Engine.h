@@ -23,6 +23,7 @@ struct OscParams {
     int fmSource = 0, amSource = 0, pwmDivision = 7;
     bool pwmSync = false;
     float kickAttack = 25;
+    StretchControls stretchControls;
     const SourceData *data = nullptr;
     GranularParams gran;
 };
@@ -632,11 +633,14 @@ class Engine {
                                             4),
                                         duty, samplePhase);
                                 } else {
-                                    if (p.spectralBank)
-                                        v.playback[size_t(osc)][size_t(u)].setSpectral(
-                                            p.spectralBank->get(int(&v - voices.data()), osc, u, 0),
-                                            p.spectralBank->get(int(&v - voices.data()), osc, u, 1),
-                                            v.age);
+                                    v.playback[size_t(osc)][size_t(u)].setSpectral(
+                                        p.spectralBank ? p.spectralBank->get(
+                                                             int(&v - voices.data()), osc, u, 0)
+                                                       : nullptr,
+                                        p.spectralBank ? p.spectralBank->get(
+                                                             int(&v - voices.data()), osc, u, 1)
+                                                       : nullptr,
+                                        v.age);
                                     signal = v.playback[size_t(osc)][size_t(u)].tick(
                                         *op.data, op.engine, ratio, sr, position, op.end, op.loop,
                                         op.reverse,
@@ -650,7 +654,8 @@ class Engine {
                                             ? noise()
                                             : 0,
                                         op.stretchMode, op.stretch, op.interpolation, duty,
-                                        samplePhase, op.kickAttack, op.gran.trimStart);
+                                        samplePhase, op.kickAttack, op.gran.trimStart,
+                                        op.stretchControls);
                                 }
                             }
                         }

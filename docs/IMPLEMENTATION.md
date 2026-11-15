@@ -17,7 +17,7 @@ wartości. Lokalne ustawienia pozostają niezależne. Każdy filtr ma wejścia A
 B, A+B lub None, tryb LP/HP/BP/Bypass, 12/24 dB/okt. i Drive. Globalne Keytrack
 wiąże cutoff z nutą; Warm Drive przełącza funkcję saturacji integratorów.
 Filtry są własną implementacją SVF (24 dB to kaskada), a nie modelem układu DSP
-Sylenth1. Próg rezonansu blisko maksimum umożliwia samowzbudzenie podczas nuty.
+external instruments. Próg rezonansu blisko maksimum umożliwia samowzbudzenie podczas nuty.
 
 Skala cutoff:
 
@@ -115,7 +115,7 @@ Bend Range, Solo A/B i polifonia do 16 nut. Przełącznik A/B wybiera edytowaną
 warstwę wewnątrz jednego okna; zmiana widoku nie zmienia parametrów ani brzmienia.
 THEME wybiera jasny lub ciemny motyw zapisany w stanie danej instancji.
 
-Nie ma importu banków/presetów Sylenth1 ani jego oryginalnych grafik, menu
+Nie ma importu banków/presetów external instruments ani jego oryginalnych grafik, menu
 zarządzania bankami i MIDI Learn. Własny zapis stanu zawiera wszystkie 248
 parametrów, także tablicę kroków i routowanie. Nowa tożsamość wtyczki wymaga
 wybrania logisth w DAW. Import wcześniejszego stanu prototypu mapuje ustawienia

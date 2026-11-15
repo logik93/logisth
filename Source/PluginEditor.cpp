@@ -1,6 +1,7 @@
 #include "PluginEditor.h"
 #include "BinaryData.h"
 #include "EnvelopePlot.h"
+#include "FactoryPresets.h"
 #include "ThemeSettings.h"
 #include <set>
 using namespace juce;
@@ -300,7 +301,38 @@ class LogisthEditor::Console : public Component,
                                public LogisthColours,
                                public FileDragAndDropTarget,
                                private ThemeSettings::Listener,
-                               private ChangeListener {
+                               private ChangeListener,
+                               private ListBoxModel,
+                               private KeyListener {
+    class SearchButton final : public Button {
+        Console &owner;
+
+      public:
+        explicit SearchButton(Console &c) : Button("Search presets"), owner(c) {
+            setComponentID("preset.search");
+            setTooltip("Search factory and user presets");
+        }
+        void paintButton(Graphics &g, bool over, bool down) override {
+            capsule(g, getLocalBounds().toFloat(),
+                    over || down || getToggleState() ? owner.screenLine : owner.panel, owner.line);
+            g.setColour(owner.mint);
+            g.drawEllipse(7, 5, 10, 10, 1.7f);
+            g.drawLine(15, 14, 21, 20, 1.8f);
+        }
+    };
+    class SearchPanel final : public Component {
+        Console &owner;
+
+      public:
+        explicit SearchPanel(Console &c) : owner(c) {}
+        void paint(Graphics &g) override {
+            capsule(g, getLocalBounds().toFloat(), owner.screen, owner.screenLine);
+        }
+    };
+    struct PresetMatch {
+        int id;
+        String name, description;
+    };
     enum class Style { Knob, Trim, Fader, Number, Menu, Toggle };
     class Control : public Component, private ThemeText {
       public:
@@ -520,7 +552,7 @@ class LogisthEditor::Console : public Component,
                 return v < 1 ? String(v * 1000, 0) + "ms" : String(v, 1) + "s";
             if (name.endsWith("fine") || name.endsWith("detune"))
                 return String(v, 1) + "ct";
-            if (String(spec.label).contains("/ ms"))
+            if (String(spec.label).contains("/ ms") && !(name.endsWith("ssblock") && v == 0))
                 return String(v, std::abs(v) >= 10 ? 0 : 1) + "ms";
             if (String(spec.label).contains("/ dB"))
                 return String(v, 0) + "dB";
@@ -541,7 +573,15 @@ class LogisthEditor::Console : public Component,
                 return String(v * 100, 0) + "%";
             if (spec.integer)
                 return (v > 0 && spec.low < 0 ? "+" : "") + String(int(v));
-            if (name.endsWith("stretch"))
+            if (name.endsWith("ssblock") && v == 0)
+                return "Auto";
+            if (name.endsWith("sstonality"))
+                return v == 0      ? "Off"
+                       : v >= 1000 ? String(v / 1000, 2) + "kHz"
+                                   : String(v, 0) + "Hz";
+            if (name.endsWith("ssformant") || name.endsWith("sssemitones"))
+                return (v > 0 ? "+" : "") + String(v, 1) + "st";
+            if (name.endsWith("stretch") || name.endsWith("ssrate"))
                 return String(v, 2) + "x";
             if (name.endsWith("phase"))
                 return String(v, 0) + String(CharPointer_UTF8("°"));
@@ -809,16 +849,26 @@ class LogisthEditor::Console : public Component,
         presets.setTextWhenNothingSelected("Current patch");
         presets.getProperties().set("fontSize", 12.f);
         refreshPresets();
-        presets.onChange = [this] {
-            int selected = presets.getSelectedId();
-            if (selected >= 1 && selected <= 10) {
-                processor.loadPreset(selected - 1);
-                readout = "Factory sound / " + presets.getText();
-                syncPresetNotes();
-            } else if (selected >= 1000 && selected - 1000 < userPresets.size())
-                processor.loadPresetAsync(userPresets[selected - 1000]);
-            repaint();
-        };
+        presets.onChange = [this] { selectPreset(presets.getSelectedId()); };
+        searchButton.onClick = [this] { showPresetSearch(!searchPanel.isVisible()); };
+        addAndMakeVisible(searchButton);
+        searchPanel.setComponentID("preset.search.panel");
+        searchQuery.setComponentID("preset.search.query");
+        searchQuery.setFont(font(12));
+        searchQuery.setTextToShowWhenEmpty("Search factory and user presets...", muted);
+        searchQuery.addKeyListener(this);
+        searchQuery.onTextChange = [this] { filterPresets(); };
+        searchQuery.onReturnKey = [this] { chooseSearchResult(); };
+        searchQuery.onEscapeKey = [this] { showPresetSearch(false); };
+        searchPanel.addAndMakeVisible(searchQuery);
+        searchResults.setComponentID("preset.search.results");
+        searchResults.setModel(this);
+        searchResults.setRowHeight(29);
+        searchPanel.addAndMakeVisible(searchResults);
+        searchEmpty.setText("No matching presets", dontSendNotification);
+        searchEmpty.setFont(font(12));
+        searchPanel.addChildComponent(searchEmpty);
+        addChildComponent(searchPanel);
         addAndMakeVisible(presets);
         previous.setButtonText(String(CharPointer_UTF8("‹")));
         next.setButtonText(String(CharPointer_UTF8("›")));
@@ -915,7 +965,7 @@ class LogisthEditor::Console : public Component,
             frame.addItemList({"AUTO", "128", "256", "512", "1024", "2048", "4096"}, 1);
             frame.setSelectedId(1);
             frame.getProperties().set("dark", true);
-            frame.setTooltip("Wavetable samples per cycle: Auto reads Serum WAV metadata, "
+            frame.setTooltip("Wavetable samples per cycle: Auto reads WAV metadata, "
                              "otherwise 2048. Short single-cycle files use their actual length.");
             addChildComponent(frame);
         }
@@ -1062,6 +1112,9 @@ class LogisthEditor::Console : public Component,
     }
     ~Console() override {
         rememberDraft();
+        searchResults.setModel(nullptr);
+        searchQuery.removeKeyListener(this);
+        searchQuery.onTextChange = nullptr;
         colourHex.onFocusLost = nullptr;
         colourHex.onReturnKey = nullptr;
         themeName.onTextChange = nullptr;
@@ -1190,6 +1243,10 @@ class LogisthEditor::Console : public Component,
              {&themeLabel, &themeHelp, &aboutLabel, &aboutInfo, &scaleLabel, &nameLabel, &roleLabel,
               &hexLabel, &fontLabel, &backgroundLabel, &knobLabel})
             label->setColour(Label::textColourId, screenText);
+        searchQuery.setColour(TextEditor::backgroundColourId, screen);
+        searchQuery.setColour(TextEditor::textColourId, screenText);
+        searchResults.setColour(ListBox::backgroundColourId, screen);
+        searchEmpty.setColour(Label::textColourId, mint);
         presetNotes.setColour(TextEditor::backgroundColourId, panel);
         presetNotes.applyColourToAllText(ink, true);
         presetNotes.setColour(TextEditor::outlineColourId, line);
@@ -1235,6 +1292,26 @@ class LogisthEditor::Console : public Component,
         repaint();
     }
     void showScenario(int index) {
+        if (index != 28)
+            showPresetSearch(false);
+        if (index == 28) {
+            showPresetSearch(true);
+            searchQuery.setText("pad", false);
+            filterPresets();
+            return;
+        }
+        if (index == 26 || index == 27) {
+            selectedPart = 0;
+            rack = 9;
+            previewSource = 2;
+            previewStretch = index == 26 ? 7 : 4;
+            layout();
+            for (auto &view : sourceViews)
+                view.setSelectedId(10, dontSendNotification);
+            layout();
+            repaint();
+            return;
+        }
         previewReverb = previewEq = previewWave = previewStretch = -1;
         if (index == 23 || index == 24 || index == 25) {
             settingsOpen = false;
@@ -1382,7 +1459,7 @@ class LogisthEditor::Console : public Component,
         for (int part = 0; part < 2; ++part)
             for (int mode = 0; mode < 4; ++mode)
                 for (int model = 0; model < 2; ++model)
-                    for (int view = 1; view <= 9; ++view) {
+                    for (int view = 1; view <= 10; ++view) {
                         selectedPart = part;
                         previewSource = mode;
                         previewGran = model;
@@ -1410,6 +1487,9 @@ class LogisthEditor::Console : public Component,
             for (auto &view : sourceViews)
                 if (view.indexOfItemId(8) >= 0)
                     view.setSelectedId(8, dontSendNotification);
+            inspect();
+            for (auto &view : sourceViews)
+                view.setSelectedId(10, dontSendNotification);
             inspect();
         }
         previewStretch = -1;
@@ -1874,12 +1954,12 @@ class LogisthEditor::Console : public Component,
         int previousId = presets.getSelectedId();
         presets.clear(dontSendNotification);
         presets.addSectionHeading("FACTORY");
-        presets.addItemList({"Init / saw", "Wide supersaw", "Sub bass", "Slow atmosphere",
-                             "Pulse pluck", "Step sequence", "Morph glass", "Sample keys",
-                             "Grain cloud", "Chord pulse"},
-                            1);
+        for (int i = 0; i < factoryPresetCount; ++i)
+            presets.addItem(i < 10 ? legacyFactoryNames[size_t(i)]
+                                   : designedSounds[size_t(i - 10)].name,
+                            i + 1);
         userPresets =
-            processor.presetDirectory().findChildFiles(File::findFiles, false, "*.logisth");
+            processor.presetDirectory().findChildFiles(File::findFiles, true, "*.logisth");
         userPresets.sort();
         auto active = processor.currentPresetFile();
         if (active.existsAsFile() && !userPresets.contains(active))
@@ -1893,11 +1973,99 @@ class LogisthEditor::Console : public Component,
             presets.setSelectedId(1000 + current, dontSendNotification);
         else if (processor.currentPresetName().isNotEmpty())
             presets.setText(processor.currentPresetName(), dontSendNotification);
-        else if (previousId > 0 && previousId <= 10)
+        else if (previousId > 0 && previousId <= factoryPresetCount)
             presets.setSelectedId(previousId, dontSendNotification);
         else
             presets.setSelectedId(0, dontSendNotification);
         presetRevision = processor.presetRevision.load();
+        if (searchPanel.isVisible())
+            filterPresets();
+    }
+    void selectPreset(int selected) {
+        if (selected >= 1 && selected <= factoryPresetCount) {
+            processor.loadPreset(selected - 1);
+            readout = "Factory sound / " + processor.currentPresetName();
+            syncPresetNotes();
+        } else if (selected >= 1000 && selected - 1000 < userPresets.size())
+            processor.loadPresetAsync(userPresets[selected - 1000]);
+        repaint();
+    }
+    void showPresetSearch(bool show) {
+        searchPanel.setVisible(show);
+        searchButton.setToggleState(show, dontSendNotification);
+        if (show) {
+            refreshPresets();
+            filterPresets();
+            searchPanel.toFront(false);
+            searchQuery.grabKeyboardFocus();
+        } else
+            searchQuery.giveAwayKeyboardFocus();
+        repaint();
+    }
+    void filterPresets() {
+        matches.clear();
+        auto words = StringArray::fromTokens(searchQuery.getText().trim(), " ", "");
+        auto add = [&](int id, const String &name, const String &description) {
+            String text = name + " " + description;
+            for (const auto &word : words)
+                if (!text.containsIgnoreCase(word))
+                    return;
+            matches.push_back({id, name, description});
+        };
+        for (int i = 0; i < factoryPresetCount; ++i)
+            add(i + 1,
+                i < 10 ? String(legacyFactoryNames[size_t(i)])
+                       : String(designedSounds[size_t(i - 10)].name),
+                i < 10 ? String("Factory") : String(designedSounds[size_t(i - 10)].description));
+        for (int i = 0; i < userPresets.size(); ++i)
+            add(1000 + i, "User / " + userPresets[i].getFileNameWithoutExtension(),
+                userPresets[i].getParentDirectory().getFileName());
+        searchEmpty.setVisible(matches.empty());
+        searchResults.updateContent();
+        searchResults.selectRow(matches.empty() ? -1 : 0);
+        searchResults.repaint();
+    }
+    int getNumRows() override {
+        return int(matches.size());
+    }
+    void paintListBoxItem(int row, Graphics &g, int width, int height, bool selected) override {
+        if (row < 0 || row >= int(matches.size()))
+            return;
+        if (selected) {
+            g.setColour(green.withAlpha(.35f));
+            g.fillRect(0, 0, width, height);
+        }
+        g.setColour(screenText);
+        g.setFont(font(12));
+        g.drawText(matches[size_t(row)].name, 9, 0, width - 18, height, Justification::centredLeft,
+                   true);
+    }
+    void returnKeyPressed(int row) override {
+        searchResults.selectRow(row);
+        chooseSearchResult();
+    }
+    void listBoxItemClicked(int row, const MouseEvent &) override {
+        searchResults.selectRow(row);
+        chooseSearchResult();
+    }
+    bool keyPressed(const KeyPress &key, Component *origin) override {
+        if (origin != &searchQuery)
+            return false;
+        if (key == KeyPress::upKey || key == KeyPress::downKey) {
+            int row = searchResults.getSelectedRow() + (key == KeyPress::downKey ? 1 : -1);
+            searchResults.selectRow(jlimit(0, jmax(0, int(matches.size()) - 1), row));
+            return true;
+        }
+        return false;
+    }
+    void chooseSearchResult() {
+        int row = searchResults.getSelectedRow();
+        if (row < 0 || row >= int(matches.size()))
+            return;
+        int selected = matches[size_t(row)].id;
+        showPresetSearch(false);
+        presets.setSelectedId(selected, dontSendNotification);
+        selectPreset(selected);
     }
     void syncPresetNotes() {
         presetNotes.setText(processor.presetComment(), false);
@@ -2032,8 +2200,10 @@ class LogisthEditor::Console : public Component,
             }
             menu.addItem("MOD", 7);
             menu.addItem("ROUTING", 9);
-            if (mode == 2)
+            if (mode == 2) {
                 menu.addItem("PLAYBACK", 8);
+                menu.addItem("STRETCH", 10);
+            }
             menu.setSelectedId(menu.indexOfItemId(selected) >= 0 ? selected
                                : mode == 0                       ? 1
                                                                  : 2,
@@ -2114,6 +2284,30 @@ class LogisthEditor::Console : public Component,
                 if (value(Param(size_t(Param::o1stretchmode) + slot * 10)) == 6)
                     control(id + "kickattack", {b.getX() + 269, b.getY() + 86, 100, 80},
                             Style::Knob, "KICK ATTACK");
+            } else if (view == 10) {
+                const int algorithm = int(value(Param(size_t(Param::o1stretchmode) + slot * 10)));
+                const bool signalsmith = algorithm == 6 || algorithm == 7;
+                StringArray keys{"ssrate",    "sssemitones", "sstonality",
+                                 "ssformant", "ssblock",     "ssoverlap"};
+                StringArray labels{"RATE",    "SEMITONES",  "TONALITY LIMIT",
+                                   "FORMANT", "BLOCK (ms)", "OVERLAP"};
+                std::vector<int> visible{0, 1};
+                if (signalsmith) {
+                    visible.push_back(2);
+                    visible.push_back(3);
+                }
+                if (algorithm >= 2) {
+                    visible.push_back(4);
+                    visible.push_back(5);
+                }
+                int columns = signalsmith ? 3 : 2;
+                for (int at = 0; at < int(visible.size()); ++at) {
+                    int i = visible[size_t(at)];
+                    control(id + keys[i],
+                            {b.getX() + 88 + (at % columns) * (columns == 3 ? 119 : 178),
+                             b.getY() + 35 + (at / columns) * 69, columns == 3 ? 110 : 170, 66},
+                            i == 5 ? Style::Menu : Style::Knob, labels[i]);
+                }
             } else if (view == 4) {
                 control(id + "gmodel", {b.getX() + 88, b.getY() + 35, 150, 24}, Style::Menu);
                 for (int i = 0; i < 4; ++i)
@@ -2478,7 +2672,14 @@ class LogisthEditor::Console : public Component,
             w->setVisible(false);
         for (auto &w : chordNotes)
             w.setVisible(false);
-        presets.setBounds(364, 24, 306, 26);
+        presets.setBounds(364, 24, 274, 26);
+        searchButton.setBounds(644, 24, 26, 26);
+        searchPanel.setBounds(332, 56, 446, 300);
+        searchQuery.setBounds(10, 10, 426, 27);
+        searchResults.setBounds(10, 45, 426, 245);
+        searchEmpty.setBounds(19, 50, 408, 30);
+        if (searchPanel.isVisible())
+            searchPanel.toFront(false);
         previous.setBounds(332, 24, 26, 26);
         next.setBounds(676, 24, 26, 26);
         presetFiles.setBounds(708, 24, 70, 26);
@@ -2785,8 +2986,15 @@ class LogisthEditor::Console : public Component,
         } else if (rack == 9) {
             int mode =
                 int(value(Param(size_t(Param::o1engine) + size_t(waveView.selectedSlot()) * 16)));
-            drawCaption(g, mode == 1 ? "WAVETABLE / WT POS" : "SAMPLE / PLAYBACK",
-                        {540, 289, 300, 23}, 11, screenText);
+            String title = mode == 1 ? "WAVETABLE / WT POS" : "SAMPLE / PLAYBACK";
+            if (mode == 2) {
+                auto parameter =
+                    Param(size_t(Param::o1stretchmode) + size_t(waveView.selectedSlot()) * 10);
+                auto names =
+                    StringArray::fromTokens(parameterSpecs[size_t(parameter)].choices, "|", "");
+                title = "SAMPLE / " + names[int(value(parameter))].toUpperCase();
+            }
+            drawCaption(g, title, {540, 289, 390, 23}, 11, screenText);
         } else if (rack == 8) {
             drawCaption(g, "TRIGGER", {414, 309, 140, 18}, 9, mint);
             drawCaption(g, "VOICING", {566, 309, 145, 18}, 9, mint);
@@ -2857,6 +3065,12 @@ class LogisthEditor::Console : public Component,
     int previewSource = -1, previewPattern = -1, previewGran = -1, previewReverb = -1,
         previewEq = -1, previewWave = -1, previewStretch = -1;
     ComboBox presets;
+    SearchButton searchButton{*this};
+    SearchPanel searchPanel{*this};
+    TextEditor searchQuery;
+    ListBox searchResults;
+    Label searchEmpty;
+    std::vector<PresetMatch> matches;
     TextButton settings;
     TextEditor presetNotes;
     Component settingsPanel;

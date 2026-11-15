@@ -12,7 +12,7 @@ section organised around a central effects and arpeggiator rack.
 
 The audio engine and all 248 parameter IDs are retained from 0.2.0. Existing
 logisth projects keep their audio settings. This is an independent instrument;
-Sylenth1 presets and exact sound compatibility are not supported.
+external instruments presets and exact sound compatibility are not supported.
 
 Native archives contain VST3, CLAP and Standalone. Additional downloads include
 the English manual, source, light/dark screenshots, a WAV demo and SHA256SUMS.

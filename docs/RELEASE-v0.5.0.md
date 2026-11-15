@@ -15,7 +15,7 @@ and macOS Universal (Intel + Apple Silicon), the English manual in PDF/Markdown,
 source, interface previews, an audio demo and SHA256SUMS. Each native archive
 contains build and test metadata.
 
-The Fruity Granulizer and Cthulhu manuals were behaviour references. All DSP and
+The the granular engine and the pattern sequencer manuals were behaviour references. All DSP and
 graphics are independently implemented. Proprietary preset formats are not
 imported, and sound/detection results are not guaranteed to match those products.
 

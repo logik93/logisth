@@ -14,7 +14,7 @@ Workflow Build and test przygotowuje osobne kompilacje Linux, Windows i macOS;
 ich wyniki są dostępne jako artefakty ukończonych zadań GitHub Actions.
 VST2 wymaga własnego SDK i nie jest dołączone.
 
-Architektura jest oparta na funkcjach opisanych w manualu Sylenth1, z własnym
+Architektura jest oparta na funkcjach opisanych w manualu external instruments, z własnym
 kodem i interfejsem. Nie deklarujemy zgodności brzmienia lub presetów 1:1.
 Skale DSP i ograniczenia opisano w docs/IMPLEMENTATION.md. Przed dystrybucją
 pochodnych produktów należy uwzględnić warunki JUCE i pozostałych zależności.

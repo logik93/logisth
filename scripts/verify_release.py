@@ -51,6 +51,17 @@ def verify(tag: str) -> None:
         for file in (root / "assets/themes").glob("*.json"):
             if archive.read(file.name) != file.read_bytes():
                 raise ValueError(f"Theme archive mismatch: {file.name}")
+    if tuple(map(int, version.split('.'))) >= (0, 9, 4):
+        required = {f"logisth-{version}-factory-presets.zip", "logisth-AlgorithmAudit.json", "logisth-ProjectReview.md"}
+        if not required.issubset(names):
+            raise ValueError("Missing preset bank or review assets")
+        with zipfile.ZipFile(folder / f"logisth-{version}-factory-presets.zip") as archive:
+            patches = [n for n in archive.namelist() if n.endswith('.logisth')]
+            if len(patches) != 48 or len(set(patches)) != 48:
+                raise ValueError("Expected 48 distinct authored presets")
+            for name in ['factory-demo.wav', 'factory-measurements.csv', 'CATALOGUE.md', 'README.md', 'LICENSE']:
+                if not archive.read(name):
+                    raise ValueError(f"Empty preset bank input: {name}")
     print(f"Verified {len(names)} release assets for {tag}")
 
 

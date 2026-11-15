@@ -188,7 +188,7 @@ inline void preview(const File &folder) {
         write("theme-" + String(theme), editor->snapshotTheme(theme));
     for (int type = 0; type < 5; ++type)
         write("reverb-" + String(type), editor->snapshotPage(14 + type));
-    for (int page = 19; page <= 25; ++page)
+    for (int page = 19; page <= 28; ++page)
         write("feature-" + String(page), editor->snapshotPage(page));
     editor->snapshotPage(23);
     editor->setTheme(5);

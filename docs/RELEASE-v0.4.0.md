@@ -9,7 +9,7 @@ Sampler and Granular** inside the same compact LIGHT/DARK console.
 - Overlapping Hann grains with size, density, position, spray, scan and reverse.
 - Embedded, compressed audio in project state; original media files are not required on recall.
 - A chord mapper with 128 triggers, eight-note voicings, chord types and MIDI learning.
-- A Cthulhu-inspired 32-step pattern editor: independent lane lengths, draw editing,
+- A the pattern sequencer-inspired 32-step pattern editor: independent lane lengths, draw editing,
   note rank, octave, velocity, gate, repeats, probability, ties and latch.
 - Eight stored pattern slots, randomisation, host MIDI output and ten factory sounds.
 - 514 automatable parameters, grouped menus and the original Legacy arp.
@@ -24,7 +24,7 @@ stored as normalised values, since extra choices can change those positions.
 
 Imports accept WAV/AIFF/FLAC, 8–96 kHz and up to 12 seconds per slot. Wavetable
 extraction uses the left channel; Sampler/Granular retain stereo. This is a
-single-sample source per slot, with one pattern active at a time. Cthulhu is a
+single-sample source per slot, with one pattern active at a time. the pattern sequencer is a
 workflow reference; its graphics, code and preset formats are not included.
 
 Native archives are published only after all three platform builds and tests

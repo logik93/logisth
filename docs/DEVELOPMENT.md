@@ -17,7 +17,7 @@ A later explicit instruction to wait or avoid publishing overrides this default.
 4. Refresh documentation images and the PDF (`python scripts/build_manual.py`).
    Commit source/documentation before creating the source archive.
 5. Run `python scripts/package_release.py --preview /absolute/preview-folder
-   --calibration /absolute/calibration-folder --kick-benchmark /absolute/kick-folder`, then `python scripts/verify_release.py
+   --calibration /absolute/calibration-folder --kick-benchmark /absolute/kick-folder --factory-bank /absolute/factory-folder`, then `python scripts/verify_release.py
    v<version>`. Source packages include LICENSE, notices, theme templates and scripts.
 6. Commit the new release asset folder, create an annotated unused `v<version>`
    tag, and push the branch/tag atomically. The existing native workflow builds
@@ -27,7 +27,7 @@ A later explicit instruction to wait or avoid publishing overrides this default.
    its package and build metadata to the same release. Preserve existing download
    IDs and bytes; only SHA256SUMS and the release description are cumulative.
    Wait for every native build/test/architecture check and publication to finish.
-   Current minimum suites: Linux 11, Windows/macOS 9, with no failures or skips.
+   Current minimum suites: Linux 12, Windows/macOS 10, with no failures or skips.
    A separate Windows AddressSanitizer build must also pass before publication;
    its binaries are diagnostic only. Its receipt is `ci-check-v<version>-windows-asan`.
    Read the status branches `ci-build-v<version>-<platform>` and
@@ -41,5 +41,5 @@ VST2 remains optional and requires a separately licensed SDK. macOS packages are
 ad-hoc signed, not notarized; Windows builds are unsigned. Preserve upstream
 library/SDK/font licenses independently of the original-code MIT license.
 
-The owner authorized the 0.9.3 release with Windows/Linux first and macOS added
-afterward. Do not repeat previously completed feature changes.
+The owner resumed automatic small 0.9.x releases on 2026-11-15. Keep Windows/Linux
+first and append macOS afterward. Do not advance to 1.0.0 without a later request.

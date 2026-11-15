@@ -28,7 +28,7 @@ def validate_record(record, archive, platform, version, fingerprint, commit):
             or record['platform'] != platform or record['source_commit'] != commit
             or record['source_fingerprint'] != fingerprint
             or record['formats'] != ['VST3', 'CLAP', 'Standalone']
-            or record['tests']['passed'] < (11 if platform.startswith('linux') else 9)
+            or record['tests']['passed'] < (12 if platform.startswith('linux') else 10)
             or record['tests']['failed'] != 0 or record['tests']['skipped'] != 0):
         raise ValueError(f'Native build does not match validated release source: {platform}')
     name = record['archive']

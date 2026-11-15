@@ -1,7 +1,9 @@
 #include "AppearanceTests.h"
 #include "EffectsReverbTests.h"
+#include "FactoryBankTests.h"
 #include "Features092Tests.h"
 #include "Features093Tests.h"
+#include "Features094Tests.h"
 #include "GainCalibration.h"
 #include "KickBenchmark.h"
 #include "PluginEditor.h"
@@ -444,7 +446,7 @@ void checkWavetableAndModeViews() {
     writeBank(128, 256, true);
     check(p.loadSource(0, file.getFile()).wasOk() && p.sourceData(0)->frames == 128 &&
               p.sourceData(0)->frameSize == 256,
-          "Auto reads Serum CLM frame length instead of treating the whole file as a cycle");
+          "Auto reads WAV CLM frame length instead of treating the whole file as a cycle");
     check(p.loadSource(1, file.getFile(), 512).wasOk() && p.sourceData(1)->frames == 64,
           "manual frame length overrides file metadata");
     writeBank(1, 128, false);
@@ -956,6 +958,19 @@ int main(int argc, char **argv) {
             kick_benchmark::run(juce::File(juce::String::fromUTF8(argv[2])));
             return 0;
         }
+        if (argc > 2 && juce::String(argv[1]) == "--factory-audit") {
+            factorybank_test::run(true, juce::File(juce::String::fromUTF8(argv[2])));
+            return 0;
+        }
+        if (argc > 1 && juce::String(argv[1]) == "--factory-check") {
+            factorybank_test::run();
+            factorybank_test::search();
+            return 0;
+        }
+        if (argc > 1 && juce::String(argv[1]) == "--features094-check") {
+            features094_test::run();
+            return 0;
+        }
         if (argc > 1 && juce::String(argv[1]) == "--features093-check") {
             features093_test::run();
             return 0;
@@ -994,6 +1009,9 @@ int main(int argc, char **argv) {
         theme_advanced_test::run();
         features092_test::run();
         features093_test::run();
+        features094_test::run();
+        factorybank_test::run();
+        factorybank_test::search();
         processor_phase_test::run();
         checkEnvelopeMidiEdges();
         gain_test::run(true);

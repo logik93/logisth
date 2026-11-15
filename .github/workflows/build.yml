@@ -9,7 +9,7 @@ on:
       release_tag:
         description: Existing tag whose release should receive the native binaries
         required: true
-        default: v0.9.3
+        default: v0.9.4
 
 permissions:
   contents: read
@@ -62,6 +62,8 @@ jobs:
       - name: Linux dependencies
         if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y libasound2-dev libx11-dev libxext-dev libxinerama-dev libxrandr-dev libxcursor-dev libfreetype6-dev libfontconfig1-dev libgl1-mesa-dev
+      - name: Verify upstream algorithm identities
+        run: python scripts/audit_algorithms.py
       - name: Verify release publisher regressions
         run: python -m unittest discover -s scripts/tests
       - name: Build, test, verify architecture and package
@@ -184,6 +186,8 @@ jobs:
         with:
           ref: ${{ inputs.release_tag || github.ref }}
           fetch-depth: 0
+      - name: Verify upstream algorithm identities
+        run: python3 scripts/audit_algorithms.py
       - name: Verify release publisher regressions
         run: python3 -m unittest discover -s scripts/tests
       - name: Build, test, verify both architectures and package

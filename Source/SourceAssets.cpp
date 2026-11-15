@@ -10,11 +10,9 @@ void LogisthProcessor::serviceAssets() {
     const ScopedLock lock(assetLock);
     if (assetReaders.load() == 0) {
         retiredSources.clear();
-        // Previous algorithm crossfades can retain a stream between audio blocks.
-        // Inactive voices are reset before reuse, so release retired banks only
-        // after processing is idle as well as having no concurrent asset reader.
-        if (voices.load() == 0)
-            retiredSpectral.clear();
+        // SourcePlayback rebinds both live/fading players before its next tick.
+        // No current audio reader can retain a dereferenceable retired pool.
+        retiredSpectral.clear();
         retiredChords.clear();
     }
 }
@@ -480,58 +478,97 @@ bool LogisthProcessor::restoreAssets(const ValueTree &tree) {
 void LogisthProcessor::ensureSpectral(bool synchronous) {
     unsigned wanted = 0;
     std::array<int, 4> unisons{};
+    std::array<SpectralConfig, 4> configs{};
     double rate = 0;
+    int voiceCount = 16;
     uint64_t generation = 0;
     std::shared_ptr<SpectralBank> previous;
     {
         const ScopedLock lock(assetLock);
         for (int i = 0; i < 4; ++i) {
-            unisons[size_t(i)] =
-                jlimit(1, 8, int(raw[size_t(Param::o1voices) + size_t(i) * 12]->load()));
+            int voices = int(raw[size_t(Param::o1voices) + size_t(i) * 12]->load());
+            unisons[size_t(i)] = jlimit(1, 8, voices);
             int mode = int(raw[size_t(Param::o1stretchmode) + size_t(i) * 10]->load());
-            if (raw[size_t(Param::o1engine) + size_t(i) * 16]->load() == 2 &&
+            if (voices > 0 && raw[size_t(Param::o1engine) + size_t(i) * 16]->load() == 2 &&
                 (mode == 6 || mode == 7))
                 wanted |= 1u << i;
+            StretchControls controls;
+            size_t at = size_t(Param::o1ssrate) + size_t(i) * 6;
+            controls.blockMs = raw[at + 4]->load();
+            int overlap = int(raw[at + 5]->load());
+            controls.overlap = overlap == 0 ? 0 : overlap + 1;
+            configs[size_t(i)] = SpectralConfig::from(controls);
         }
-        if (!wanted)
-            return;
+        voiceCount = raw[size_t(Param::monolegato)]->load() > 0
+                         ? 1
+                         : jlimit(1, 16, int(raw[size_t(Param::polyphony)]->load()));
         rate = spectralRate.load();
-        previous = spectralOwner;
-        if (previous && previous->rate == rate) {
-            bool enough = (previous->mask & wanted) == wanted;
-            for (int i = 0; i < 4; ++i) {
-                if ((wanted & (1u << i)) && previous->capacity[size_t(i)] < unisons[size_t(i)])
-                    enough = false;
-                unisons[size_t(i)] = jmax(unisons[size_t(i)], previous->capacity[size_t(i)]);
+        if (wanted != spectralDesiredMask || voiceCount != spectralDesiredVoices ||
+            rate != spectralDesiredRate || configs != spectralDesiredConfigs ||
+            unisons != spectralDesiredUnisons) {
+            spectralDesiredMask = wanted;
+            spectralDesiredVoices = voiceCount;
+            spectralDesiredRate = rate;
+            spectralDesiredConfigs = configs;
+            spectralDesiredUnisons = unisons;
+            ++spectralGeneration;
+        }
+        generation = spectralGeneration.load();
+        if (!wanted) {
+            if (spectralOwner) {
+                retiredSpectral.push_back(spectralOwner);
+                spectralPointer = nullptr;
+                spectralOwner.reset();
             }
+            return;
+        }
+        previous = spectralOwner;
+        if (previous && previous->rate == rate && previous->voiceCapacity >= voiceCount) {
+            bool enough = (previous->mask & wanted) == wanted;
+            for (int i = 0; i < 4; ++i)
+                if ((wanted & (1u << i)) && (previous->capacity[size_t(i)] < unisons[size_t(i)] ||
+                                             previous->configs[size_t(i)] != configs[size_t(i)]))
+                    enough = false;
             if (enough)
                 return;
-            wanted |= previous->mask;
         }
-        if (!synchronous && spectralPending.exchange(true))
+        if (spectralRejectedGeneration == generation)
             return;
-        if (synchronous)
-            spectralPending = true;
-        generation = ++spectralGeneration;
-        assetStatus = "Preparing spectral processing buffers...";
+        if (SpectralBank::estimatedBytes(rate, wanted, unisons, configs, voiceCount) >
+            SpectralBank::memoryBudget) {
+            spectralRejectedGeneration = generation;
+            assetStatus = "Signalsmith memory budget: reduce block, polyphony or unison.";
+            return;
+        }
+        if (!synchronous && spectralPending.load())
+            return;
+        if (synchronous && spectralPending.load())
+            generation = ++spectralGeneration;
+        spectralPending = true;
+        spectralPendingGeneration = generation;
+        assetStatus = "Preparing Signalsmith Stretch buffers...";
     }
-    auto build = [this, previous, wanted, rate, unisons, generation] {
+    auto build = [this, previous, wanted, rate, unisons, configs, voiceCount, generation] {
         try {
-            auto next = std::make_shared<SpectralBank>(rate, wanted, unisons, previous);
+            auto next = std::make_shared<SpectralBank>(rate, wanted, unisons, previous, configs,
+                                                       voiceCount);
             const ScopedLock lock(assetLock);
             if (spectralRate.load() == rate && spectralGeneration.load() == generation) {
                 if (spectralOwner)
                     retiredSpectral.push_back(spectralOwner);
                 spectralOwner = std::move(next);
                 spectralPointer = spectralOwner.get();
-                assetStatus = "Spectral engine ready";
+                assetStatus = "Signalsmith Stretch ready";
             }
-        } catch (const std::bad_alloc &) {
+        } catch (const std::exception &) {
             const ScopedLock lock(assetLock);
-            if (spectralGeneration.load() == generation)
-                assetStatus = "Spectral engine could not allocate its processing buffers.";
+            if (spectralGeneration.load() == generation) {
+                spectralRejectedGeneration = generation;
+                assetStatus = "Signalsmith buffers unavailable: reduce block, polyphony or unison.";
+            }
         }
-        if (spectralGeneration.load() == generation)
+        const ScopedLock lock(assetLock);
+        if (spectralPendingGeneration == generation)
             spectralPending = false;
     };
     if (synchronous)
@@ -542,8 +579,19 @@ void LogisthProcessor::ensureSpectral(bool synchronous) {
 
 bool LogisthProcessor::spectralReady(int slot) const {
     const ScopedLock lock(assetLock);
-    return slot >= 0 && slot < 4 && spectralOwner && spectralOwner->rate == spectralRate.load() &&
-           (spectralOwner->mask & (1u << slot)) &&
+    if (slot < 0 || slot >= 4 || !spectralOwner || spectralOwner->rate != spectralRate.load() ||
+        !(spectralOwner->mask & (1u << slot)))
+        return false;
+    StretchControls controls;
+    size_t at = size_t(Param::o1ssrate) + size_t(slot) * 6;
+    controls.blockMs = raw[at + 4]->load();
+    int overlap = int(raw[at + 5]->load());
+    controls.overlap = overlap == 0 ? 0 : overlap + 1;
+    int voices = raw[size_t(Param::monolegato)]->load() > 0
+                     ? 1
+                     : jlimit(1, 16, int(raw[size_t(Param::polyphony)]->load()));
+    return spectralOwner->voiceCapacity >= voices &&
+           spectralOwner->configs[size_t(slot)] == SpectralConfig::from(controls) &&
            spectralOwner->capacity[size_t(slot)] >=
                jlimit(1, 8, int(raw[size_t(Param::o1voices) + size_t(slot) * 12]->load()));
 }

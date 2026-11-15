@@ -208,19 +208,34 @@ struct SourcePlayback {
     SamplerPlayer sampler, previousSampler;
     std::array<SpectralStream *, 2> spectralCells{};
     uint64_t spectralToken = 0;
+    std::array<uint64_t, 2> spectralIdentities{};
     int spectralLane = 0;
     void setSpectral(SpectralStream *a, SpectralStream *b, uint64_t serial) {
+        const std::array<uint64_t, 2> identities{a ? a->identity : 0, b ? b->identity : 0};
+        if (spectralIdentities != identities) {
+            // A pool can be retired after the current audio reader finishes.
+            // Dormant/muted players rebind here before dereferencing any stream.
+            previousSampler.spectral = nullptr;
+            previousSampler.spectralWasReady = false;
+            fadeLeft = 0;
+            sampler.spectralWasReady = false;
+            sampler.spectralReset = true;
+        }
         spectralCells = {a, b};
+        spectralIdentities = identities;
         spectralToken = serial;
         sampler.spectral = spectralCells[size_t(spectralLane)];
         sampler.token = serial;
     }
+    StretchControls activeControls{}, previousControls{};
     int samplerMode = -1, samplerQuality = 0, previousQuality = 0, fadeLeft = 0, fadeLength = 1;
     void reset() {
         auto cells = spectralCells;
+        auto identities = spectralIdentities;
         auto serial = spectralToken;
         *this = SourcePlayback{};
         spectralCells = cells;
+        spectralIdentities = identities;
         spectralToken = serial;
         sampler.spectral = cells[0];
         sampler.token = serial;
@@ -230,7 +245,7 @@ struct SourcePlayback {
                               float density, float spray, float scan, float random,
                               int stretchMode = 0, float stretch = 1, int interpolation = 0,
                               float width = .5f, double fmOffset = 0, float kickAttack = 25,
-                              float trimStart = 0) {
+                              float trimStart = 0, const StretchControls &controls = {}) {
         if (mode != selected || source != &data || sourceRevision != data.revision) {
             reset();
             mode = selected;
@@ -247,9 +262,13 @@ struct SourcePlayback {
             if (samplerMode < 0) {
                 samplerMode = stretchMode;
                 samplerQuality = interpolation;
+                activeControls = controls;
             }
-            if (fadeLeft == 0 && (samplerMode != stretchMode || samplerQuality != interpolation)) {
+            if (fadeLeft == 0 &&
+                (samplerMode != stretchMode || samplerQuality != interpolation ||
+                 SpectralConfig::from(activeControls) != SpectralConfig::from(controls))) {
                 previousSampler = sampler;
+                previousControls = activeControls;
                 previousQuality = samplerQuality;
                 double at = sampler.cursor, factor = sampler.stretch;
                 sampler.reset();
@@ -265,12 +284,13 @@ struct SourcePlayback {
                 fadeLength = std::max(1, int(sr * .02));
                 fadeLeft = fadeLength;
             }
+            activeControls = controls;
             auto out = sampler.tick(data, ratio, sr, position, end, loop, reverse, samplerMode,
-                                    stretch, samplerQuality, width, fmOffset, kickAttack);
+                                    stretch, samplerQuality, width, fmOffset, kickAttack, controls);
             if (fadeLeft > 0) {
                 auto old = previousSampler.tick(data, ratio, sr, position, end, loop, reverse,
                                                 previousSampler.algorithm, stretch, previousQuality,
-                                                width, fmOffset, kickAttack);
+                                                width, fmOffset, kickAttack, previousControls);
                 float mix = 1 - float(fadeLeft) / fadeLength;
                 for (int ch = 0; ch < 2; ++ch)
                     out[size_t(ch)] = old[size_t(ch)] + (out[size_t(ch)] - old[size_t(ch)]) * mix;

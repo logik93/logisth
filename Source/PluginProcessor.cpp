@@ -1,4 +1,5 @@
 #include "PluginProcessor.h"
+#include "FactoryPresets.h"
 #include "PluginEditor.h"
 using namespace juce;
 using namespace logisth;
@@ -91,6 +92,14 @@ Params LogisthProcessor::snapshot() const {
         o.pwmSync = get(Param(extra + 2)) > 0;
         o.pwmDivision = int(get(Param(extra + 3)));
         o.kickAttack = get(Param(extra + 4));
+        size_t stretch = size_t(Param::o1ssrate) + size_t(i) * 6;
+        o.stretchControls.rate = get(Param(stretch));
+        o.stretchControls.semitones = get(Param(stretch + 1));
+        o.stretchControls.tonalityHz = get(Param(stretch + 2));
+        o.stretchControls.formant = get(Param(stretch + 3));
+        o.stretchControls.blockMs = get(Param(stretch + 4));
+        int overlap = int(get(Param(stretch + 5)));
+        o.stretchControls.overlap = overlap == 0 ? 0 : overlap + 1;
         o.data = sourcePointers[size_t(i)].load();
         size_t g = size_t(Param::o1gmodel) + size_t(i) * 15;
         auto granNext = [&] { return get(Param(g++)); };
@@ -621,6 +630,46 @@ bool LogisthProcessor::applyState(const void *data, int size) try {
     return false;
 }
 void LogisthProcessor::loadPreset(int index) {
+    if (index >= 10 && index < factoryPresetCount) {
+        loadPreset(0);
+        auto set = [&](const char *id, float value) {
+            auto *parameter = state.getParameter(id);
+            jassert(parameter != nullptr);
+            if (parameter)
+                parameter->setValueNotifyingHost(parameter->convertTo0to1(value));
+        };
+        applyDesignedSound(index - 10, set);
+        const auto &sound = designedSounds[size_t(index - 10)];
+        {
+            const ScopedLock lock(assetLock);
+            presetName = sound.name;
+            comment = sound.description;
+            ++commentRevision;
+        }
+        // Each new patch has four useful, neutral-at-zero performance controls.
+        const std::array<Param, 4> targets{
+            Param::filtercutoff, Param::o1fmdepth, Param::o1pulsewidth,
+            raw[size_t(Param::reverbon)]->load() > 0  ? Param::reverb
+            : raw[size_t(Param::delayon)]->load() > 0 ? Param::delay
+                                                      : Param::drive};
+        const int routes[]{1, 12, 8,
+                           raw[size_t(Param::reverbon)]->load() > 0  ? 20
+                           : raw[size_t(Param::delayon)]->load() > 0 ? 22
+                                                                     : 23};
+        for (int macro = 0; macro < 4; ++macro) {
+            setMacroName(macro, StringArray{"Brightness", "Harmonics", "Warp",
+                                            routes[macro] == 23 ? "Drive" : "Space"}[macro]);
+            auto prefix = "m" + String(macro + 1);
+            auto *parameter = state.getParameter(parameterSpecs[size_t(targets[size_t(macro)])].id);
+            float base = parameter->getValue();
+            set((prefix + "target1").toRawUTF8(), float(routes[macro]));
+            set((prefix + "low1").toRawUTF8(), base);
+            set((prefix + "high1").toRawUTF8(), jmin(1.f, base + (macro == 0 ? .16f : .2f)));
+        }
+        ++presetRevision;
+        uiChanges.fetch_or(4);
+        return;
+    }
     mutationUndo.reset();
     mutateLocks = 0;
     for (int i = 0; i < 4; ++i)
@@ -632,10 +681,7 @@ void LogisthProcessor::loadPreset(int index) {
     }
     {
         const ScopedLock lock(assetLock);
-        static const char *names[] = {
-            "Init / saw",    "Wide supersaw", "Sub bass",    "Slow atmosphere", "Pulse pluck",
-            "Step sequence", "Morph glass",   "Sample keys", "Grain cloud",     "Chord pulse"};
-        presetName = names[jlimit(0, 9, index)];
+        presetName = legacyFactoryNames[size_t(jlimit(0, 9, index))];
         comment.clear();
         ++commentRevision;
         activePresetFile = File{};

@@ -49,10 +49,12 @@ struct SamplerPlayer {
         int age = 0;
         bool active = false;
     };
-    std::array<Grain, 4> grains{};
+    std::array<Grain, 16> grains{};
     double rateCache = 0, smoothing = 0;
     double cursor = 0, untilGrain = 0, lastStart = 0, stretch = 1;
     double elapsedSamples = 0;
+    float rateControl = 1, pitchControl = 0, tonalityControl = 0, formantControl = 0;
+    bool controlsReady = false;
     SpectralStream *spectral = nullptr;
     uint64_t token = 0;
     bool spectralReset = true, spectralWasReady = false;
@@ -69,11 +71,14 @@ struct SamplerPlayer {
     template <class Data>
     std::array<float, 2> tick(const Data &data, double ratio, double sr, float begin, float end,
                               bool loop, bool reverse, int mode, float factor, int interpolation,
-                              float width = .5f, double fmOffset = 0, float kickAttack = 25) {
+                              float width = .5f, double fmOffset = 0, float kickAttack = 25,
+                              const StretchControls &controls = {}) {
         if (algorithm != mode) {
             reset();
             algorithm = mode;
-            stretch = std::clamp(double(factor), .125, 8.);
+            stretch =
+                std::clamp(double(factor), .125, 8.) /
+                (std::isfinite(controls.rate) ? std::clamp(double(controls.rate), .125, 8.) : 1.);
         }
         double length = double(data.samples[0].size());
         if (length < 2)
@@ -85,7 +90,28 @@ struct SamplerPlayer {
             rateCache = sr;
             smoothing = 1 - std::exp(-1 / (.02 * sr));
         }
-        stretch += smoothing * (std::clamp(double(factor), .125, 8.) - stretch);
+        const float rateTarget =
+            std::isfinite(controls.rate) ? std::clamp(controls.rate, .125f, 8.f) : 1;
+        const float pitchTarget =
+            std::isfinite(controls.semitones) ? std::clamp(controls.semitones, -48.f, 48.f) : 0;
+        const float tonalityTarget = std::isfinite(controls.tonalityHz)
+                                         ? std::clamp(controls.tonalityHz, 0.f, float(sr * .49))
+                                         : 0;
+        const float formantTarget =
+            std::isfinite(controls.formant) ? std::clamp(controls.formant, -24.f, 24.f) : 0;
+        if (!controlsReady) {
+            rateControl = rateTarget;
+            pitchControl = pitchTarget;
+            tonalityControl = tonalityTarget;
+            formantControl = formantTarget;
+            controlsReady = true;
+        }
+        rateControl += float(smoothing) * (rateTarget - rateControl);
+        pitchControl += float(smoothing) * (pitchTarget - pitchControl);
+        tonalityControl += float(smoothing) * (tonalityTarget - tonalityControl);
+        formantControl += float(smoothing) * (formantTarget - formantControl);
+        stretch += smoothing * (std::clamp(double(factor) / rateTarget, 1. / 64, 64.) - stretch);
+        ratio *= std::exp2(double(pitchControl) / 12);
         double pitch = ratio * data.sampleRate / sr;
         auto read = [&](double offset, int ch) {
             offset = warpSamplePosition(offset, data.sampleRate * .04, width) + fmOffset;
@@ -95,16 +121,20 @@ struct SamplerPlayer {
             return resample(data, at, ch, interpolation,
                             mode >= 6   ? data.sampleRate / sr
                             : mode == 1 ? pitch / stretch
+                            : mode == 0 ? pitch * rateControl
                                         : pitch,
                             first, last, loop);
         };
-        if ((mode == 6 || mode == 7) && spectral) {
+        if ((mode == 6 || mode == 7) && spectral && spectral->matches(sr, controls)) {
             if (finished)
                 return {};
             double step = data.sampleRate / sr, attack = kickAttack * .001 * sr;
             float timeFactor = mode == 6 && elapsedSamples < attack ? 1.f : float(stretch);
+            auto live = controls;
+            live.tonalityHz = tonalityControl;
+            live.formant = formantControl;
             auto out = spectral->tick(read, cursor, step, float(ratio), timeFactor, token,
-                                      data.revision, spectralReset);
+                                      data.revision, spectralReset, live);
             spectralReset = false;
             if (!spectralWasReady) {
                 spectralWasReady = true;
@@ -116,7 +146,7 @@ struct SamplerPlayer {
                 bool savedFinished = finished;
                 spectral = nullptr;
                 auto old = tick(data, ratio, sr, begin, end, loop, reverse, mode, factor,
-                                interpolation, width, fmOffset, kickAttack);
+                                interpolation, width, fmOffset, kickAttack, controls);
                 spectral = savedStream;
                 cursor = savedCursor;
                 elapsedSamples = savedElapsed;
@@ -139,6 +169,7 @@ struct SamplerPlayer {
                     x *= fade;
             }
             cursor += step / timeFactor;
+            started = true;
             ++elapsedSamples;
             if (cursor >= span) {
                 if (loop)
@@ -173,13 +204,17 @@ struct SamplerPlayer {
                 }
             }
             ++elapsedSamples;
-            cursor += pitch / (mode == 1 ? stretch : 1);
+            cursor += pitch * (mode == 0 ? rateControl : 1 / stretch);
             return out;
         }
-        const int window = std::max(32, int(sr * (mode == 5   ? .012
-                                                  : mode == 4 ? .065
-                                                              : .04))),
-                  hop = window / 2;
+        const double block = controls.blockMs > 0 && std::isfinite(controls.blockMs)
+                                 ? std::clamp(double(controls.blockMs), .1, 200.) * .001
+                             : mode == 5 ? .012
+                             : mode == 4 ? .065
+                                         : .04;
+        const int window = std::max(32, int(sr * block));
+        const int overlap = controls.overlap == 0 ? 2 : std::clamp(controls.overlap, 2, 16);
+        const int hop = std::max(1, window / overlap);
         if (!started) {
             grains[0] = {cursor, hop, true};
             started = true;
@@ -247,6 +282,8 @@ struct SamplerPlayer {
                 if (++g.age >= window)
                     g.active = false;
             }
+        for (auto &value : out)
+            value *= 2.f / float(overlap);
         if (mode == 6) {
             double attack = kickAttack * .001 * sr;
             float mix = float(std::clamp((elapsedSamples - attack) / (sr * .008), 0., 1.));

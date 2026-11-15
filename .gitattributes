@@ -1,2 +1,10 @@
+# Preserve exact upstream bytes and formatting across native build hosts.
+Source/vendor/signalsmith-stretch/** -text -whitespace
 *.pdf binary
+*.png binary
+*.wav binary
 *.ttf binary
+*.otf binary
+*.zip binary
+*.gz binary
+*.logisth binary

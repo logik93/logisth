@@ -10,7 +10,7 @@ Sampler PLAYBACK adds Tonal (65 ms correlation windows), Transient (12 ms),
 Spectral and Kick. Spectral/Kick integrate Signalsmith Stretch 1.1.0 under MIT;
 Kick retains 0–100 ms of original attack (25 ms default), then crossfades over
 8 ms to its pitched/stretched tail. Time Factor remains independent from note
-pitch. This is an independent hybrid, not Nimble Kick's Time Machine algorithm.
+pitch. This is an independent hybrid, not other instruments's external processing algorithm.
 Analysis-window duration scales with host sample rate; prepared unison capacity
 grows as needed. Processing buffers are prepared outside the audio callback, including with the
 editor closed. Preparation jobs have generation checks, and late readiness

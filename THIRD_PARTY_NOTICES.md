@@ -17,13 +17,16 @@ JUCE's notice lists further bundled third-party components and their licenses.
 Binary distribution must satisfy the applicable JUCE/SDK terms as well as the
 notices above; the original-code MIT grant remains available independently.
 
-## Signalsmith Stretch and DSP
+## Signalsmith Stretch and Linear
 
-Signalsmith Stretch 1.1.0, commit 44c8f865af9da8c29cc4a70a2d5a3ec83639c711,
-https://github.com/Signalsmith-Audio/signalsmith-stretch, MIT. Includes Signalsmith
-DSP under its own MIT notice. Vendored headers are unchanged in
-Source/vendor/signalsmith-stretch. Full notices are in licenses/Signalsmith-Stretch-MIT.txt
-and licenses/Signalsmith-DSP-MIT.txt. Used by Spectral and Kick sampler modes.
+Signalsmith Stretch 1.3.2, commit 88061fd4eda56a2353c5d65c74aa3f4ccf76f9da,
+https://github.com/Signalsmith-Audio/signalsmith-stretch, MIT. It uses Signalsmith
+Linear 0.6.6, commit 7bb1c8f36794d6980080ce817c91f8da8fe56a66, MIT.
+Vendored upstream headers are unchanged in Source/vendor/signalsmith-stretch;
+UPSTREAM.json records their hashes. Full notices are in
+licenses/Signalsmith-Stretch-MIT.txt and licenses/Signalsmith-Linear-MIT.txt.
+Both Signalsmith Stretch and the independent Kick hybrid use the same upstream
+processor.
 
 ## AP logo artwork
 

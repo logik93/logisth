@@ -247,6 +247,25 @@ int main() {
                 check(v[0] == 0 && v[1] == 0, "cloud loops remain inside selected source region");
             }
         }
+        {
+            StretchControls controls;
+            controls.blockMs = 48;
+            controls.overlap = 4;
+            controls.formant = 7;
+            controls.tonalityHz = 3000;
+            controls.rate = 2;
+            controls.semitones = 5;
+            SpectralStream stream(48000, SpectralConfig::from(controls));
+            SamplerPlayer player;
+            player.spectral = &stream;
+            watchAlloc = true;
+            for (int i = 0; i < 16000; ++i) {
+                auto value =
+                    player.tick(data, 1, 48000, 0, 1, true, false, 7, 1, 1, .5f, 0, 25, controls);
+                check(std::isfinite(value[0]), "formant and tonality automation stays finite");
+            }
+            watchAlloc = false;
+        }
         check(allocations.load() == 0,
               "prepared spectral and time-domain engines do not allocate during processing");
         {

@@ -9,7 +9,7 @@
   mouse wheel to move one frame at a time. During playback the display follows
   the latest voice's modulated WT position. Position smoothing is independent of
   unison count, so adding voices no longer changes the speed of WT POS movement.
-- **Auto import reads Serum WAV `clm ` cycle-length metadata**, otherwise using
+- **Auto import reads WAV `clm ` cycle-length metadata**, otherwise using
   2048 samples per cycle. Short power-of-two single-cycle files are detected.
   Manual cycle lengths of 128, 256, 512, 1024, 2048 and 4096 samples override Auto.
   Wavetables use the file's left channel; Sampler and Granular keep stereo audio.

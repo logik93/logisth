@@ -5,7 +5,7 @@ Its initial size adapts to the monitor. Drag the lower-right corner to resize
 proportionally from 80% to 200%.
 
 SETTINGS opens in the central rack and offers Light, Midnight Blue, Cobalt,
-Graphite and Forest, plus About. Menus, editors, keyboard and controls follow the
+Graphite, Forest and AP always flexin'!, plus About. Menus, editors, keyboard and controls follow the
 palette. The selected appearance persists as a shared user preference; changing
 sounds keeps it and audio settings remain untouched. Midnight Blue is the default.
 Vector drawing and embedded Open Sans keep the design consistent across systems.
@@ -22,12 +22,12 @@ three grouped columns. Hover for tooltips and the bottom value readout.
 Numeric values support units such as kHz, ms and percent. Sync displays musical
 divisions instead of free time/rate controls. Arp steps use 01–08 and 09–16 views.
 
-The current engine exposes 712 audio parameters. Tests check access, bounds, click
+The current engine exposes 736 audio parameters. Tests check access, bounds, click
 targets, view changes, bindings, scaling and independent theme persistence.
 See [the English user manual](MANUAL.md) for full operation.
 
 The oscillator header selects engine and only its relevant pages: VOICE/ENV for
-Classic, WAVETABLE for the table engine, SOURCE/PLAYBACK for Sampler, and GRAINS for
+Classic, WAVETABLE for the table engine, SOURCE/PLAYBACK/STRETCH for Sampler, and GRAINS for
 Granular. MOTION/TIME are available only in the Granulizer model. File drops and
 IMPORT load audio into that slot. CHORDS is the ninth rack page. Pattern arp
 uses a seven-row drawing canvas with independent lane lengths, exact cell entry,
@@ -86,3 +86,10 @@ Width/Warp for every engine; PLAYBACK adds Tonal/Transient/Kick/Spectral, showin
 Kick Attack only when applicable. SAMPLE supports zoomed drag selections and
 START/END handles, with separate granular trim/scanning. Six standard themes
 include AP always flexin'! and its white AP mark without the signature.
+
+0.9.4 adds a magnifying-glass preset search beside the selector. The same-window
+panel supports multiple query words, factory descriptions, recursive user folders,
+arrow keys, Enter and Escape. The library has 58 entries, including 48 new patches
+with descriptions and four performance macros. Each player has a compact STRETCH
+page: six controls for Signalsmith Stretch/Kick, four for windowed time-domain
+algorithms and Rate/Semitones for coupled playback modes.

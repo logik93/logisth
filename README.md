@@ -1,10 +1,26 @@
-# logisth 0.9.3
+# logisth 0.9.4
 
 **wavelogik logisth — a two-part polyphonic subtractive synthesizer with a compact single-window console.**
 VST3, CLAP and Standalone for Windows, macOS and Linux. Built with JUCE and an
-independent synthesis engine; not affiliated with LennarDigital.
+independent synthesis engine.
 
 ![logisth dark interface](docs/images/logisth-dark.png)
+
+## New in 0.9.4
+
+- **Signalsmith Stretch** replaces the Spectral label and uses upstream 1.3.2.
+- Independent Rate, Semitones, Tonality Limit, Formant, Block (ms) and Overlap
+  controls for A1/A2/B1/B2, in a compact Sampler → STRETCH page.
+- Shared controls work with other applicable sampler algorithms. Window changes
+  prepare outside audio processing, with bounded pools and safe live/muted handoff.
+- Upstream source hashes and stereo DSP conformance tests. See the
+  [algorithm/project review](docs/PROJECT_REVIEW.md).
+- Preset search with a magnifying-glass button, keyboard selection and user folders.
+- 48 new authored patches in eight categories, descriptions and performance macros;
+  58 factory entries in total. [Preset catalogue](docs/FACTORY_PRESETS.md), native bank, demo and level report included.
+- 736 automatable parameters; VST3, CLAP and Standalone remain supported.
+
+[Preset search](docs/images/logisth-preset-search.png) · [Stretch controls](docs/images/logisth-signalsmith-stretch.png)
 
 ## New in 0.9.3
 
@@ -16,7 +32,7 @@ independent synthesis engine; not affiliated with LennarDigital.
 - Sampler adds Tonal, Transient, Spectral and **Kick** modes. Spectral/Kick use
   the MIT-licensed Signalsmith Stretch library. Kick retains a configurable
   0–100 ms attack, then crossfades to its pitched/stretched tail. This is an
-  independent implementation, not Nimble Kick's proprietary Time Machine.
+  independently designed attack/tail processor.
 - Drag a range in SAMPLE after wheel zoom, adjust START/END handles, double-click
   to fit, right-click to reset. Granular trim is separate from its scanner position.
 - **MORPH** rack: four named macros, four routes each, individual From/To ranges;
@@ -126,7 +142,7 @@ independent synthesis engine; not affiliated with LennarDigital.
 - WT POS selects one periodic cycle from a bank of up to 256 frames; the factory
   bank contains 128 waves. A stacked waveform view highlights the playing frame
   and displays its number. Drag the window or use the wheel to select a frame.
-- Auto wavetable import reads Serum WAV CLM cycle lengths, with a 2048-point
+- Auto wavetable import reads WAV CLM cycle lengths, with a 2048-point
   fallback and short single-cycle detection. Manual lengths: 128–4096 samples.
 - Graphs arp is removed. Legacy and the seven-row Pattern engine remain, with
   twelve A–L pattern memories, latch, MIDI output and MIDI-only operation.
@@ -174,7 +190,7 @@ sounds. Parameter IDs remain stable; preserving old sound is not the objective.
 - Earlier releases included an experimental Graphs arp, removed in 0.7.0.
   Twelve A–L pattern memories remain available for Legacy and Pattern.
 - User preset library: save/load/delete .logisth files with embedded audio,
-  chords, all patterns and UI preferences. 712 current automatable audio parameters.
+  chords, all patterns and UI preferences. 736 current automatable audio parameters.
 - Compact single-window interface with light/dark themes.
 
 [English manual](docs/MANUAL.md) · [PDF manual](docs/logisth-Manual-English.pdf) ·
@@ -184,8 +200,7 @@ sounds. Parameter IDs remain stable; preserving old sound is not the objective.
 Native archives are built and tested on Windows, macOS and Linux. Each package
 contains the English manual and build metadata. Publication requires all platform
 builds and tests to pass.
-Cthulhu and Fruity Granulizer manuals supply behaviour references. logisth uses
-its own implementation and graphics and does not import their proprietary presets.
+Presets, chord maps and patterns use the native logisth format.
 
 ## Install
 
@@ -256,15 +271,15 @@ Tests cover synthesis, modulation, filters, arp scheduling, effects, state,
 presets, editor reachability and bindings, layout and independent theme recall.
 Linux also loads real CLAP/VST3 binaries. To render screenshots and a WAV, run
 `build/processor_tests /absolute/output-directory` (Windows: `build/Release/processor_tests.exe`).
-These tests do not establish compatibility with every DAW or sample-exact
-Sylenth1 sound. No Sylenth1 preset/bank import, original graphics or MIDI Learn
-menu is included. See the manual for DSP and performance limitations.
+Real-host coverage varies by platform. See the manual for format support, DSP
+and performance limits.
 
 ## Dependencies
 
 JUCE: AGPLv3 or commercial JUCE license; consult the upstream license and choose
 a compliant distribution model. CLAP and clap-juce-extensions: MIT. Open Sans:
-Apache-2.0, with license/attribution in `assets/fonts`. VST2 SDK terms are separate.
+Apache-2.0, with license/attribution in `assets/fonts`. Signalsmith Stretch and
+Signalsmith Linear: MIT, with pinned source identities and full notices. VST2 SDK terms are separate.
 
 ## License
 

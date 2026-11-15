@@ -12,14 +12,14 @@ import zipfile
 from pathlib import Path
 
 
-def package(preview: Path, calibration: Path, kick_benchmark: Path | None = None) -> Path:
+def package(preview: Path, calibration: Path, kick_benchmark: Path | None = None, factory_bank: Path | None = None) -> Path:
     root = Path(__file__).resolve().parents[1]
     version = re.search(r'project\(Logisth VERSION ([\d.]+)',
                         (root / 'CMakeLists.txt').read_text()).group(1)
     folder = root / 'releases' / f'logisth-{version}'
     if folder.exists():
         raise ValueError('Refusing to replace an existing release asset folder')
-    paths = ['.github', '.gitignore', 'CMakeLists.txt', 'README.md', 'LICENSE',
+    paths = ['.github', '.gitignore', '.gitattributes', 'CMakeLists.txt', 'README.md', 'BUILD_STATUS.md', 'LICENSE',
              'THIRD_PARTY_NOTICES.md', 'Source', 'tests', 'scripts', 'assets', 'docs', 'licenses']
     subprocess.run(['git', 'diff', '--exit-code', 'HEAD', '--', *paths], cwd=root,
                    check=True, stdout=subprocess.DEVNULL)
@@ -39,6 +39,8 @@ def package(preview: Path, calibration: Path, kick_benchmark: Path | None = None
               (root / 'docs/CALIBRATION.md', 'logisth-GainCalibration.md'),
               (root / 'LICENSE', 'logisth-LICENSE-MIT.txt'),
               (root / 'THIRD_PARTY_NOTICES.md', 'logisth-ThirdPartyNotices.md'),
+              (root / 'docs/ALGORITHM_AUDIT.json', 'logisth-AlgorithmAudit.json'),
+              (root / 'docs/PROJECT_REVIEW.md', 'logisth-ProjectReview.md'),
               (preview / 'logisth-demo.wav', 'logisth-demo.wav'),
               (root / 'docs/images/logisth-dark.png', 'logisth.png')]
     copies += [(p, p.name) for p in sorted((root / 'docs/images').glob('*.png'))]
@@ -69,6 +71,17 @@ def package(preview: Path, calibration: Path, kick_benchmark: Path | None = None
         files=[(p,p.name) for p in sorted(kick_benchmark.iterdir()) if p.is_file()]
         files += [(root/'LICENSE','LICENSE')]
         bundles.append(('kick-benchmark',files))
+    if factory_bank is not None:
+        presets = sorted((factory_bank / 'Presets').rglob('*.logisth'))
+        if len(presets) != 48:
+            raise ValueError('Factory bank must contain 48 native presets')
+        required = ['factory-demo.wav', 'factory-measurements.csv', 'README.md']
+        if any(not (factory_bank / name).is_file() for name in required):
+            raise ValueError('Factory bank demo, measurements or description missing')
+        files = [(p, p.relative_to(factory_bank).as_posix()) for p in presets]
+        files += [(factory_bank / name, name) for name in required]
+        files += [(root / 'LICENSE', 'LICENSE'), (root / 'docs/FACTORY_PRESETS.md', 'CATALOGUE.md')]
+        bundles.append(('factory-presets', files))
     folder.mkdir(parents=True)
     for file, name in copies:
         shutil.copyfile(file, folder / name)
@@ -92,8 +105,10 @@ if __name__ == '__main__':
     parser.add_argument('--preview', type=Path, required=True)
     parser.add_argument('--calibration', type=Path, required=True)
     parser.add_argument('--kick-benchmark', type=Path)
+    parser.add_argument('--factory-bank', type=Path)
     args = parser.parse_args()
     try:
-        package(args.preview.resolve(), args.calibration.resolve(), args.kick_benchmark.resolve() if args.kick_benchmark else None)
+        package(args.preview.resolve(), args.calibration.resolve(), args.kick_benchmark.resolve() if args.kick_benchmark else None,
+                args.factory_bank.resolve() if args.factory_bank else None)
     except (OSError, ValueError, subprocess.CalledProcessError) as error:
         raise SystemExit(str(error)) from error

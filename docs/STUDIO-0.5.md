@@ -10,9 +10,9 @@ and are not redistributed. The DSP, interface and preset format are logisth's ow
 
 ## Granulizer
 
-Reference: **Fruity Granulizer – Instrument**, supplied printout, pages 19–21,
+Reference: **the granular engine – Instrument**, supplied printout, pages 19–21,
 Grains, Effects, Transients and Time sections. Original documentation:
-https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/plugins/Fruity%20Granulizer.htm
+
 
 `Source/Granular.h` implements sample-quantized attack + hold + decay grains,
 separate grain-start intervals and source hops, signed wave spacing, alternating
@@ -29,14 +29,14 @@ Implementation choices where the manual does not specify an algorithm:
 - ROOT supplies the MIDI reference for key mapping (default 60); this avoids
   differences between DAWs' octave naming conventions.
 - Regions come from WAV cue offsets. Detect uses a block-energy onset detector;
-  it does not claim the same detection results as Fruity Granulizer.
+  it does not claim the same detection results as the granular engine.
 - Tempo fitting uses the sample-to-END span and a user-selected BEATS duration.
 - The earlier eight-grain Cloud model and parameter IDs remain available for
   compatibility with 0.4 projects.
 
 ## Arpeggiator
 
-Reference: **Cthulhu user manual**, chapters 9–11, particularly pages 24–30.
+Reference: **the pattern sequencer user manual**, chapters 9–11, particularly pages 24–30.
 `Source/GraphArpeggiator.h` implements the eight graphs, note motions, mute and
 position reset, independent lengths, graph clock dividers, selective pitch-degree
 transposition, harmony, velocity/gate, early/late scheduling, chord rotation and
@@ -50,9 +50,9 @@ pending times. The synchronized engine follows transport stop; free mode and
 hosts without a clock can run from incoming notes.
 
 Chord-root detection scores common triad/seventh templates and uses the bass
-as a tie-breaker. Ambiguous chords may differ from Cthulhu. The 0.4 grid and
+as a tie-breaker. Ambiguous chords may differ from the pattern sequencer. The 0.4 grid and
 Legacy engines remain selectable. Chord learn/mapping is retained; this update
-does not implement Cthulhu's complete proprietary chord library or file formats.
+does not implement the pattern sequencer's complete proprietary chord library or file formats.
 COPY TO replaces whole-pattern Alt-drag with an explicit destination menu.
 
 ## Displays and presets

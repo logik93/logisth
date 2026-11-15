@@ -1,9 +1,7 @@
-# logisth 0.9.3 — User Manual
+# logisth 0.9.4 — User Manual
 
 wavelogik logisth is a two-part polyphonic subtractive synthesizer for VST3, CLAP and standalone use.
-This manual describes logisth's own controls and behaviour. logisth is an independent
-instrument and is not affiliated with LennarDigital. It does not load Sylenth1
-presets or reproduce its sound exactly.
+This manual describes logisth's controls, sound engines and preset workflow.
 
 ## Contents
 
@@ -215,7 +213,7 @@ frame and displays its one-based number and total frame count. While playing,
 the display follows the latest voice's modulated WT position; with no active
 voice it follows the knob. Drag horizontally to select a frame, or wheel one
 frame at a time. The header's AUTO menu controls import cycle length. Auto reads
-Serum WAV `clm ` metadata when present, otherwise uses 2048 samples per cycle.
+WAV `clm ` metadata when present, otherwise uses 2048 samples per cycle.
 An untagged power-of-two file of 128–2048 samples becomes one complete cycle.
 Manual lengths are 128, 256, 512, 1024, 2048 or 4096 samples; a manual choice takes
 precedence over metadata. Use 4096 manually for a single 4096-sample cycle.
@@ -244,7 +242,7 @@ Sampler / PLAYBACK selects STRETCH, TIME FACTOR and INTERPOLATION:
 | Tonal | Longer 65 ms correlation-aligned windows for sustained material. |
 | Transient | Shorter 12 ms windows to localize percussive changes. |
 | Kick | Original attack plus a pitch/time-shifted spectral tail. |
-| Spectral | Stereo phase-locked spectral processing through Signalsmith Stretch. |
+| Signalsmith Stretch | Upstream 1.3.2 stereo spectral processing, with native formant and tonality controls. |
 
 TIME FACTOR ranges from 0.125× to 8×. At 2×, independent modes take twice as long
 while preserving played-note pitch. Kick protects KICK ATTACK (0–100 ms, default
@@ -252,19 +250,38 @@ while preserving played-note pitch. Kick protects KICK ATTACK (0–100 ms, defau
 Its total duration is attack + stretched remainder. Attack and tail are processed
 independently so pitching does not smear the initial punch. Start with Kick, Time
 Factor 1× and root note set to the sample's tuning for hardstyle kick pitch maps.
-Try Spectral when the complete sound should follow pitch/time processing.
-These modes do not reproduce Nimble Kick's Time Machine implementation.
+Try Signalsmith Stretch when the complete sound should follow pitch/time processing.
 
-Spectral analysis windows scale with host sample rate (approximately 80–93 ms
-at 44.1/48/96 kHz); pitch mapping spans ±8 octaves. Unison buffers are prepared
-only for the spectral players and unison counts requested. Signalsmith buffers
-are prepared on the control/import thread, never allocated
-inside sample processing. On first selection a status message indicates preparation;
-the existing time-domain path continues until ready, then crossfades over 20 ms.
-Preparation runs with the editor closed as well; changes in host sample rate
-supersede stale preparation jobs. Spectral quality costs more
-CPU and memory; extreme factors can create audible artifacts. Test your own kicks
-before committing a track; the included synthetic benchmark is a regression fixture.
+Sampler / **STRETCH** provides six independent controls for each player:
+
+| Control | Behaviour |
+| --- | --- |
+| RATE | 0.125–8× traversal-speed multiplier. At Time Factor 1×, Rate 2× halves duration in independent modes; the note pitch remains controlled by MIDI and Semitones. Effective duration factor is Time Factor / Rate. |
+| SEMITONES | -48 to +48 st offset, in addition to oscillator/root/MIDI pitch. Off and Tape continue to couple pitch and duration. |
+| TONALITY LIMIT | 0/off to 20 kHz. Uses the upstream nonlinear frequency mapping above the chosen limit; the integration converts Hz to a fraction of the host sample rate. |
+| FORMANT | -24 to +24 st shift of the spectral envelope, independent from the note offset. Zero is neutral; this does not automatically enable pitch-compensated formant preservation. |
+| BLOCK (ms) | Auto, or an analysis window up to 200 ms. Spectral windows have a minimum of 32 samples. Auto uses approximately 80–93 ms at 44.1/48/96 kHz; time-domain defaults are 40 ms (Granular/WSOLA), 65 ms (Tonal) and 12 ms (Transient). |
+| OVERLAP | Auto or 2–16×. Auto uses 8× for Signalsmith/Kick and 2× for time-domain windows. Greater overlap increases CPU use. |
+
+Rate and Semitones work across sampler algorithms. Block/Overlap appear for
+windowed modes; Tonality/Formant appear for Signalsmith Stretch and Kick only.
+Kick applies the spectral controls to its tail while retaining the protected
+original attack. Existing Time Factor values remain stored under their existing
+parameter IDs. At neutral Rate/Semitones, earlier duration/pitch settings retain
+their meaning. The upstream version update can change spectral voicing.
+
+Block/Overlap changes prepare new processing pools on the control/import thread,
+never in the sample callback. Playback uses the time-domain path while waiting,
+then blends into the ready processor. Preparation also runs with the editor
+closed, and the last requested configuration supersedes stale jobs. Muted players
+rebind safely before resuming. Live Rate/tuning controls are smoothed.
+
+Only requested sources, unison and polyphony are prepared. A conservative 512 MiB
+estimate guards each spectral bank; an excessive request asks you to reduce block,
+polyphony or unison. During a replacement, old and new banks can temporarily
+coexist. This guard does not cover all sample/GUI memory. Larger windows and
+formants increase CPU/memory use; listen to the included kick examples and your
+own material before committing a track.
 
 Interpolation choices are Linear, Cubic, Sinc 16 and Sinc 32. Sinc modes use a
 windowed band-limited resampler with anti-alias filtering when reading faster
@@ -433,9 +450,8 @@ Saved presets retain the section locks, but do not contain the Undo history.
 
 ## 6. Chords and pattern arpeggiator
 
-The CHORDS rack page and Pattern arp use a chord-programming and multi-lane
-workflow inspired by Cthulhu, with logisth's own interface and implementation.
-It is not a Cthulhu clone and does not import Cthulhu chord/pattern files.
+The CHORDS rack page provides chord programming, while Pattern arp offers
+independent sequence lanes.
 The chain is MIDI input → Chords → Arpeggiator → Synth and optional MIDI output.
 Each processor has its own enable square in the rack.
 
@@ -572,8 +588,8 @@ source-bus level. Levels and effect drive have been retuned together; older
 patches can sound different. Factory Main trims provide headroom; new instances start with Main at 65%. Reduce Main
 for louder layered edits.
 
-The test reference for factory presets is a six-second C3/G3/C4/E4 chord (MIDI
-48/55/60/64), velocity 102, including the attack. At 48 kHz most factory presets
+The test reference for the nine earlier factory presets is a six-second C3/G3/C4/E4 chord (MIDI
+48/55/60/64), velocity 102, including the attack. At 48 kHz most earlier factory presets
 have individual reference levels; the rebuilt Hall and corrected EQ change
 some wet-preset peaks. Grain cloud and Chord pulse remain quieter. All ten
 are tested at 44.1, 48 and 96 kHz. The nine authored sounds keep at least 3 dB
@@ -612,9 +628,21 @@ also update these controls. The keyboard covers five octaves.
 
 ## 9. Presets, automation and project recall
 
-The ten factory sounds are Init / saw, Wide supersaw, Sub bass, Slow atmosphere,
-Pulse pluck, Step sequence, Morph glass, Sample keys, Grain cloud and Chord pulse.
-The sound selector lists factory sounds and user presets from the current folder.
+The library contains **58 factory entries**: the clean Init / saw, the nine
+previous factory sounds, and 48 new authored patches in eight categories:
+Bass, Lead, Pluck, Pad, Keys, Arp, Wavetable and Sample (six new sounds each).
+New patches include an editable description and four performance macros:
+Brightness, Harmonics, Warp, and Space/Drive. The macros start at zero, preserving
+the authored patch. The new collection is measured at full velocity with default
+and maximum macro settings; output trims are per preset. The downloadable bank contains 48 native files, a short stereo demo and a measurement report. Init / saw continues to
+open at Main 65%.
+
+Click the **magnifying glass** beside the sound selector to search. Type words
+from a name or category; factory descriptions and user folder names also match.
+Multiple words narrow the results. Up/Down selects a row, Enter loads it, Escape
+closes the panel. Clicking a row loads that result. User presets are scanned
+recursively under the chosen library folder, alongside the current file.
+The sound selector lists factory sounds and user presets from the library folder and its subfolders.
 Its arrows step through that list. Loading replaces the current patch.
 
 The PATCH menu provides Save as, Save current, Load file, Choose folder,
@@ -634,7 +662,7 @@ temporary file and atomic replacement. Invalid files leave the current patch
 intact. State/preset files are limited to 1 GiB. These are logisth's own files;
 renaming another format to .logisth does not convert it.
 
-All 712 parameters are available for host automation. The first 514 parameter
+All 736 parameters are available for host automation. The first 514 parameter
 IDs and order from 0.4 are retained. Granulizer and global MIDI-only controls
 follow them; the former Graphs parameter block is removed. A/B views, rack pages,
 theme and scope source do not change the patch's audio settings. DAW state
@@ -644,7 +672,7 @@ Destination menus now contain 59 entries, including individual and grouped
 WT position, FM index, AM depth and pulse-width targets. Numeric destination IDs are retained, but normalized
 host automation may need review after a destination-list expansion.
 
-There is no Sylenth1 bank import or MIDI Learn menu. Legacy prototype states
+Presets use the native .logisth format. Legacy prototype states
 receive a best-effort migration of filter and modulation settings; changes to
 DSP mean that identical sound is not guaranteed.
 
@@ -708,11 +736,10 @@ run on Intel; Universal architecture checks establish that arm64 code is present
 not that it has been auditioned on Apple Silicon hardware.
 
 The filter is an independent SVF design. All five reverb algorithms, including
-the rebuilt Hall, are original wavelogik implementations. Spectral and Kick
-sampler modes use Signalsmith Stretch 1.1.0 and its bundled DSP library (MIT). Modulation
-scales and some sequencer behaviour are implementation choices. No sample-exact
-comparison with Sylenth1 has been performed. Third-party font notices are included
-in assets/fonts. The original Sylenth1 manual and graphics are not redistributed.
+the rebuilt Hall, are original wavelogik implementations. Signalsmith Stretch and Kick
+sampler modes use Signalsmith Stretch 1.3.2 and Signalsmith Linear 0.6.6 (MIT). Modulation
+scales and sequencer behaviour are defined by this manual. Open Sans font
+notices are included in assets/fonts.
 
 ## License and manufacturer
 

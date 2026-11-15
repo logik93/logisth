@@ -154,6 +154,12 @@ class LogisthProcessor : public juce::AudioProcessor {
     std::atomic<logisth::SpectralBank *> spectralPointer{nullptr};
     std::atomic<bool> spectralPending{false};
     std::atomic<uint64_t> spectralGeneration{0};
+    uint64_t spectralPendingGeneration = 0, spectralRejectedGeneration = 0;
+    std::array<logisth::SpectralConfig, 4> spectralDesiredConfigs{};
+    std::array<int, 4> spectralDesiredUnisons{};
+    unsigned spectralDesiredMask = 0;
+    int spectralDesiredVoices = 0;
+    double spectralDesiredRate = 0;
     std::atomic<double> spectralRate{44100};
     std::array<std::shared_ptr<const logisth::SourceData>, 4> sourceOwners;
     std::array<std::atomic<const logisth::SourceData *>, 4> sourcePointers{};
