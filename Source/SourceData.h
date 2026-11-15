@@ -228,6 +228,7 @@ struct SourcePlayback {
         sampler.token = serial;
     }
     StretchControls activeControls{}, previousControls{};
+    TailLoopSettings activeTail{}, previousTail{};
     int samplerMode = -1, samplerQuality = 0, previousQuality = 0, fadeLeft = 0, fadeLength = 1;
     void reset() {
         auto cells = spectralCells;
@@ -245,7 +246,8 @@ struct SourcePlayback {
                               float density, float spray, float scan, float random,
                               int stretchMode = 0, float stretch = 1, int interpolation = 0,
                               float width = .5f, double fmOffset = 0, float kickAttack = 25,
-                              float trimStart = 0, const StretchControls &controls = {}) {
+                              float trimStart = 0, const StretchControls &controls = {},
+                              const TailLoopSettings &tail = {}) {
         if (mode != selected || source != &data || sourceRevision != data.revision) {
             reset();
             mode = selected;
@@ -263,14 +265,20 @@ struct SourcePlayback {
                 samplerMode = stretchMode;
                 samplerQuality = interpolation;
                 activeControls = controls;
+                activeTail = tail;
             }
             if (fadeLeft == 0 &&
                 (samplerMode != stretchMode || samplerQuality != interpolation ||
-                 SpectralConfig::from(activeControls) != SpectralConfig::from(controls))) {
+                 SpectralConfig::from(activeControls) != SpectralConfig::from(controls) ||
+                 activeTail != tail)) {
                 previousSampler = sampler;
                 previousControls = activeControls;
+                previousTail = activeTail;
                 previousQuality = samplerQuality;
-                double at = sampler.cursor, factor = sampler.stretch;
+                double at = activeTail.enabled && !tail.enabled ? sampler.displayCursor
+                                                                : sampler.cursor,
+                       factor = sampler.stretch;
+                activeTail = tail;
                 sampler.reset();
                 spectralLane = 1 - spectralLane;
                 sampler.spectral = spectralCells[size_t(spectralLane)];
@@ -285,18 +293,20 @@ struct SourcePlayback {
                 fadeLeft = fadeLength;
             }
             activeControls = controls;
-            auto out = sampler.tick(data, ratio, sr, position, end, loop, reverse, samplerMode,
-                                    stretch, samplerQuality, width, fmOffset, kickAttack, controls);
+            auto out =
+                sampler.tick(data, ratio, sr, position, end, loop, reverse, samplerMode, stretch,
+                             samplerQuality, width, fmOffset, kickAttack, controls, activeTail);
             if (fadeLeft > 0) {
-                auto old = previousSampler.tick(data, ratio, sr, position, end, loop, reverse,
-                                                previousSampler.algorithm, stretch, previousQuality,
-                                                width, fmOffset, kickAttack, previousControls);
+                auto old =
+                    previousSampler.tick(data, ratio, sr, position, end, loop, reverse,
+                                         previousSampler.algorithm, stretch, previousQuality, width,
+                                         fmOffset, kickAttack, previousControls, previousTail);
                 float mix = 1 - float(fadeLeft) / fadeLength;
                 for (int ch = 0; ch < 2; ++ch)
                     out[size_t(ch)] = old[size_t(ch)] + (out[size_t(ch)] - old[size_t(ch)]) * mix;
                 --fadeLeft;
             }
-            cursor = sampler.cursor;
+            cursor = activeTail.enabled ? sampler.displayCursor : sampler.cursor;
             finished =
                 sampler.finished && std::none_of(sampler.grains.begin(), sampler.grains.end(),
                                                  [](auto &g) { return g.active; });

@@ -31,7 +31,7 @@ LogisthProcessor::LogisthProcessor()
       state(*this, nullptr, "LogisthState", layout()) {
     for (size_t i = 0; i < parameterCount; ++i)
         raw[i] = state.getRawParameterValue(parameterSpecs[i].id);
-    for (int i = 0; i < 4; ++i)
+    for (int i = 0; i < playerCount; ++i)
         publishSource(i, SourceData::factory());
     auto map = std::make_shared<ChordMap>();
     for (int i = 0; i < 128; ++i)
@@ -43,8 +43,8 @@ LogisthProcessor::LogisthProcessor()
 Params LogisthProcessor::snapshot() const {
     Params p;
     p.spectralBank = spectralPointer.load();
-    for (int i = 0; i < 4; ++i) {
-        size_t at = size_t(Param::o1wave) + size_t(i) * 12;
+    for (int i = 0; i < playerCount; ++i) {
+        size_t at = playerParamIndex(Param::o1wave, i, 12);
         auto next = [&] { return get(Param(at++)); };
         auto &o = p.osc[size_t(i)];
         o.wave = int(next());
@@ -55,12 +55,12 @@ Params LogisthProcessor::snapshot() const {
         float fine = next();
         o.semitone = octave * 12 + note + fine * .01f;
         o.phase = next();
-        o.detune = next();
+        o.detune = next() + get(detuneExtra(i));
         o.stereo = next();
         o.pan = next();
         o.retrigger = next() > 0;
         o.invert = next() > 0;
-        size_t ext = size_t(Param::o1engine) + size_t(i) * 16;
+        size_t ext = playerParamIndex(Param::o1engine, i, 16);
         auto sourceNext = [&] { return get(Param(ext++)); };
         o.engine = int(sourceNext());
         o.position = sourceNext();
@@ -75,7 +75,7 @@ Params LogisthProcessor::snapshot() const {
         o.warp = sourceNext();
         o.envelopeEnabled = sourceNext() > 0;
         o.envelope = {sourceNext(), sourceNext(), sourceNext(), sourceNext()};
-        size_t modulation = size_t(Param::o1fmdepth) + size_t(i) * 10;
+        size_t modulation = playerParamIndex(Param::o1fmdepth, i, 10);
         o.fmDepth = get(Param(modulation));
         o.fmRatio = get(Param(modulation + 1));
         o.amDepth = get(Param(modulation + 2));
@@ -86,13 +86,13 @@ Params LogisthProcessor::snapshot() const {
         o.stretchMode = int(get(Param(modulation + 7)));
         o.stretch = get(Param(modulation + 8));
         o.interpolation = int(get(Param(modulation + 9)));
-        size_t extra = size_t(Param::o1fmsource) + size_t(i) * 5;
+        size_t extra = playerParamIndex(Param::o1fmsource, i, 5);
         o.fmSource = int(get(Param(extra)));
         o.amSource = int(get(Param(extra + 1)));
         o.pwmSync = get(Param(extra + 2)) > 0;
         o.pwmDivision = int(get(Param(extra + 3)));
         o.kickAttack = get(Param(extra + 4));
-        size_t stretch = size_t(Param::o1ssrate) + size_t(i) * 6;
+        size_t stretch = playerParamIndex(Param::o1ssrate, i, 6);
         o.stretchControls.rate = get(Param(stretch));
         o.stretchControls.semitones = get(Param(stretch + 1));
         o.stretchControls.tonalityHz = get(Param(stretch + 2));
@@ -100,10 +100,15 @@ Params LogisthProcessor::snapshot() const {
         o.stretchControls.blockMs = get(Param(stretch + 4));
         int overlap = int(get(Param(stretch + 5)));
         o.stretchControls.overlap = overlap == 0 ? 0 : overlap + 1;
+        const size_t tail = size_t(tailParam(i));
+        o.tail.enabled = get(Param(tail)) > 0;
+        o.tail.start = get(Param(tail + 1));
+        o.tail.end = get(Param(tail + 2));
+        o.tail.fadeMs = get(Param(tail + 3));
         o.data = sourcePointers[size_t(i)].load();
-        size_t g = size_t(Param::o1gmodel) + size_t(i) * 15;
+        size_t g = playerParamIndex(Param::o1gmodel, i, 15);
         auto granNext = [&] { return get(Param(g++)); };
-        o.gran.trimStart = get(Param(size_t(Param::o1trimstart) + size_t(i)));
+        o.gran.trimStart = get(Param(playerParamIndex(Param::o1trimstart, i, 1)));
         o.gran.enabled = granNext() > 0;
         o.gran.attack = granNext() * .001f;
         o.gran.hold = granNext() * .001f;
@@ -120,8 +125,8 @@ Params LogisthProcessor::snapshot() const {
         o.gran.sync = granNext() > 0;
         o.gran.beats = granNext();
     }
-    for (int i = 0; i < 2; ++i) {
-        size_t at = size_t(Param::p1input) + size_t(i) * 10;
+    for (int i = 0; i < partCount; ++i) {
+        size_t at = partParamIndex(Param::p1input, i, 10);
         auto next = [&] { return get(Param(at++)); };
         auto &part = p.part[size_t(i)];
         part.input = int(next());
@@ -131,7 +136,7 @@ Params LogisthProcessor::snapshot() const {
         part.resonance = next();
         part.drive = next();
         part.amp = {next(), next(), next(), next()};
-        part.level = get(i == 0 ? Param::mixA : Param::mixB);
+        part.level = get(i == 0 ? Param::mixA : i == 1 ? Param::mixB : Param::mixC);
     }
     auto readRoutes = [&](size_t at) {
         Routes result{};
@@ -158,7 +163,7 @@ Params LogisthProcessor::snapshot() const {
     }
     for (int i = 0; i < 4; ++i) {
         size_t at = size_t(Param::misc1source) + size_t(i) * 5;
-        p.misc[i].source = Source(int(raw[at]->load()));
+        p.misc[i].source = Source(int(get(Param(at))));
         p.misc[i].routes = readRoutes(at + 1);
     }
     p.filterCutoff = get(Param::filtercutoff);
@@ -364,7 +369,8 @@ void LogisthProcessor::processBlock(AudioBuffer<float> &audio, MidiBuffer &midi)
             engine.render(l, r, count, p, driveMod.data(), phaserMod.data(), partScopeA.data(),
                           partScopeB.data(),
                           {playerTraces[0].data(), playerTraces[1].data(), playerTraces[2].data(),
-                           playerTraces[3].data()});
+                           playerTraces[3].data(), playerTraces[4].data(), playerTraces[5].data()},
+                          partScopeC.data());
             effects.process(l, r, count, driveMod.data(), phaserMod.data(), fx);
             for (int s = 0; s < count; ++s) {
                 masterSmooth += smoothing * (masterTarget - masterSmooth);
@@ -375,13 +381,14 @@ void LogisthProcessor::processBlock(AudioBuffer<float> &audio, MidiBuffer &midi)
                     const size_t channel = ch == l ? 0 : 1;
                     maxima[channel] = jmax(maxima[channel], std::abs(ch[s]));
                 }
-                for (int slot = 0; slot < 4; ++slot)
+                for (int slot = 0; slot < playerCount; ++slot)
                     playerScopes[size_t(slot)].push(0, 0, playerTraces[size_t(slot)][size_t(s)]);
                 scope.push(partScopeA[size_t(s)] * masterSmooth,
-                           partScopeB[size_t(s)] * masterSmooth, l[s] + r[s]);
+                           partScopeB[size_t(s)] * masterSmooth, l[s] + r[s],
+                           partScopeC[size_t(s)] * masterSmooth);
             }
             const auto &views = engine.playbackPictures();
-            for (int i = 0; i < 4; ++i)
+            for (int i = 0; i < playerCount; ++i)
                 playback[size_t(i)].write(views[size_t(i)]);
             rendered += count;
         }
@@ -542,7 +549,7 @@ bool LogisthProcessor::applyState(const void *data, int size) try {
         ValueTree safe("LogisthState");
         safe.setProperty("schema", 4, nullptr);
         if (source.hasProperty("uiScope"))
-            safe.setProperty("uiScope", jlimit(0, 2, int(source["uiScope"])), nullptr);
+            safe.setProperty("uiScope", jlimit(0, 3, int(source["uiScope"])), nullptr);
         for (const auto &spec : parameterSpecs) {
             float value = (String(spec.id) == "arppattern" || String(spec.id).endsWith("gmodel"))
                               ? 0
@@ -688,7 +695,7 @@ void LogisthProcessor::loadPreset(int index) {
         patterns = {};
         currentPattern = 0;
     }
-    for (int i = 0; i < 4; ++i)
+    for (int i = 0; i < playerCount; ++i)
         clearSource(i);
     auto defaultChords = std::make_shared<ChordMap>();
     for (int key = 0; key < 128; ++key)
@@ -702,7 +709,7 @@ void LogisthProcessor::loadPreset(int index) {
         parameter->endChangeGesture();
     };
     if (index == 0) {
-        for (int i = 1; i <= 4; ++i) {
+        for (int i = 1; i <= playerCount; ++i) {
             auto id = "o" + String(i);
             set(id + "engine", 0);
             set(id + "wave", 1);
@@ -716,7 +723,7 @@ void LogisthProcessor::loadPreset(int index) {
             set(id + "stereo", 0);
             set(id + "envelope", 0);
         }
-        for (int i = 1; i <= 2; ++i) {
+        for (int i = 1; i <= partCount; ++i) {
             auto id = "p" + String(i);
             set(id + "type", 3);
             set(id + "res", 0);

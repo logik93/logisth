@@ -31,7 +31,7 @@ def audit(stretch=None, linear=None):
     return {'components':reports,
             'processing_parity':'StretchControls CTest compares stereo output with upstream at 44.1/48/96 kHz',
             'independent_models':['Kick attack/tail hybrid','WSOLA/Tonal/Transient sampler paths',
-                                  'granular sample engine','two-part subtractive engine',
+                                  'granular sample engine','three-part subtractive engine',
                                   'chord and pattern sequencer','five character reverbs and equalizers'],
             'scope':'Source identity and DSP adapter parity do not assert equivalence to proprietary plug-in binaries.'}
 

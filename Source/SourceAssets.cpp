@@ -17,11 +17,11 @@ void LogisthProcessor::serviceAssets() {
     }
 }
 bool LogisthProcessor::publishSource(int index, std::shared_ptr<const SourceData> data) {
-    if (index < 0 || index >= 4 || !data)
+    if (index < 0 || index >= playerCount || !data)
         return false;
     const ScopedLock lock(assetLock);
     uint64_t bytes = data == SourceData::factory() ? 0 : data->samples[0].size() * 8ull;
-    for (int i = 0; i < 4; ++i)
+    for (int i = 0; i < playerCount; ++i)
         if (i != index && sourceOwners[size_t(i)] &&
             sourceOwners[size_t(i)] != SourceData::factory())
             bytes += sourceOwners[size_t(i)]->samples[0].size() * 8ull;
@@ -37,7 +37,7 @@ bool LogisthProcessor::publishSource(int index, std::shared_ptr<const SourceData
 }
 std::shared_ptr<const SourceData> LogisthProcessor::sourceData(int index) const {
     const ScopedLock lock(assetLock);
-    return sourceOwners[size_t(jlimit(0, 3, index))];
+    return sourceOwners[size_t(jlimit(0, playerCount - 1, index))];
 }
 void LogisthProcessor::clearSource(int index) {
     publishSource(index, SourceData::factory());
@@ -75,7 +75,7 @@ int wavetableFrameSize(const File &file, int64 length) {
 }
 } // namespace
 Result LogisthProcessor::loadSource(int index, const File &file, int frameSize) try {
-    if (index < 0 || index >= 4)
+    if (index < 0 || index >= playerCount)
         return Result::fail("Invalid source slot");
     if (frameSize != 0 && !SourceData::validFrameSize(frameSize))
         return Result::fail("Unsupported frame size");
@@ -90,12 +90,12 @@ Result LogisthProcessor::loadSource(int index, const File &file, int frameSize) 
     uint64_t otherBytes = 0;
     {
         const ScopedLock lock(assetLock);
-        for (int i = 0; i < 4; ++i)
+        for (int i = 0; i < playerCount; ++i)
             if (i != index && sourceOwners[size_t(i)] != SourceData::factory())
                 otherBytes += sourceOwners[size_t(i)]->samples[0].size() * 8ull;
     }
     if (!fitsSampleMemory(uint64_t(reader->lengthInSamples), otherBytes))
-        return Result::fail("The four sources exceed the 512 MiB decoded-audio memory budget.");
+        return Result::fail("The six sources exceed the 512 MiB decoded-audio memory budget.");
     int n = int(reader->lengthInSamples);
     auto data = std::make_shared<SourceData>();
     data->sampleRate = reader->sampleRate;
@@ -128,7 +128,7 @@ Result LogisthProcessor::loadSource(int index, const File &file, int frameSize) 
     data->regions.erase(std::unique(data->regions.begin(), data->regions.end()),
                         data->regions.end());
     if (!publishSource(index, data))
-        return Result::fail("The four sources exceed the 512 MiB decoded-audio memory budget.");
+        return Result::fail("The six sources exceed the 512 MiB decoded-audio memory budget.");
     return Result::ok();
 } catch (const std::bad_alloc &) {
     return Result::fail("Not enough memory to load this sample; the previous source was kept.");
@@ -292,7 +292,7 @@ void LogisthProcessor::randomisePattern() {
     }
 }
 void LogisthProcessor::saveAssets(ValueTree &tree) {
-    std::array<std::shared_ptr<const SourceData>, 4> owners;
+    std::array<std::shared_ptr<const SourceData>, playerCount> owners;
     std::shared_ptr<const ChordMap> chordsSnapshot;
     std::array<ValueTree, 12> patternSnapshot;
     {
@@ -303,7 +303,7 @@ void LogisthProcessor::saveAssets(ValueTree &tree) {
             patternSnapshot[size_t(i)] = patterns[size_t(i)].createCopy();
     }
     tree.setProperty("currentPattern", currentPattern.load(), nullptr);
-    for (int slot = 0; slot < 4; ++slot) {
+    for (int slot = 0; slot < playerCount; ++slot) {
         const auto &data = owners[size_t(slot)];
         if (data == SourceData::factory())
             continue;
@@ -351,19 +351,19 @@ void LogisthProcessor::saveAssets(ValueTree &tree) {
             tree.addChild(pattern.createCopy(), -1, nullptr);
 }
 bool LogisthProcessor::restoreAssets(const ValueTree &tree) {
-    std::array<std::shared_ptr<const SourceData>, 4> sources;
+    std::array<std::shared_ptr<const SourceData>, playerCount> sources;
     sources.fill(SourceData::factory());
     auto map = std::make_shared<ChordMap>();
     for (int key = 0; key < 128; ++key)
         map->set(key, 1);
     std::array<ValueTree, 12> restoredPatterns;
-    std::array<bool, 4> seen{};
+    std::array<bool, playerCount> seen{};
     uint64_t totalDecoded = 0;
     for (auto node : tree) {
         if (node.hasType("SOURCE")) {
             int slot = int(node.getProperty("slot", -1));
             const auto *blob = node["audio"].getBinaryData();
-            if (slot < 0 || slot > 3 || seen[size_t(slot)] || !blob ||
+            if (slot < 0 || slot >= playerCount || seen[size_t(slot)] || !blob ||
                 blob->getSize() > sourceBlobLimit)
                 return false;
             seen[size_t(slot)] = true;
@@ -461,7 +461,7 @@ bool LogisthProcessor::restoreAssets(const ValueTree &tree) {
         const ScopedLock lock(assetLock);
         retiredSources.reserve(retiredSources.size() + 4);
         retiredChords.reserve(retiredChords.size() + 1);
-        for (int slot = 0; slot < 4; ++slot) {
+        for (int slot = 0; slot < playerCount; ++slot) {
             retiredSources.push_back(sourceOwners[size_t(slot)]);
             sourceOwners[size_t(slot)] = std::move(sources[size_t(slot)]);
             sourcePointers[size_t(slot)].store(sourceOwners[size_t(slot)].get());
@@ -477,23 +477,23 @@ bool LogisthProcessor::restoreAssets(const ValueTree &tree) {
 
 void LogisthProcessor::ensureSpectral(bool synchronous) {
     unsigned wanted = 0;
-    std::array<int, 4> unisons{};
-    std::array<SpectralConfig, 4> configs{};
+    std::array<int, playerCount> unisons{};
+    std::array<SpectralConfig, playerCount> configs{};
     double rate = 0;
     int voiceCount = 16;
     uint64_t generation = 0;
     std::shared_ptr<SpectralBank> previous;
     {
         const ScopedLock lock(assetLock);
-        for (int i = 0; i < 4; ++i) {
-            int voices = int(raw[size_t(Param::o1voices) + size_t(i) * 12]->load());
+        for (int i = 0; i < playerCount; ++i) {
+            int voices = int(raw[playerParamIndex(Param::o1voices, i, 12)]->load());
             unisons[size_t(i)] = jlimit(1, 8, voices);
-            int mode = int(raw[size_t(Param::o1stretchmode) + size_t(i) * 10]->load());
-            if (voices > 0 && raw[size_t(Param::o1engine) + size_t(i) * 16]->load() == 2 &&
+            int mode = int(raw[playerParamIndex(Param::o1stretchmode, i, 10)]->load());
+            if (voices > 0 && raw[playerParamIndex(Param::o1engine, i, 16)]->load() == 2 &&
                 (mode == 6 || mode == 7))
                 wanted |= 1u << i;
             StretchControls controls;
-            size_t at = size_t(Param::o1ssrate) + size_t(i) * 6;
+            size_t at = playerParamIndex(Param::o1ssrate, i, 6);
             controls.blockMs = raw[at + 4]->load();
             int overlap = int(raw[at + 5]->load());
             controls.overlap = overlap == 0 ? 0 : overlap + 1;
@@ -525,7 +525,7 @@ void LogisthProcessor::ensureSpectral(bool synchronous) {
         previous = spectralOwner;
         if (previous && previous->rate == rate && previous->voiceCapacity >= voiceCount) {
             bool enough = (previous->mask & wanted) == wanted;
-            for (int i = 0; i < 4; ++i)
+            for (int i = 0; i < playerCount; ++i)
                 if ((wanted & (1u << i)) && (previous->capacity[size_t(i)] < unisons[size_t(i)] ||
                                              previous->configs[size_t(i)] != configs[size_t(i)]))
                     enough = false;
@@ -579,11 +579,11 @@ void LogisthProcessor::ensureSpectral(bool synchronous) {
 
 bool LogisthProcessor::spectralReady(int slot) const {
     const ScopedLock lock(assetLock);
-    if (slot < 0 || slot >= 4 || !spectralOwner || spectralOwner->rate != spectralRate.load() ||
-        !(spectralOwner->mask & (1u << slot)))
+    if (slot < 0 || slot >= playerCount || !spectralOwner ||
+        spectralOwner->rate != spectralRate.load() || !(spectralOwner->mask & (1u << slot)))
         return false;
     StretchControls controls;
-    size_t at = size_t(Param::o1ssrate) + size_t(slot) * 6;
+    size_t at = playerParamIndex(Param::o1ssrate, slot, 6);
     controls.blockMs = raw[at + 4]->load();
     int overlap = int(raw[at + 5]->load());
     controls.overlap = overlap == 0 ? 0 : overlap + 1;
@@ -593,5 +593,5 @@ bool LogisthProcessor::spectralReady(int slot) const {
     return spectralOwner->voiceCapacity >= voices &&
            spectralOwner->configs[size_t(slot)] == SpectralConfig::from(controls) &&
            spectralOwner->capacity[size_t(slot)] >=
-               jlimit(1, 8, int(raw[size_t(Param::o1voices) + size_t(slot) * 12]->load()));
+               jlimit(1, 8, int(raw[playerParamIndex(Param::o1voices, slot, 12)]->load()));
 }

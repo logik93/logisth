@@ -372,6 +372,13 @@ class LogisthEditor::Console : public Component,
             setDescription(tooltip);
             if (*spec.choices) {
                 auto choices = StringArray::fromTokens(spec.choices, "|", "");
+                const auto extension = choiceExtension(id);
+                if (extension != Param::Count) {
+                    auto added =
+                        StringArray::fromTokens(parameterSpecs[size_t(extension)].choices, "|", "");
+                    added.remove(0);
+                    choices.addArray(added);
+                }
                 if (choices == StringArray{"Off", "On"}) {
                     kind = Style::Toggle;
                     toggle.setButtonText(spec.label);
@@ -381,7 +388,18 @@ class LogisthEditor::Console : public Component,
                 } else {
                     kind = Style::Menu;
                     menu.getProperties().set("routing", String(spec.id).contains("dest"));
+                    PopupMenu cChoices;
                     for (int i = 0; i < choices.size(); ++i) {
+                        const bool cDestination =
+                            String(spec.id).contains("dest") && i >= int(Destination::VolumeC);
+                        const bool cMacro = String(spec.id).startsWith("m") &&
+                                            String(spec.id).contains("target") && i >= 31;
+                        if (cDestination || cMacro) {
+                            if (cDestination && i == int(Destination::VolumeC) + 16)
+                                cChoices.addColumnBreak();
+                            cChoices.addItem(i + 1, choices[i]);
+                            continue;
+                        }
                         if (String(spec.id).startsWith("m") && String(spec.id).contains("target")) {
                             if (i == 4 || i == 20)
                                 menu.getRootMenu()->addColumnBreak();
@@ -414,14 +432,35 @@ class LogisthEditor::Console : public Component,
                         }
                         menu.addItem(name, i + 1);
                     }
-                    choiceAttachment =
-                        std::make_unique<AudioProcessorValueTreeState::ComboBoxAttachment>(
-                            owner.processor.state, spec.id, menu);
+                    if (cChoices.getNumItems() > 0)
+                        menu.getRootMenu()->addSubMenu("Part C / A+B+C", cChoices);
+                    if (extension != Param::Count)
+                        bindComposite(extension, false);
+                    else
+                        choiceAttachment =
+                            std::make_unique<AudioProcessorValueTreeState::ComboBoxAttachment>(
+                                owner.processor.state, spec.id, menu);
                 }
             } else {
                 kind = Style::Knob;
-                sliderAttachment = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(
-                    owner.processor.state, spec.id, slider);
+                if (String(spec.id).startsWith("o") && String(spec.id).endsWith("detune")) {
+                    slider.setRange(0, 200, 0);
+                    bindComposite(detuneExtra(String(spec.id).substring(1).getIntValue() - 1),
+                                  true);
+                    slider.onDragStart = [this] {
+                        compositeGesture = true;
+                        compositeBase->beginGesture();
+                        compositeExtra->beginGesture();
+                    };
+                    slider.onDragEnd = [this] {
+                        compositeBase->endGesture();
+                        compositeExtra->endGesture();
+                        compositeGesture = false;
+                    };
+                } else
+                    sliderAttachment =
+                        std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(
+                            owner.processor.state, spec.id, slider);
                 slider.textFromValueFunction = [this](double v) { return formatted(v); };
                 slider.valueFromTextFunction = [this](const String &t) {
                     double v = t.getDoubleValue();
@@ -442,6 +481,8 @@ class LogisthEditor::Console : public Component,
                 slider.setDoubleClickReturnValue(
                     true, String(spec.id).contains("amt") ? 0 : spec.initial);
                 slider.onValueChange = [this] {
+                    if (compositeDetune && !compositeUpdate)
+                        writeComposite(float(slider.getValue()));
                     if (isMouseOverOrDragging(true))
                         describe();
                     if (String(spec.id).contains("amp"))
@@ -449,15 +490,26 @@ class LogisthEditor::Console : public Component,
                 };
             }
             menu.onChange = [this] {
+                if (compositeChoice && !compositeUpdate && menu.getSelectedId() > 0)
+                    writeComposite(float(menu.getSelectedId() - 1));
                 if (String(spec.id).endsWith("engine")) {
-                    int slot = (int(id) - int(Param::o1engine)) / 16;
+                    int slot = String(spec.id).substring(1).getIntValue() - 1;
                     owner.sourceViews[size_t(slot)].setSelectedId(menu.getSelectedId() == 1 ? 1 : 2,
                                                                   dontSendNotification);
+                    owner.layout();
+                    owner.repaint();
                 }
                 if (isMouseOverOrDragging(true))
                     describe();
             };
             toggle.onClick = [this] {
+                if (String(spec.id).endsWith("tailon") && toggle.getToggleState()) {
+                    const int slot = String(spec.id).substring(1).getIntValue() - 1;
+                    logisth_ui::change(owner.processor, "o" + String(slot + 1) + "loop", 0);
+                    owner.waveView.setSlot(slot);
+                    owner.waveSlot.setSelectedId(slot + 1, dontSendNotification);
+                    owner.setRack(9);
+                }
                 if (id == Param::midionly && toggle.getToggleState()) {
                     auto *midi = owner.processor.state.getParameter("arpout");
                     midi->beginChangeGesture();
@@ -517,8 +569,12 @@ class LogisthEditor::Console : public Component,
             describe();
         }
         void describe() {
-            owner.readout = String(spec.group) + "  /  " + String(spec.label) + "   " +
-                            owner.processor.state.getParameter(spec.id)->getCurrentValueAsText();
+            owner.readout =
+                String(spec.group) + "  /  " + String(spec.label) + "   " +
+                (compositeDetune ? formatted(slider.getValue())
+                 : compositeChoice
+                     ? menu.getText()
+                     : owner.processor.state.getParameter(spec.id)->getCurrentValueAsText());
             owner.repaint(118, 844, 870, 16);
         }
         Param parameter() const {
@@ -601,6 +657,48 @@ class LogisthEditor::Console : public Component,
                 return String(v, 0) + String(CharPointer_UTF8("°"));
             return String(v, std::abs(v) >= 10 ? 0 : 2);
         }
+        void bindComposite(Param extra, bool detune) {
+            compositeId = extra;
+            compositeDetune = detune;
+            compositeChoice = !detune;
+            auto *base = owner.processor.state.getParameter(spec.id);
+            auto *extension = owner.processor.state.getParameter(parameterSpecs[size_t(extra)].id);
+            compositeBase = std::make_unique<ParameterAttachment>(
+                *base, [this](float) { syncComposite(); }, nullptr);
+            compositeExtra = std::make_unique<ParameterAttachment>(
+                *extension, [this](float) { syncComposite(); }, nullptr);
+            compositeBase->sendInitialUpdate();
+            compositeExtra->sendInitialUpdate();
+        }
+        void syncComposite() {
+            if (compositeUpdate)
+                return;
+            const ScopedValueSetter<bool> guard(compositeUpdate, true);
+            if (compositeDetune)
+                slider.setValue(owner.value(id) + owner.value(compositeId), dontSendNotification);
+            else
+                menu.setSelectedId(int(owner.value(id)) + 1, dontSendNotification);
+        }
+        void writeComposite(float value) {
+            const ScopedValueSetter<bool> guard(compositeUpdate, true);
+            const float base = compositeDetune     ? std::min(100.f, value)
+                               : value > spec.high ? 0
+                                                   : value;
+            const float extra = compositeDetune     ? std::max(0.f, value - 100)
+                                : value > spec.high ? value - spec.high
+                                                    : 0;
+            if (compositeGesture) {
+                compositeBase->setValueAsPartOfGesture(base);
+                compositeExtra->setValueAsPartOfGesture(extra);
+            } else {
+                compositeBase->setValueAsCompleteGesture(base);
+                compositeExtra->setValueAsCompleteGesture(extra);
+            }
+        }
+        Param compositeId = Param::Count;
+        bool compositeChoice = false, compositeDetune = false, compositeUpdate = false,
+             compositeGesture = false;
+        std::unique_ptr<ParameterAttachment> compositeBase, compositeExtra;
         Console &owner;
         const ParameterSpec &spec;
         Param id;
@@ -838,10 +936,10 @@ class LogisthEditor::Console : public Component,
             controls[i] = std::make_unique<Control>(*this, Param(i));
             addChildComponent(*controls[i]);
         }
-        for (int i = 0; i < 2; ++i) {
+        for (int i = 0; i < partCount; ++i) {
             auto &button = parts[size_t(i)];
             button.setComponentID("part." + String(i));
-            button.setButtonText(i == 0 ? "A" : "B");
+            button.setButtonText(String::charToString(juce_wchar('A' + i)));
             button.onClick = [this, i] { setPart(i); };
             addAndMakeVisible(button);
         }
@@ -949,7 +1047,7 @@ class LogisthEditor::Console : public Component,
         addChildComponent(settingsPanel);
         initialiseSettings();
         initialiseMorph();
-        for (int i = 0; i < 4; ++i) {
+        for (int i = 0; i < playerCount; ++i) {
             auto &view = sourceViews[size_t(i)];
             view.setComponentID("source.view." + String(i));
             view.addItemList({"VOICE", "SOURCE", "ENV", "GRAINS", "MOTION", "TIME", "MOD",
@@ -985,7 +1083,7 @@ class LogisthEditor::Console : public Component,
                              "otherwise 2048. Short single-cycle files use their actual length.");
             addChildComponent(frame);
         }
-        for (int i = 0; i < 4; ++i) {
+        for (int i = 0; i < playerCount; ++i) {
             sourceWave[size_t(i)].onClick = [this, i] {
                 waveView.setSlot(i);
                 waveSlot.setSelectedId(i + 1, dontSendNotification);
@@ -998,7 +1096,7 @@ class LogisthEditor::Console : public Component,
             importDroppedSource(slot, file);
         };
         waveSlot.setComponentID("sample.slot");
-        waveSlot.addItemList({"A1", "A2", "B1", "B2"}, 1);
+        waveSlot.addItemList({"A1", "A2", "B1", "B2", "C1", "C2"}, 1);
         waveSlot.setSelectedId(1);
         waveSlot.onChange = [this] {
             waveView.setSlot(waveSlot.getSelectedId() - 1);
@@ -1007,18 +1105,18 @@ class LogisthEditor::Console : public Component,
         };
         waveSlot.getProperties().set("dark", true);
         addChildComponent(waveSlot);
-        for (int i = 0; i < 3; ++i) {
+        for (int i = 0; i < 4; ++i) {
             auto &button = scopeSources[size_t(i)];
-            button.setButtonText(i == 0 ? "A" : i == 1 ? "B" : "L+R");
+            button.setButtonText(i == 0 ? "A" : i == 1 ? "B" : i == 3 ? "C" : "L+R");
             button.onClick = [this, i] {
                 scopeView.setSource(i);
                 processor.state.state.setProperty("uiScope", i, nullptr);
-                for (int j = 0; j < 3; ++j)
+                for (int j = 0; j < 4; ++j)
                     scopeSources[size_t(j)].setToggleState(j == i, dontSendNotification);
             };
             addAndMakeVisible(button);
         }
-        int initialScope = jlimit(0, 2, int(processor.state.state.getProperty("uiScope", 2)));
+        int initialScope = jlimit(0, 3, int(processor.state.state.getProperty("uiScope", 2)));
         scopeView.setSource(initialScope);
         scopeSources[size_t(initialScope)].setToggleState(true, dontSendNotification);
         patternSlot.addItemList({"A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L"}, 1);
@@ -1301,7 +1399,7 @@ class LogisthEditor::Console : public Component,
         return settingsOpen;
     }
     void setPart(int part) {
-        selectedPart = jlimit(0, 1, part);
+        selectedPart = jlimit(0, partCount - 1, part);
         layout();
         repaint();
     }
@@ -1314,6 +1412,22 @@ class LogisthEditor::Console : public Component,
     void showScenario(int index) {
         if (index != 28)
             showPresetSearch(false);
+        if (index == 29 || index == 30) {
+            settingsOpen = false;
+            previewPattern = previewGran = previewWave = previewEq = previewReverb = -1;
+            previewSource = index == 29 ? 2 : 1;
+            previewStretch = -1;
+            selectedPart = index == 30 ? 2 : 0;
+            rack = 9;
+            waveSlot.setSelectedId(index == 30 ? 5 : 1, dontSendNotification);
+            waveView.setSlot(index == 30 ? 4 : 0);
+            layout();
+            for (auto &view : sourceViews)
+                view.setSelectedId(index == 29 ? 11 : 2, dontSendNotification);
+            layout();
+            repaint();
+            return;
+        }
         if (index == 28) {
             showPresetSearch(true);
             searchQuery.setText("pad", false);
@@ -1418,8 +1532,8 @@ class LogisthEditor::Console : public Component,
         settingsOpen = false;
         const int oldPart = selectedPart, oldRack = rack, oldStep = stepPage,
                   oldMacro = selectedMacro;
-        std::array<int, 4> views;
-        for (int i = 0; i < 4; ++i)
+        std::array<int, playerCount> views;
+        for (int i = 0; i < playerCount; ++i)
             views[size_t(i)] = sourceViews[size_t(i)].getSelectedId();
         std::set<size_t> visited;
         String error;
@@ -1428,6 +1542,11 @@ class LogisthEditor::Console : public Component,
             for (size_t i = 0; i < controls.size(); ++i)
                 if (controls[i]->isVisible()) {
                     visited.insert(i);
+                    if (choiceExtension(Param(i)) != Param::Count)
+                        visited.insert(size_t(choiceExtension(Param(i))));
+                    for (int slot = 0; slot < playerCount; ++slot)
+                        if (i == playerParamIndex(Param::o1detune, slot, 12))
+                            visited.insert(size_t(detuneExtra(slot)));
                     auto *hit = getComponentAt(controls[i]->getBounds().getCentre());
                     if (hit != controls[i].get() && !controls[i]->isParentOf(hit) &&
                         hit != &patternCanvas)
@@ -1460,7 +1579,7 @@ class LogisthEditor::Console : public Component,
         previewSource = 0;
         for (int clock = 0; clock < 2; ++clock) {
             previewSync = clock;
-            for (int part = 0; part < 2; ++part)
+            for (int part = 0; part < partCount; ++part)
                 for (int page = 0; page < 11; ++page)
                     for (int step = 0; step < 2; ++step) {
                         selectedPart = part;
@@ -1476,10 +1595,10 @@ class LogisthEditor::Console : public Component,
             inspect();
         }
         previewPattern = 0;
-        for (int part = 0; part < 2; ++part)
+        for (int part = 0; part < partCount; ++part)
             for (int mode = 0; mode < 4; ++mode)
                 for (int model = 0; model < 2; ++model)
-                    for (int view = 1; view <= 10; ++view) {
+                    for (int view = 1; view <= 11; ++view) {
                         selectedPart = part;
                         previewSource = mode;
                         previewGran = model;
@@ -1494,14 +1613,14 @@ class LogisthEditor::Console : public Component,
         previewWave = 2;
         for (auto &view : sourceViews)
             view.setSelectedId(7, dontSendNotification);
-        for (int part = 0; part < 2; ++part) {
+        for (int part = 0; part < partCount; ++part) {
             selectedPart = part;
             inspect();
         }
         previewWave = -1;
         previewSource = 2;
         previewStretch = 6;
-        for (int part = 0; part < 2; ++part) {
+        for (int part = 0; part < partCount; ++part) {
             selectedPart = part;
             layout();
             for (auto &view : sourceViews)
@@ -1533,7 +1652,7 @@ class LogisthEditor::Console : public Component,
         rack = oldRack;
         stepPage = oldStep;
         previewSync = previewSource = previewPattern = previewGran = -1;
-        for (int i = 0; i < 4; ++i)
+        for (int i = 0; i < playerCount; ++i)
             sourceViews[size_t(i)].setSelectedId(views[size_t(i)], dontSendNotification);
         layout();
         return error;
@@ -1957,7 +2076,7 @@ class LogisthEditor::Console : public Component,
             if (p == Param::lfo1free || p == Param::lfo2free)
                 return 0;
         }
-        return processor.state.getRawParameterValue(parameterSpecs[size_t(p)].id)->load();
+        return processor.effectiveValue(p);
     }
     void put(Param id, Rectangle<int> bounds, Style style, const String &label = {},
              bool isDark = false) {
@@ -2207,8 +2326,8 @@ class LogisthEditor::Console : public Component,
         control(id + "engine", {b.getX() + 300, b.getY() + 6, 146, 24}, Style::Menu);
         sourceViews[slot].setBounds(b.getX() + 191, b.getY() + 6, 99, 24);
         sourceViews[slot].setVisible(true);
-        const int mode = int(value(Param(size_t(Param::o1engine) + slot * 16)));
-        const bool granModel = value(Param(size_t(Param::o1gmodel) + slot * 15)) > 0;
+        const int mode = int(value(Param(playerParamIndex(Param::o1engine, int(slot), 16))));
+        const bool granModel = value(Param(playerParamIndex(Param::o1gmodel, int(slot), 15))) > 0;
         auto &menu = sourceViews[slot];
         const int menuState = mode * 2 + int(granModel);
         if (sourceMenuStates[slot] != menuState) {
@@ -2230,6 +2349,7 @@ class LogisthEditor::Console : public Component,
             if (mode == 2) {
                 menu.addItem("PLAYBACK", 8);
                 menu.addItem("STRETCH", 10);
+                menu.addItem("LOOP TAIL", 11);
             }
             menu.setSelectedId(menu.indexOfItemId(selected) >= 0 ? selected
                                : mode == 0                       ? 1
@@ -2244,7 +2364,14 @@ class LogisthEditor::Console : public Component,
         }
         sourceWave[slot].setBounds(b.getX() + 86, b.getY() + 114, 358, 14);
         sourceWave[slot].setVisible(view == 2);
-        if (view == 1) {
+        if (view == 11 && mode == 2) {
+            control(id + "tailon", {b.getX() + 88, b.getY() + 40, 128, 24}, Style::Toggle,
+                    "LOOP TAIL");
+            for (int i = 0; i < 3; ++i)
+                control(id + StringArray{"tailstart", "tailend", "tailfade"}[i],
+                        {b.getX() + 88 + i * 117, b.getY() + 77, 104, 82}, Style::Knob,
+                        StringArray{"LOOP IN", "LOOP OUT", "CROSSFADE"}[i]);
+        } else if (view == 1) {
             StringArray names{"VOLUME", "PHASE", "DETUNE", "STEREO", "PAN"};
             StringArray suffix{"level", "phase", "detune", "stereo", "pan"};
             for (int i = 0; i < 3; ++i)
@@ -2269,12 +2396,12 @@ class LogisthEditor::Console : public Component,
                         "RETRIG");
             control(id + "invert", {b.getX() + 371, b.getY() + 141, 74, 22}, Style::Toggle,
                     "INVERT");
-            controls[size_t(Param(size_t(Param::o1wave) + size_t(number - 1) * 12))]->enable(
-                value(Param(size_t(Param::o1engine) + slot * 16)) == 0);
-            controls[size_t(Param(size_t(Param::o1retrig) + size_t(number - 1) * 12))]->enable(
-                value(Param(size_t(Param::o1engine) + slot * 16)) <= 1);
-            controls[size_t(Param(size_t(Param::o1phase) + size_t(number - 1) * 12))]->enable(
-                value(Param(size_t(Param::o1engine) + slot * 16)) <= 1);
+            controls[size_t(Param(playerParamIndex(Param::o1wave, number - 1, 12)))]->enable(
+                value(Param(playerParamIndex(Param::o1engine, int(slot), 16))) == 0);
+            controls[size_t(Param(playerParamIndex(Param::o1retrig, number - 1, 12)))]->enable(
+                value(Param(playerParamIndex(Param::o1engine, int(slot), 16))) <= 1);
+            controls[size_t(Param(playerParamIndex(Param::o1phase, number - 1, 12)))]->enable(
+                value(Param(playerParamIndex(Param::o1engine, int(slot), 16))) <= 1);
         } else {
             for (int i = 0; i < 3; ++i)
                 control(id + StringArray{"octave", "tune", "fine"}[i],
@@ -2308,11 +2435,12 @@ class LogisthEditor::Console : public Component,
                         "INTERPOLATION");
                 control(id + "stretch", {b.getX() + 88, b.getY() + 86, 95, 80}, Style::Knob,
                         "TIME FACTOR");
-                if (value(Param(size_t(Param::o1stretchmode) + slot * 10)) == 6)
+                if (value(Param(playerParamIndex(Param::o1stretchmode, int(slot), 10))) == 6)
                     control(id + "kickattack", {b.getX() + 269, b.getY() + 86, 100, 80},
                             Style::Knob, "KICK ATTACK");
             } else if (view == 10) {
-                const int algorithm = int(value(Param(size_t(Param::o1stretchmode) + slot * 10)));
+                const int algorithm =
+                    int(value(Param(playerParamIndex(Param::o1stretchmode, int(slot), 10))));
                 const bool signalsmith = algorithm == 6 || algorithm == 7;
                 StringArray keys{"ssrate",    "sssemitones", "sstonality",
                                  "ssformant", "ssblock",     "ssoverlap"};
@@ -2379,7 +2507,8 @@ class LogisthEditor::Console : public Component,
                     mode == 3   ? StringArray{"level", "position", "size", "density", "spray"}
                     : mode == 2 ? StringArray{"level", "position", "end", "stereo", "pan"}
                                 : StringArray{"level", "position", "warp", "stereo", "pan"};
-                if (mode == 3 && value(Param(size_t(Param::o1gmodel) + slot * 15)) > 0) {
+                if (mode == 3 &&
+                    value(Param(playerParamIndex(Param::o1gmodel, int(slot), 15))) > 0) {
                     names = {"VOLUME", "START", "HOLD", "GR.SPACE", "WAVE.SPACE"};
                     suffix = {"level", "position", "ghold", "gspace", "gwave"};
                 }
@@ -2389,7 +2518,8 @@ class LogisthEditor::Console : public Component,
                 if (mode >= 2) {
                     control(id + "root", {b.getX() + 88, b.getY() + 129, 48, 35}, Style::Number,
                             "ROOT");
-                    if (mode == 3 && value(Param(size_t(Param::o1gmodel) + slot * 15)) == 0)
+                    if (mode == 3 &&
+                        value(Param(playerParamIndex(Param::o1gmodel, int(slot), 15))) == 0)
                         control(id + "scan", {b.getX() + 145, b.getY() + 129, 68, 35},
                                 Style::Number, "SCAN");
                     else
@@ -2510,7 +2640,7 @@ class LogisthEditor::Console : public Component,
             waveView.setBounds(414, 320, 520, 203);
             waveView.setVisible(true);
             int slot = waveView.selectedSlot();
-            int mode = int(value(Param(size_t(Param::o1engine) + size_t(slot) * 16)));
+            int mode = int(value(Param(playerParamIndex(Param::o1engine, slot, 16))));
             waveView.setMode(mode);
             if (mode == 1) {
                 sourceFrame[size_t(slot)].setBounds(846, 289, 88, 23);
@@ -2711,8 +2841,8 @@ class LogisthEditor::Console : public Component,
         next.setBounds(676, 24, 26, 26);
         presetFiles.setBounds(708, 24, 70, 26);
         presetNotes.setBounds(332, 54, 446, 23);
-        for (int i = 0; i < 2; ++i) {
-            parts[size_t(i)].setBounds(834 + i * 40, 28, 34, 24);
+        for (int i = 0; i < partCount; ++i) {
+            parts[size_t(i)].setBounds(832 + i * 29, 28, 26, 24);
             parts[size_t(i)].setToggleState(i == selectedPart, dontSendNotification);
         }
         put(Param::solo, {927, 28, 68, 24}, Style::Menu);
@@ -2738,11 +2868,16 @@ class LogisthEditor::Console : public Component,
         put(Param::keytrack, {151, 462, 57, 66}, Style::Knob, "KEYTRACK");
         put(Param::warmdrive, {215, 479, 42, 22}, Style::Toggle, "WARM");
         scopeView.setBounds(972, 309, 236, 85);
-        for (int i = 0; i < 3; ++i)
-            scopeSources[size_t(i)].setBounds(976 + i * 77, 402, 70, 22);
-        put(Param::mixA, {975, 429, 45, 95}, Style::Fader, "MIX A");
-        put(Param::mixB, {1031, 429, 45, 95}, Style::Fader, "MIX B");
-        put(Param::master, {1087, 429, 45, 95}, Style::Fader, "MAIN");
+        for (int i = 0; i < 4; ++i)
+            scopeSources[size_t(i)].setBounds(972 + (i == 2   ? 3
+                                                     : i == 3 ? 2
+                                                              : i) *
+                                                        60,
+                                              402, 56, 22);
+        put(Param::mixA, {975, 429, 35, 95}, Style::Fader, "MIX A");
+        put(Param::mixB, {1015, 429, 35, 95}, Style::Fader, "MIX B");
+        put(Param::mixC, {1055, 429, 35, 95}, Style::Fader, "MIX C");
+        put(Param::master, {1095, 429, 35, 95}, Style::Fader, "MAIN");
         envelope("env1", {16, 548, 152, 208}, true);
         envelope("env2", {176, 548, 152, 208}, true);
         routes("env1", {16, 548, 152, 208}, 128, 35);
@@ -2762,25 +2897,26 @@ class LogisthEditor::Console : public Component,
         put(Param::portamento, {1126, 813, 76, 24}, Style::Number);
         parts[0].repaint();
         parts[1].repaint();
+        parts[2].repaint();
         for (auto &b : rackButtons)
             b->repaint();
         layoutStamp = currentLayoutState();
     }
-    std::array<int, 23> currentLayoutState() const {
-        std::array<int, 23> state{int(value(Param::sync)), int(value(Param::lfo1free)),
-                                  int(value(Param::lfo2free)), int(value(Param::arpmode) >= 8),
-                                  int(value(Param::arppattern))};
-        for (int o = 0; o < 4; ++o) {
-            state[size_t(5 + o)] = int(value(Param(size_t(Param::o1engine) + size_t(o) * 16)));
-            state[size_t(9 + o)] = int(value(Param(size_t(Param::o1gmodel) + size_t(o) * 15)));
+    std::array<int, 7 + 4 * playerCount> currentLayoutState() const {
+        std::array<int, 7 + 4 * playerCount> state{
+            int(value(Param::sync)), int(value(Param::lfo1free)), int(value(Param::lfo2free)),
+            int(value(Param::arpmode) >= 8), int(value(Param::arppattern))};
+        for (int o = 0; o < playerCount; ++o) {
+            state[size_t(5 + o)] = int(value(Param(playerParamIndex(Param::o1engine, o, 16))));
+            state[size_t(5 + playerCount + o)] =
+                int(value(Param(playerParamIndex(Param::o1gmodel, o, 15))));
+            state[size_t(7 + 2 * playerCount + o)] =
+                int(value(Param(playerParamIndex(Param::o1wave, o, 12))));
+            state[size_t(7 + 3 * playerCount + o)] =
+                int(value(Param(playerParamIndex(Param::o1stretchmode, o, 10))));
         }
-        state[13] = int(value(Param::reverbtype));
-        state[14] = int(value(Param::eqmode));
-        for (int i = 0; i < 4; ++i)
-            state[size_t(15 + i)] = int(value(Param(size_t(Param::o1wave) + size_t(i) * 12)));
-        for (int i = 0; i < 4; ++i)
-            state[size_t(19 + i)] =
-                int(value(Param(size_t(Param::o1stretchmode) + size_t(i) * 10)));
+        state[5 + 2 * playerCount] = int(value(Param::reverbtype));
+        state[6 + 2 * playerCount] = int(value(Param::eqmode));
         return state;
     }
     void timerCallback() override {
@@ -2804,7 +2940,7 @@ class LogisthEditor::Console : public Component,
                 readout = status;
             repaint(120, 844, 870, 16);
         }
-        for (int i = 0; i < 4; ++i) {
+        for (int i = 0; i < playerCount; ++i) {
             auto data = processor.sourceData(i);
             if (displayedRevisions[size_t(i)] != data->revision) {
                 displayedRevisions[size_t(i)] = data->revision;
@@ -2815,9 +2951,9 @@ class LogisthEditor::Console : public Component,
         if (presetRevision != processor.presetRevision.load()) {
             refreshPresets();
             syncPresetNotes();
-            int scope = jlimit(0, 2, int(processor.state.state.getProperty("uiScope", 2)));
+            int scope = jlimit(0, 3, int(processor.state.state.getProperty("uiScope", 2)));
             scopeView.setSource(scope);
-            for (int i = 0; i < 3; ++i)
+            for (int i = 0; i < 4; ++i)
                 scopeSources[size_t(i)].setToggleState(i == scope, dontSendNotification);
             patternSlot.setSelectedId(processor.activePattern() + 1, dontSendNotification);
         }
@@ -2830,16 +2966,16 @@ class LogisthEditor::Console : public Component,
         }
         if (rack == 9) {
             waveView.setMode(
-                int(value(Param(size_t(Param::o1engine) + size_t(waveView.selectedSlot()) * 16))));
+                int(value(Param(playerParamIndex(Param::o1engine, waveView.selectedSlot(), 16)))));
             waveView.repaint();
         }
-        for (int slot = 0; slot < 4; ++slot) {
+        for (int slot = 0; slot < playerCount; ++slot) {
             auto picture = processor.playback[size_t(slot)].read();
             for (auto pair :
-                 {std::pair<Param, float>{Param(size_t(Param::o1fmdepth) + size_t(slot) * 10),
+                 {std::pair<Param, float>{Param(playerParamIndex(Param::o1fmdepth, slot, 10)),
                                           picture.fm},
-                  {Param(size_t(Param::o1amdepth) + size_t(slot) * 10), picture.am},
-                  {Param(size_t(Param::o1pulsewidth) + size_t(slot) * 10), picture.width}})
+                  {Param(playerParamIndex(Param::o1amdepth, slot, 10)), picture.am},
+                  {Param(playerParamIndex(Param::o1pulsewidth, slot, 10)), picture.width}})
                 controls[size_t(pair.first)]->liveValue(pair.second, picture.active);
         }
         if (rack == 4)
@@ -2848,9 +2984,9 @@ class LogisthEditor::Console : public Component,
             refreshChord();
         if (currentLayoutState() != layoutStamp)
             layout();
-        for (int i = 0; i < 4; ++i)
-            controls[size_t(Param(size_t(Param::o1phase) + size_t(i) * 12))]->enable(
-                value(Param(size_t(Param::o1engine) + size_t(i) * 16)) <= 1);
+        for (int i = 0; i < playerCount; ++i)
+            controls[size_t(Param(playerParamIndex(Param::o1phase, i, 12)))]->enable(
+                value(Param(playerParamIndex(Param::o1engine, i, 16))) <= 1);
         controls[size_t(Param::polyphony)]->enable(value(Param::monolegato) == 0);
         if (!pitch.isMouseButtonDown())
             pitch.setValue(processor.pitchPosition.load(), dontSendNotification);
@@ -2913,7 +3049,7 @@ class LogisthEditor::Console : public Component,
         drawCaption(g, "PART", {795, 30, 33, 20}, 8.5f, muted);
         drawCaption(g, "SOLO", {927, 12, 68, 13}, 8, muted);
         drawCaption(g, "OPTIONS", {1162, 12, 62, 13}, 8, muted);
-        String part = selectedPart == 0 ? "A" : "B";
+        String part = String::charToString(juce_wchar('A' + selectedPart));
         shell(g, {16, 82, 460, 184}, "OSCILLATOR " + part + "1", {});
         shell(g, {764, 82, 460, 184}, "OSCILLATOR " + part + "2", {});
         shell(g, {486, 82, 268, 184}, "AMP ENVELOPE " + part, "ADSR");
@@ -2921,9 +3057,9 @@ class LogisthEditor::Console : public Component,
             if (sourceViews[size_t(slot)].getSelectedId() == 2) {
                 auto data = processor.sourceData(slot);
                 int x = slot % 2 ? 850 : 102;
-                const int mode = int(value(Param(size_t(Param::o1engine) + size_t(slot) * 16)));
+                const int mode = int(value(Param(playerParamIndex(Param::o1engine, slot, 16))));
                 auto telemetry = processor.playback[size_t(slot)].read();
-                float position = float(value(Param(size_t(Param::o1position) + size_t(slot) * 16)));
+                float position = float(value(Param(playerParamIndex(Param::o1position, slot, 16))));
                 if (telemetry.active && telemetry.revision == data->revision && mode == 1)
                     position = telemetry.position;
                 Path path;
@@ -2948,7 +3084,7 @@ class LogisthEditor::Console : public Component,
                             {x, 248, 340, 14}, 8, muted);
             }
         auto curveBounds = Rectangle<float>(508, 116, 224, 22);
-        size_t ampBase = size_t(Param::p1ampa) + size_t(selectedPart) * 10;
+        size_t ampBase = partParamIndex(Param::p1ampa, selectedPart, 10);
         auto points = envelopePlot({value(Param(ampBase)), value(Param(ampBase + 1)),
                                     value(Param(ampBase + 2)), value(Param(ampBase + 3))});
         Path curve;
@@ -2963,7 +3099,7 @@ class LogisthEditor::Console : public Component,
         g.setColour(green.withAlpha(.7f));
         g.strokePath(curve, PathStrokeType(1.5f));
         shell(g, {16, 278, 252, 144}, "FILTER " + part, "INPUT / TYPE / SLOPE");
-        shell(g, {16, 434, 252, 102}, "FILTER CONTROL", "A + B");
+        shell(g, {16, 434, 252, 102}, "FILTER CONTROL", "A+B+C");
         shell(g, {956, 278, 268, 258}, "MIXER",
               "OUT / " + String(processor.voices.load()) + " VOICES");
         for (int i = 0; i < 2; ++i) {
@@ -3012,11 +3148,11 @@ class LogisthEditor::Console : public Component,
             drawCaption(g, "TO", {807, 398, 126, 12}, 8, muted);
         } else if (rack == 9) {
             int mode =
-                int(value(Param(size_t(Param::o1engine) + size_t(waveView.selectedSlot()) * 16)));
+                int(value(Param(playerParamIndex(Param::o1engine, waveView.selectedSlot(), 16))));
             String title = mode == 1 ? "WAVETABLE / WT POS" : "SAMPLE / PLAYBACK";
             if (mode == 2) {
                 auto parameter =
-                    Param(size_t(Param::o1stretchmode) + size_t(waveView.selectedSlot()) * 10);
+                    Param(playerParamIndex(Param::o1stretchmode, waveView.selectedSlot(), 10));
                 auto names =
                     StringArray::fromTokens(parameterSpecs[size_t(parameter)].choices, "|", "");
                 title = "SAMPLE / " + names[int(value(parameter))].toUpperCase();
@@ -3079,11 +3215,12 @@ class LogisthEditor::Console : public Component,
     LogisthProcessor &processor;
     LogisthLook &look;
     std::array<std::unique_ptr<Control>, parameterCount> controls;
-    std::array<ToggleButton, 2> parts, stepPages;
+    std::array<ToggleButton, partCount> parts;
+    std::array<ToggleButton, 2> stepPages;
     std::array<std::unique_ptr<RackButton>, 11> rackButtons;
-    std::array<ComboBox, 4> sourceViews, sourceFrame;
-    std::array<int, 4> sourceMenuStates{-1, -1, -1, -1};
-    std::array<TextButton, 4> sourceLoad, sourceClear;
+    std::array<ComboBox, playerCount> sourceViews, sourceFrame;
+    std::array<int, playerCount> sourceMenuStates{-1, -1, -1, -1, -1, -1};
+    std::array<TextButton, playerCount> sourceLoad, sourceClear;
     ComboBox patternSlot, chordTrigger, chordType;
     TextButton patternSave, patternRandom, chordLearn, chordCopy;
     std::array<Slider, 8> chordNotes;
@@ -3124,8 +3261,8 @@ class LogisthEditor::Console : public Component,
     logisth_ui::WaveView waveView;
     logisth_ui::ScopeView scopeView;
     logisth_ui::EqView eqView;
-    std::array<logisth_ui::ClickArea, 4> sourceWave;
-    std::array<ToggleButton, 3> scopeSources;
+    std::array<logisth_ui::ClickArea, playerCount> sourceWave;
+    std::array<ToggleButton, 4> scopeSources;
     TextButton presetFiles;
     ComboBox waveSlot;
     std::array<TextEditor, 4> macroNames;
@@ -3142,8 +3279,8 @@ class LogisthEditor::Console : public Component,
     Slider pitch, mod;
     TooltipWindow tooltips;
     String readout, lastStatus;
-    std::array<uint64_t, 4> displayedRevisions{};
-    std::array<int, 23> layoutStamp{};
+    std::array<uint64_t, playerCount> displayedRevisions{};
+    std::array<int, 7 + 4 * playerCount> layoutStamp{};
     int selectedPart = 0, rack = 0, stepPage = 0, previewSync = -1;
 };
 LogisthEditor::LogisthEditor(LogisthProcessor &p) : AudioProcessorEditor(p) {

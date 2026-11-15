@@ -1,10 +1,12 @@
 #pragma once
+#include "Topology.h"
 #include "vendor/signalsmith-stretch/signalsmith-stretch.h"
 #include <array>
 #include <atomic>
 #include <cmath>
 #include <memory>
 #include <stdexcept>
+#include <type_traits>
 namespace logisth {
 struct StretchControls {
     float rate = 1, semitones = 0, tonalityHz = 0, formant = 0, blockMs = 0;
@@ -119,30 +121,32 @@ struct SpectralBank {
     double rate;
     unsigned mask;
     int voiceCapacity;
-    std::array<int, 4> capacity{};
-    std::array<SpectralConfig, 4> configs{};
-    std::array<std::shared_ptr<SpectralStream>, 1024> cells{};
+    std::array<int, playerCount> capacity{};
+    std::array<SpectralConfig, playerCount> configs{};
+    std::array<std::shared_ptr<SpectralStream>, 16 * playerCount * 8 * 2> cells{};
     static size_t index(int voice, int osc, int unison, int lane) {
-        return size_t((((voice * 4) + osc) * 8 + unison) * 2 + lane);
+        return size_t((((voice * playerCount) + osc) * 8 + unison) * 2 + lane);
     }
-    static size_t estimatedBytes(double rate, unsigned mask, const std::array<int, 4> &unisons,
-                                 const std::array<SpectralConfig, 4> &configs, int voices) {
+    static size_t estimatedBytes(double rate, unsigned mask,
+                                 const std::array<int, playerCount> &unisons,
+                                 const std::array<SpectralConfig, playerCount> &configs,
+                                 int voices) {
         size_t bytes = 0;
-        for (int osc = 0; osc < 4; ++osc)
+        for (int osc = 0; osc < playerCount; ++osc)
             if (mask & (1u << osc))
                 bytes += configs[size_t(osc)].estimatedBytes(rate) * size_t(voices) *
                          size_t(std::clamp(unisons[size_t(osc)], 1, 8)) * 2;
         return bytes;
     }
-    SpectralBank(double sampleRate, unsigned wanted, std::array<int, 4> unisons,
+    SpectralBank(double sampleRate, unsigned wanted, std::array<int, playerCount> unisons,
                  const std::shared_ptr<SpectralBank> &old,
-                 std::array<SpectralConfig, 4> settings = {}, int voices = 16)
+                 std::array<SpectralConfig, playerCount> settings = {}, int voices = 16)
         : rate(sampleRate), mask(wanted), voiceCapacity(std::clamp(voices, 1, 16)),
           capacity(unisons), configs(settings) {
         if (estimatedBytes(rate, mask, capacity, configs, voiceCapacity) > memoryBudget)
             throw std::length_error("Spectral memory budget exceeded");
         for (int voice = 0; voice < voiceCapacity; ++voice)
-            for (int osc = 0; osc < 4; ++osc)
+            for (int osc = 0; osc < playerCount; ++osc)
                 if (mask & (1u << osc))
                     for (int u = 0; u < capacity[size_t(osc)]; ++u)
                         for (int lane = 0; lane < 2; ++lane) {
@@ -155,8 +159,20 @@ struct SpectralBank {
                                     std::make_shared<SpectralStream>(rate, configs[size_t(osc)]);
                         }
     }
+    template <class T, size_t N>
+    static std::array<T, playerCount> expanded(const std::array<T, N> &values) {
+        static_assert(N <= size_t(playerCount));
+        std::array<T, playerCount> result{};
+        std::copy(values.begin(), values.end(), result.begin());
+        return result;
+    }
+    template <size_t N, std::enable_if_t<N != size_t(playerCount), int> = 0>
+    SpectralBank(double sampleRate, unsigned wanted, std::array<int, N> unisons,
+                 const std::shared_ptr<SpectralBank> &old,
+                 std::array<SpectralConfig, N> settings = {}, int voices = 16)
+        : SpectralBank(sampleRate, wanted, expanded(unisons), old, expanded(settings), voices) {}
     SpectralStream *get(int voice, int osc, int unison, int lane) const {
-        if (voice < 0 || voice >= voiceCapacity || osc < 0 || osc >= 4 || unison < 0 ||
+        if (voice < 0 || voice >= voiceCapacity || osc < 0 || osc >= playerCount || unison < 0 ||
             unison >= capacity[size_t(osc)] || lane < 0 || lane > 1)
             return nullptr;
         return cells[index(voice, osc, unison, lane)].get();

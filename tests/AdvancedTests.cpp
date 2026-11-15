@@ -53,11 +53,14 @@ int main() {
     try {
         for (auto &spec : parameterSpecs) {
             std::string id = spec.id;
-            if (id.find("dest") != std::string::npos) {
+            if (id.find("dest") != std::string::npos && id.substr(id.size() - 2) != "cx") {
                 int count = 1;
                 for (auto *p = spec.choices; *p; ++p)
                     if (*p == '|')
                         ++count;
+                auto extension = choiceExtension(Param(&spec - parameterSpecs.data()));
+                if (extension != Param::Count)
+                    count += int(parameterSpecs[size_t(extension)].high);
                 check(count == int(Destination::Count),
                       "every modulation menu exposes all appended FM/AM/PWM targets");
             }

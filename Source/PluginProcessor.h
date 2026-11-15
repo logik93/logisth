@@ -38,8 +38,8 @@ class LogisthProcessor : public juce::AudioProcessor {
     bool spectralReady(int slot) const;
     std::atomic<int> arpPlayhead{-1};
     logisth::ScopeBuffer scope;
-    std::array<logisth::ScopeBuffer, 4> playerScopes;
-    std::array<logisth::PlaybackTelemetry, 4> playback;
+    std::array<logisth::ScopeBuffer, logisth::playerCount> playerScopes;
+    std::array<logisth::PlaybackTelemetry, logisth::playerCount> playback;
     void copyPattern(int, int);
     void setPatternName(int, const juce::String &);
     juce::String patternName(int) const;
@@ -137,7 +137,10 @@ class LogisthProcessor : public juce::AudioProcessor {
   private:
     static juce::AudioProcessorValueTreeState::ParameterLayout layout();
     float get(logisth::Param id) const {
-        return logisth::morphedValue(id, [this](size_t i) { return raw[i]->load(); });
+        return logisth::morphedValue(id, [this](size_t i) {
+            return logisth::expandedChoiceValue(logisth::Param(i),
+                                                [this](size_t at) { return raw[at]->load(); });
+        });
     }
     logisth::Params snapshot() const;
     logisth::EffectsParams effectsSnapshot() const;
@@ -155,14 +158,14 @@ class LogisthProcessor : public juce::AudioProcessor {
     std::atomic<bool> spectralPending{false};
     std::atomic<uint64_t> spectralGeneration{0};
     uint64_t spectralPendingGeneration = 0, spectralRejectedGeneration = 0;
-    std::array<logisth::SpectralConfig, 4> spectralDesiredConfigs{};
-    std::array<int, 4> spectralDesiredUnisons{};
+    std::array<logisth::SpectralConfig, logisth::playerCount> spectralDesiredConfigs{};
+    std::array<int, logisth::playerCount> spectralDesiredUnisons{};
     unsigned spectralDesiredMask = 0;
     int spectralDesiredVoices = 0;
     double spectralDesiredRate = 0;
     std::atomic<double> spectralRate{44100};
-    std::array<std::shared_ptr<const logisth::SourceData>, 4> sourceOwners;
-    std::array<std::atomic<const logisth::SourceData *>, 4> sourcePointers{};
+    std::array<std::shared_ptr<const logisth::SourceData>, logisth::playerCount> sourceOwners;
+    std::array<std::atomic<const logisth::SourceData *>, logisth::playerCount> sourcePointers{};
     std::vector<std::shared_ptr<const logisth::SourceData>> retiredSources;
     std::shared_ptr<const logisth::ChordMap> chordOwner;
     std::vector<std::shared_ptr<const logisth::ChordMap>> retiredChords;
@@ -184,8 +187,8 @@ class LogisthProcessor : public juce::AudioProcessor {
     logisth::Engine engine;
     logisth::Effects effects;
     logisth::Arpeggiator arp;
-    std::array<std::array<float, 512>, 4> playerTraces{};
-    std::array<float, 512> driveMod{}, phaserMod{}, partScopeA{}, partScopeB{};
+    std::array<std::array<float, 512>, logisth::playerCount> playerTraces{};
+    std::array<float, 512> driveMod{}, phaserMod{}, partScopeA{}, partScopeB{}, partScopeC{};
     std::atomic<int> uiChanges{0};
     class PreparationThread final : public juce::Thread {
         LogisthProcessor &owner;

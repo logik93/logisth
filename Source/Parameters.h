@@ -1,4 +1,5 @@
 #pragma once
+#include "Topology.h"
 #include <array>
 #include <cstddef>
 namespace logisth {
@@ -739,6 +740,225 @@ enum class Param : size_t {
     o4ssformant,
     o4ssblock,
     o4ssoverlap,
+    // 0.9.5 additions: append-only for saved projects and host automation.
+    o5wave,
+    o5voices,
+    o5level,
+    o5octave,
+    o5tune,
+    o5fine,
+    o5phase,
+    o5detune,
+    o5stereo,
+    o5pan,
+    o5retrig,
+    o5invert,
+    o5engine,
+    o5position,
+    o5end,
+    o5root,
+    o5loop,
+    o5reverse,
+    o5size,
+    o5density,
+    o5spray,
+    o5scan,
+    o5warp,
+    o5envelope,
+    o5enva,
+    o5envd,
+    o5envs,
+    o5envr,
+    o5gmodel,
+    o5gattack,
+    o5ghold,
+    o5gspace,
+    o5gwave,
+    o5gpan,
+    o5gdepth,
+    o5gspeed,
+    o5grandom,
+    o5gtrans,
+    o5gthold,
+    o5gfreeze,
+    o5gkey,
+    o5gsync,
+    o5gbeats,
+    o5fmdepth,
+    o5fmratio,
+    o5amdepth,
+    o5amratio,
+    o5pulsewidth,
+    o5pwmdepth,
+    o5pwmrate,
+    o5stretchmode,
+    o5stretch,
+    o5interpolation,
+    o5fmsource,
+    o5amsource,
+    o5pwmsync,
+    o5pwmdivision,
+    o5kickattack,
+    o5trimstart,
+    o5ssrate,
+    o5sssemitones,
+    o5sstonality,
+    o5ssformant,
+    o5ssblock,
+    o5ssoverlap,
+    o6wave,
+    o6voices,
+    o6level,
+    o6octave,
+    o6tune,
+    o6fine,
+    o6phase,
+    o6detune,
+    o6stereo,
+    o6pan,
+    o6retrig,
+    o6invert,
+    o6engine,
+    o6position,
+    o6end,
+    o6root,
+    o6loop,
+    o6reverse,
+    o6size,
+    o6density,
+    o6spray,
+    o6scan,
+    o6warp,
+    o6envelope,
+    o6enva,
+    o6envd,
+    o6envs,
+    o6envr,
+    o6gmodel,
+    o6gattack,
+    o6ghold,
+    o6gspace,
+    o6gwave,
+    o6gpan,
+    o6gdepth,
+    o6gspeed,
+    o6grandom,
+    o6gtrans,
+    o6gthold,
+    o6gfreeze,
+    o6gkey,
+    o6gsync,
+    o6gbeats,
+    o6fmdepth,
+    o6fmratio,
+    o6amdepth,
+    o6amratio,
+    o6pulsewidth,
+    o6pwmdepth,
+    o6pwmrate,
+    o6stretchmode,
+    o6stretch,
+    o6interpolation,
+    o6fmsource,
+    o6amsource,
+    o6pwmsync,
+    o6pwmdivision,
+    o6kickattack,
+    o6trimstart,
+    o6ssrate,
+    o6sssemitones,
+    o6sstonality,
+    o6ssformant,
+    o6ssblock,
+    o6ssoverlap,
+    p3input,
+    p3type,
+    p3slope,
+    p3cutoff,
+    p3res,
+    p3drive,
+    p3ampa,
+    p3ampd,
+    p3amps,
+    p3ampr,
+    mixC,
+    o1tailon,
+    o1tailstart,
+    o1tailend,
+    o1tailfade,
+    o1detuneextra,
+    o2tailon,
+    o2tailstart,
+    o2tailend,
+    o2tailfade,
+    o2detuneextra,
+    o3tailon,
+    o3tailstart,
+    o3tailend,
+    o3tailfade,
+    o3detuneextra,
+    o4tailon,
+    o4tailstart,
+    o4tailend,
+    o4tailfade,
+    o4detuneextra,
+    o5tailon,
+    o5tailstart,
+    o5tailend,
+    o5tailfade,
+    o5detuneextra,
+    o6tailon,
+    o6tailstart,
+    o6tailend,
+    o6tailfade,
+    o6detuneextra,
+    p1inputcx,
+    p2inputcx,
+    solocx,
+    env1dest1cx,
+    env1dest2cx,
+    env2dest1cx,
+    env2dest2cx,
+    lfo1dest1cx,
+    lfo1dest2cx,
+    lfo2dest1cx,
+    lfo2dest2cx,
+    misc1sourcecx,
+    misc1dest1cx,
+    misc1dest2cx,
+    misc2sourcecx,
+    misc2dest1cx,
+    misc2dest2cx,
+    misc3sourcecx,
+    misc3dest1cx,
+    misc3dest2cx,
+    misc4sourcecx,
+    misc4dest1cx,
+    misc4dest2cx,
+    o1fmsourcecx,
+    o1amsourcecx,
+    o2fmsourcecx,
+    o2amsourcecx,
+    o3fmsourcecx,
+    o3amsourcecx,
+    o4fmsourcecx,
+    o4amsourcecx,
+    m1target1cx,
+    m1target2cx,
+    m1target3cx,
+    m1target4cx,
+    m2target1cx,
+    m2target2cx,
+    m2target3cx,
+    m2target4cx,
+    m3target1cx,
+    m3target2cx,
+    m3target3cx,
+    m3target4cx,
+    m4target1cx,
+    m4target2cx,
+    m4target3cx,
+    m4target4cx,
     Count
 };
 constexpr size_t parameterCount = size_t(Param::Count);
@@ -1799,5 +2019,569 @@ inline const std::array<ParameterSpec, parameterCount> parameterSpecs{{
     {"o4ssblock", "Block / ms", 5, "SOURCE 4", 0.f, 200.f, 0.f, 1.f, "", false},
     {"o4ssoverlap", "Overlap", 5, "SOURCE 4", 0.f, 15.f, 0.f, 1.f,
      "Auto|2x|3x|4x|5x|6x|7x|8x|9x|10x|11x|12x|13x|14x|15x|16x", true},
+    {"o5wave", "Wave", 0, "OSC C1", 0.0f, 11.0f, 1.0f, 1.0f,
+     "Sine|Saw|Pulse|Triangle|White noise|Half pulse|Quarter pulse|Tri-saw|Pink noise|Brown "
+     "noise|Organ|Folded sine",
+     false},
+    {"o5voices", "Voices", 0, "OSC C1", 0.0f, 8.0f, 1.0f, 1.0f, "", true},
+    {"o5level", "Volume", 0, "OSC C1", 0.0f, 1.0f, 0.0f, 1.0f, "", false},
+    {"o5octave", "Octave", 0, "OSC C1", -3.0f, 3.0f, 0.0f, 1.0f, "", true},
+    {"o5tune", "Note", 0, "OSC C1", -12.0f, 12.0f, 0.0f, 1.0f, "", true},
+    {"o5fine", "Fine / cents", 0, "OSC C1", -100.0f, 100.0f, 0.0f, 1.0f, "", false},
+    {"o5phase", "Phase / deg", 0, "OSC C1", 0.0f, 360.0f, 0.0f, 1.0f, "", false},
+    {"o5detune", "Detune / cents", 0, "OSC C1", 0.0f, 100.0f, 12.0f, 1.0f, "", false},
+    {"o5stereo", "Stereo", 0, "OSC C1", 0.0f, 1.0f, 0.600000024f, 1.0f, "", false},
+    {"o5pan", "Pan", 0, "OSC C1", -1.0f, 1.0f, 0.0f, 1.0f, "", false},
+    {"o5retrig", "Retrigger", 0, "OSC C1", 0.0f, 1.0f, 0.0f, 1.0f, "Off|On", false},
+    {"o5invert", "Invert", 0, "OSC C1", 0.0f, 1.0f, 0.0f, 1.0f, "Off|On", false},
+    {"o5engine", "Engine", 4, "SOURCE 5", 0.0f, 3.0f, 0.0f, 1.0f,
+     "Classic|Wavetable|Sampler|Granular", false},
+    {"o5position", "Position", 4, "SOURCE 5", 0.0f, 1.0f, 0.0f, 1.0f, "", false},
+    {"o5end", "Sample end", 4, "SOURCE 5", 0.0f, 1.0f, 1.0f, 1.0f, "", false},
+    {"o5root", "Root note", 4, "SOURCE 5", 0.0f, 127.0f, 60.0f, 1.0f, "", true},
+    {"o5loop", "Loop", 4, "SOURCE 5", 0.0f, 1.0f, 1.0f, 1.0f, "Off|On", false},
+    {"o5reverse", "Reverse", 4, "SOURCE 5", 0.0f, 1.0f, 0.0f, 1.0f, "Off|On", false},
+    {"o5size", "Grain / ms", 4, "SOURCE 5", 5.0f, 250.0f, 80.0f, 0.5f, "", false},
+    {"o5density", "Density / Hz", 4, "SOURCE 5", 1.0f, 32.0f, 16.0f, 1.0f, "", false},
+    {"o5spray", "Spray", 4, "SOURCE 5", 0.0f, 1.0f, 0.150000006f, 1.0f, "", false},
+    {"o5scan", "Scan", 4, "SOURCE 5", -2.0f, 2.0f, 0.0f, 1.0f, "", false},
+    {"o5warp", "Warp", 4, "SOURCE 5", -1.0f, 1.0f, 0.0f, 1.0f, "", false},
+    {"o5envelope", "Osc envelope", 4, "SOURCE 5", 0.0f, 1.0f, 0.0f, 1.0f, "Off|On", false},
+    {"o5enva", "Attack / s", 4, "SOURCE 5", 0.0f, 8.0f, 0.00800000038f, 0.300000012f, "", false},
+    {"o5envd", "Decay / s", 4, "SOURCE 5", 0.0f, 8.0f, 0.25f, 0.300000012f, "", false},
+    {"o5envs", "Sustain", 4, "SOURCE 5", 0.0f, 1.0f, 1.0f, 1.0f, "", false},
+    {"o5envr", "Release / s", 4, "SOURCE 5", 0.0f, 12.0f, 0.349999994f, 0.300000012f, "", false},
+    {"o5gmodel", "Grain model", 5, "GRANULIZER 1", 0.0f, 1.0f, 1.0f, 1.0f, "Cloud|Granulizer",
+     false},
+    {"o5gattack", "Attack / ms", 5, "GRANULIZER 1", 0.0f, 500.0f, 10.0f, 0.400000006f, "", false},
+    {"o5ghold", "Hold / ms", 5, "GRANULIZER 1", 1.0f, 1000.0f, 30.0f, 0.400000006f, "", false},
+    {"o5gspace", "Grain spacing", 5, "GRANULIZER 1", 0.0500000007f, 4.0f, 1.0f, 1.0f, "", false},
+    {"o5gwave", "Wave spacing", 5, "GRANULIZER 1", -3.0f, 3.0f, 1.0f, 1.0f, "", false},
+    {"o5gpan", "Alternating pan", 5, "GRANULIZER 1", 0.0f, 1.0f, 0.0f, 1.0f, "", false},
+    {"o5gdepth", "Wave LFO depth", 5, "GRANULIZER 1", 0.0f, 3.0f, 0.0f, 1.0f, "", false},
+    {"o5gspeed", "Wave LFO / Hz", 5, "GRANULIZER 1", 0.00999999978f, 20.0f, 1.0f, 0.400000006f, "",
+     false},
+    {"o5grandom", "Random order", 5, "GRANULIZER 1", 0.0f, 1.0f, 0.0f, 1.0f, "", false},
+    {"o5gtrans", "Transient mode", 5, "GRANULIZER 1", 0.0f, 2.0f, 0.0f, 1.0f, "Off|Regions|Detect",
+     false},
+    {"o5gthold", "Transient hold / ms", 5, "GRANULIZER 1", 1.0f, 500.0f, 30.0f, 0.400000006f, "",
+     false},
+    {"o5gfreeze", "Time hold", 5, "GRANULIZER 1", 0.0f, 1.0f, 0.0f, 1.0f, "Off|On", false},
+    {"o5gkey", "Key to", 5, "GRANULIZER 1", 0.0f, 3.0f, 0.0f, 1.0f, "Pitch|Percent|Step|Transient",
+     false},
+    {"o5gsync", "Stretch sync", 5, "GRANULIZER 1", 0.0f, 1.0f, 0.0f, 1.0f, "Off|On", false},
+    {"o5gbeats", "Sample beats", 5, "GRANULIZER 1", 0.25f, 64.0f, 4.0f, 0.400000006f, "", false},
+    {"o5fmdepth", "FM index", 5, "SOURCE 5", 0.0f, 8.0f, 0.0f, 0.5f, "", false},
+    {"o5fmratio", "FM ratio", 5, "SOURCE 5", 0.25f, 16.0f, 1.0f, 0.5f, "", false},
+    {"o5amdepth", "AM depth", 5, "SOURCE 5", 0.0f, 1.0f, 0.0f, 1.0f, "", false},
+    {"o5amratio", "AM ratio", 5, "SOURCE 5", 0.125f, 16.0f, 1.0f, 0.5f, "", false},
+    {"o5pulsewidth", "Pulse width", 5, "SOURCE 5", 0.00999999978f, 0.99000001f, 0.5f, 1.0f, "",
+     false},
+    {"o5pwmdepth", "PWM depth", 5, "SOURCE 5", 0.0f, 0.449999988f, 0.0f, 1.0f, "", false},
+    {"o5pwmrate", "PWM / Hz", 5, "SOURCE 5", 0.00999999978f, 20.0f, 0.5f, 0.400000006f, "", false},
+    {"o5stretchmode", "Stretch", 5, "SOURCE 5", 0.0f, 7.0f, 0.0f, 1.0f,
+     "Off|Tape|Granular|WSOLA|Tonal|Transient|Kick|Signalsmith Stretch", false},
+    {"o5stretch", "Time factor", 5, "SOURCE 5", 0.125f, 8.0f, 1.0f, 0.5f, "", false},
+    {"o5interpolation", "Interpolation", 5, "SOURCE 5", 0.0f, 3.0f, 0.0f, 1.0f,
+     "Linear|Cubic|Sinc 16|Sinc 32", false},
+    {"o5fmsource", "FM source", 5, "SOURCE 5", 0.0f, 6.0f, 0.0f, 1.0f, "Sine|A1|A2|B1|B2|C1|C2",
+     false},
+    {"o5amsource", "AM source", 5, "SOURCE 5", 0.0f, 6.0f, 0.0f, 1.0f, "Sine|A1|A2|B1|B2|C1|C2",
+     false},
+    {"o5pwmsync", "PWM sync", 5, "SOURCE 5", 0.0f, 1.0f, 0.0f, 1.0f, "Off|On", false},
+    {"o5pwmdivision", "PWM division", 5, "SOURCE 5", 0.0f, 15.0f, 7.0f, 1.0f,
+     "1/64|1/32T|1/32|1/16T|1/16|1/16D|1/8T|1/8|1/8D|1/4T|1/4|1/4D|1/2|1 bar|2 bars|4 bars", false},
+    {"o5kickattack", "Kick attack / ms", 5, "SOURCE 5", 0.0f, 100.0f, 25.0f, 1.0f, "", false},
+    {"o5trimstart", "Trim start", 5, "SOURCE 5", 0.0f, 1.0f, 0.0f, 1.0f, "", false},
+    {"o5ssrate", "Rate", 5, "SOURCE 5", 0.125f, 8.0f, 1.0f, 0.5f, "", false},
+    {"o5sssemitones", "Semitones / st", 5, "SOURCE 5", -48.0f, 48.0f, 0.0f, 1.0f, "", false},
+    {"o5sstonality", "Tonality limit / Hz", 5, "SOURCE 5", 0.0f, 20000.0f, 0.0f, 0.400000006f, "",
+     false},
+    {"o5ssformant", "Formant / st", 5, "SOURCE 5", -24.0f, 24.0f, 0.0f, 1.0f, "", false},
+    {"o5ssblock", "Block / ms", 5, "SOURCE 5", 0.0f, 200.0f, 0.0f, 1.0f, "", false},
+    {"o5ssoverlap", "Overlap", 5, "SOURCE 5", 0.0f, 15.0f, 0.0f, 1.0f,
+     "Auto|2x|3x|4x|5x|6x|7x|8x|9x|10x|11x|12x|13x|14x|15x|16x", true},
+    {"o6wave", "Wave", 0, "OSC C2", 0.0f, 11.0f, 1.0f, 1.0f,
+     "Sine|Saw|Pulse|Triangle|White noise|Half pulse|Quarter pulse|Tri-saw|Pink noise|Brown "
+     "noise|Organ|Folded sine",
+     false},
+    {"o6voices", "Voices", 0, "OSC C2", 0.0f, 8.0f, 1.0f, 1.0f, "", true},
+    {"o6level", "Volume", 0, "OSC C2", 0.0f, 1.0f, 0.0f, 1.0f, "", false},
+    {"o6octave", "Octave", 0, "OSC C2", -3.0f, 3.0f, 0.0f, 1.0f, "", true},
+    {"o6tune", "Note", 0, "OSC C2", -12.0f, 12.0f, 0.0f, 1.0f, "", true},
+    {"o6fine", "Fine / cents", 0, "OSC C2", -100.0f, 100.0f, 0.0f, 1.0f, "", false},
+    {"o6phase", "Phase / deg", 0, "OSC C2", 0.0f, 360.0f, 0.0f, 1.0f, "", false},
+    {"o6detune", "Detune / cents", 0, "OSC C2", 0.0f, 100.0f, 12.0f, 1.0f, "", false},
+    {"o6stereo", "Stereo", 0, "OSC C2", 0.0f, 1.0f, 0.600000024f, 1.0f, "", false},
+    {"o6pan", "Pan", 0, "OSC C2", -1.0f, 1.0f, 0.0f, 1.0f, "", false},
+    {"o6retrig", "Retrigger", 0, "OSC C2", 0.0f, 1.0f, 0.0f, 1.0f, "Off|On", false},
+    {"o6invert", "Invert", 0, "OSC C2", 0.0f, 1.0f, 0.0f, 1.0f, "Off|On", false},
+    {"o6engine", "Engine", 4, "SOURCE 6", 0.0f, 3.0f, 0.0f, 1.0f,
+     "Classic|Wavetable|Sampler|Granular", false},
+    {"o6position", "Position", 4, "SOURCE 6", 0.0f, 1.0f, 0.0f, 1.0f, "", false},
+    {"o6end", "Sample end", 4, "SOURCE 6", 0.0f, 1.0f, 1.0f, 1.0f, "", false},
+    {"o6root", "Root note", 4, "SOURCE 6", 0.0f, 127.0f, 60.0f, 1.0f, "", true},
+    {"o6loop", "Loop", 4, "SOURCE 6", 0.0f, 1.0f, 1.0f, 1.0f, "Off|On", false},
+    {"o6reverse", "Reverse", 4, "SOURCE 6", 0.0f, 1.0f, 0.0f, 1.0f, "Off|On", false},
+    {"o6size", "Grain / ms", 4, "SOURCE 6", 5.0f, 250.0f, 80.0f, 0.5f, "", false},
+    {"o6density", "Density / Hz", 4, "SOURCE 6", 1.0f, 32.0f, 16.0f, 1.0f, "", false},
+    {"o6spray", "Spray", 4, "SOURCE 6", 0.0f, 1.0f, 0.150000006f, 1.0f, "", false},
+    {"o6scan", "Scan", 4, "SOURCE 6", -2.0f, 2.0f, 0.0f, 1.0f, "", false},
+    {"o6warp", "Warp", 4, "SOURCE 6", -1.0f, 1.0f, 0.0f, 1.0f, "", false},
+    {"o6envelope", "Osc envelope", 4, "SOURCE 6", 0.0f, 1.0f, 0.0f, 1.0f, "Off|On", false},
+    {"o6enva", "Attack / s", 4, "SOURCE 6", 0.0f, 8.0f, 0.00800000038f, 0.300000012f, "", false},
+    {"o6envd", "Decay / s", 4, "SOURCE 6", 0.0f, 8.0f, 0.25f, 0.300000012f, "", false},
+    {"o6envs", "Sustain", 4, "SOURCE 6", 0.0f, 1.0f, 1.0f, 1.0f, "", false},
+    {"o6envr", "Release / s", 4, "SOURCE 6", 0.0f, 12.0f, 0.349999994f, 0.300000012f, "", false},
+    {"o6gmodel", "Grain model", 5, "GRANULIZER 1", 0.0f, 1.0f, 1.0f, 1.0f, "Cloud|Granulizer",
+     false},
+    {"o6gattack", "Attack / ms", 5, "GRANULIZER 1", 0.0f, 500.0f, 10.0f, 0.400000006f, "", false},
+    {"o6ghold", "Hold / ms", 5, "GRANULIZER 1", 1.0f, 1000.0f, 30.0f, 0.400000006f, "", false},
+    {"o6gspace", "Grain spacing", 5, "GRANULIZER 1", 0.0500000007f, 4.0f, 1.0f, 1.0f, "", false},
+    {"o6gwave", "Wave spacing", 5, "GRANULIZER 1", -3.0f, 3.0f, 1.0f, 1.0f, "", false},
+    {"o6gpan", "Alternating pan", 5, "GRANULIZER 1", 0.0f, 1.0f, 0.0f, 1.0f, "", false},
+    {"o6gdepth", "Wave LFO depth", 5, "GRANULIZER 1", 0.0f, 3.0f, 0.0f, 1.0f, "", false},
+    {"o6gspeed", "Wave LFO / Hz", 5, "GRANULIZER 1", 0.00999999978f, 20.0f, 1.0f, 0.400000006f, "",
+     false},
+    {"o6grandom", "Random order", 5, "GRANULIZER 1", 0.0f, 1.0f, 0.0f, 1.0f, "", false},
+    {"o6gtrans", "Transient mode", 5, "GRANULIZER 1", 0.0f, 2.0f, 0.0f, 1.0f, "Off|Regions|Detect",
+     false},
+    {"o6gthold", "Transient hold / ms", 5, "GRANULIZER 1", 1.0f, 500.0f, 30.0f, 0.400000006f, "",
+     false},
+    {"o6gfreeze", "Time hold", 5, "GRANULIZER 1", 0.0f, 1.0f, 0.0f, 1.0f, "Off|On", false},
+    {"o6gkey", "Key to", 5, "GRANULIZER 1", 0.0f, 3.0f, 0.0f, 1.0f, "Pitch|Percent|Step|Transient",
+     false},
+    {"o6gsync", "Stretch sync", 5, "GRANULIZER 1", 0.0f, 1.0f, 0.0f, 1.0f, "Off|On", false},
+    {"o6gbeats", "Sample beats", 5, "GRANULIZER 1", 0.25f, 64.0f, 4.0f, 0.400000006f, "", false},
+    {"o6fmdepth", "FM index", 5, "SOURCE 6", 0.0f, 8.0f, 0.0f, 0.5f, "", false},
+    {"o6fmratio", "FM ratio", 5, "SOURCE 6", 0.25f, 16.0f, 1.0f, 0.5f, "", false},
+    {"o6amdepth", "AM depth", 5, "SOURCE 6", 0.0f, 1.0f, 0.0f, 1.0f, "", false},
+    {"o6amratio", "AM ratio", 5, "SOURCE 6", 0.125f, 16.0f, 1.0f, 0.5f, "", false},
+    {"o6pulsewidth", "Pulse width", 5, "SOURCE 6", 0.00999999978f, 0.99000001f, 0.5f, 1.0f, "",
+     false},
+    {"o6pwmdepth", "PWM depth", 5, "SOURCE 6", 0.0f, 0.449999988f, 0.0f, 1.0f, "", false},
+    {"o6pwmrate", "PWM / Hz", 5, "SOURCE 6", 0.00999999978f, 20.0f, 0.5f, 0.400000006f, "", false},
+    {"o6stretchmode", "Stretch", 5, "SOURCE 6", 0.0f, 7.0f, 0.0f, 1.0f,
+     "Off|Tape|Granular|WSOLA|Tonal|Transient|Kick|Signalsmith Stretch", false},
+    {"o6stretch", "Time factor", 5, "SOURCE 6", 0.125f, 8.0f, 1.0f, 0.5f, "", false},
+    {"o6interpolation", "Interpolation", 5, "SOURCE 6", 0.0f, 3.0f, 0.0f, 1.0f,
+     "Linear|Cubic|Sinc 16|Sinc 32", false},
+    {"o6fmsource", "FM source", 5, "SOURCE 6", 0.0f, 6.0f, 0.0f, 1.0f, "Sine|A1|A2|B1|B2|C1|C2",
+     false},
+    {"o6amsource", "AM source", 5, "SOURCE 6", 0.0f, 6.0f, 0.0f, 1.0f, "Sine|A1|A2|B1|B2|C1|C2",
+     false},
+    {"o6pwmsync", "PWM sync", 5, "SOURCE 6", 0.0f, 1.0f, 0.0f, 1.0f, "Off|On", false},
+    {"o6pwmdivision", "PWM division", 5, "SOURCE 6", 0.0f, 15.0f, 7.0f, 1.0f,
+     "1/64|1/32T|1/32|1/16T|1/16|1/16D|1/8T|1/8|1/8D|1/4T|1/4|1/4D|1/2|1 bar|2 bars|4 bars", false},
+    {"o6kickattack", "Kick attack / ms", 5, "SOURCE 6", 0.0f, 100.0f, 25.0f, 1.0f, "", false},
+    {"o6trimstart", "Trim start", 5, "SOURCE 6", 0.0f, 1.0f, 0.0f, 1.0f, "", false},
+    {"o6ssrate", "Rate", 5, "SOURCE 6", 0.125f, 8.0f, 1.0f, 0.5f, "", false},
+    {"o6sssemitones", "Semitones / st", 5, "SOURCE 6", -48.0f, 48.0f, 0.0f, 1.0f, "", false},
+    {"o6sstonality", "Tonality limit / Hz", 5, "SOURCE 6", 0.0f, 20000.0f, 0.0f, 0.400000006f, "",
+     false},
+    {"o6ssformant", "Formant / st", 5, "SOURCE 6", -24.0f, 24.0f, 0.0f, 1.0f, "", false},
+    {"o6ssblock", "Block / ms", 5, "SOURCE 6", 0.0f, 200.0f, 0.0f, 1.0f, "", false},
+    {"o6ssoverlap", "Overlap", 5, "SOURCE 6", 0.0f, 15.0f, 0.0f, 1.0f,
+     "Auto|2x|3x|4x|5x|6x|7x|8x|9x|10x|11x|12x|13x|14x|15x|16x", true},
+    {"p3input", "Input select", 0, "FILTER C", 0.0f, 7.0f, 4.0f, 1.0f,
+     "A|B|A+B|None|C|A+C|B+C|A+B+C", false},
+    {"p3type", "Filter type", 0, "FILTER C", 0.0f, 3.0f, 0.0f, 1.0f,
+     "Low pass|High pass|Band pass|Bypass", false},
+    {"p3slope", "Slope", 0, "FILTER C", 0.0f, 1.0f, 0.0f, 1.0f, "12 dB/oct|24 dB/oct", false},
+    {"p3cutoff", "Cutoff / Hz", 0, "FILTER C", 20.0f, 20000.0f, 5000.0f, 0.25f, "", false},
+    {"p3res", "Resonance", 0, "FILTER C", 0.0f, 1.0f, 0.150000006f, 1.0f, "", false},
+    {"p3drive", "Drive", 0, "FILTER C", 0.0f, 1.0f, 0.0f, 1.0f, "", false},
+    {"p3ampa", "Attack / s", 0, "AMP ENV C", 0.0f, 8.0f, 0.00800000038f, 0.300000012f, "", false},
+    {"p3ampd", "Decay / s", 0, "AMP ENV C", 0.0f, 8.0f, 0.25f, 0.300000012f, "", false},
+    {"p3amps", "Sustain", 0, "AMP ENV C", 0.0f, 1.0f, 0.699999988f, 1.0f, "", false},
+    {"p3ampr", "Release / s", 0, "AMP ENV C", 0.0f, 12.0f, 0.349999994f, 0.300000012f, "", false},
+    {"mixC", "Mix C", 2, "MIXER", 0.0f, 1.0f, 0.7f, 1.0f, "", false},
+    {"o1tailon", "Loop tail", 5, "SOURCE 1", 0.0f, 1.0f, 0.0f, 1.0f, "Off|On", false},
+    {"o1tailstart", "Loop in", 5, "SOURCE 1", 0.0f, 1.0f, 0.5f, 1.0f, "", false},
+    {"o1tailend", "Loop out", 5, "SOURCE 1", 0.0f, 1.0f, 1.0f, 1.0f, "", false},
+    {"o1tailfade", "Loop fade / ms", 5, "SOURCE 1", 0.0f, 200.0f, 5.0f, 1.0f, "", false},
+    {"o1detuneextra", "Detune extension / cents", 0, "OSC A1", 0.0f, 100.0f, 0.0f, 1.0f, "", false},
+    {"o2tailon", "Loop tail", 5, "SOURCE 2", 0.0f, 1.0f, 0.0f, 1.0f, "Off|On", false},
+    {"o2tailstart", "Loop in", 5, "SOURCE 2", 0.0f, 1.0f, 0.5f, 1.0f, "", false},
+    {"o2tailend", "Loop out", 5, "SOURCE 2", 0.0f, 1.0f, 1.0f, 1.0f, "", false},
+    {"o2tailfade", "Loop fade / ms", 5, "SOURCE 2", 0.0f, 200.0f, 5.0f, 1.0f, "", false},
+    {"o2detuneextra", "Detune extension / cents", 0, "OSC A2", 0.0f, 100.0f, 0.0f, 1.0f, "", false},
+    {"o3tailon", "Loop tail", 5, "SOURCE 3", 0.0f, 1.0f, 0.0f, 1.0f, "Off|On", false},
+    {"o3tailstart", "Loop in", 5, "SOURCE 3", 0.0f, 1.0f, 0.5f, 1.0f, "", false},
+    {"o3tailend", "Loop out", 5, "SOURCE 3", 0.0f, 1.0f, 1.0f, 1.0f, "", false},
+    {"o3tailfade", "Loop fade / ms", 5, "SOURCE 3", 0.0f, 200.0f, 5.0f, 1.0f, "", false},
+    {"o3detuneextra", "Detune extension / cents", 0, "OSC B1", 0.0f, 100.0f, 0.0f, 1.0f, "", false},
+    {"o4tailon", "Loop tail", 5, "SOURCE 4", 0.0f, 1.0f, 0.0f, 1.0f, "Off|On", false},
+    {"o4tailstart", "Loop in", 5, "SOURCE 4", 0.0f, 1.0f, 0.5f, 1.0f, "", false},
+    {"o4tailend", "Loop out", 5, "SOURCE 4", 0.0f, 1.0f, 1.0f, 1.0f, "", false},
+    {"o4tailfade", "Loop fade / ms", 5, "SOURCE 4", 0.0f, 200.0f, 5.0f, 1.0f, "", false},
+    {"o4detuneextra", "Detune extension / cents", 0, "OSC B2", 0.0f, 100.0f, 0.0f, 1.0f, "", false},
+    {"o5tailon", "Loop tail", 5, "SOURCE 5", 0.0f, 1.0f, 0.0f, 1.0f, "Off|On", false},
+    {"o5tailstart", "Loop in", 5, "SOURCE 5", 0.0f, 1.0f, 0.5f, 1.0f, "", false},
+    {"o5tailend", "Loop out", 5, "SOURCE 5", 0.0f, 1.0f, 1.0f, 1.0f, "", false},
+    {"o5tailfade", "Loop fade / ms", 5, "SOURCE 5", 0.0f, 200.0f, 5.0f, 1.0f, "", false},
+    {"o5detuneextra", "Detune extension / cents", 0, "OSC C1", 0.0f, 100.0f, 0.0f, 1.0f, "", false},
+    {"o6tailon", "Loop tail", 5, "SOURCE 6", 0.0f, 1.0f, 0.0f, 1.0f, "Off|On", false},
+    {"o6tailstart", "Loop in", 5, "SOURCE 6", 0.0f, 1.0f, 0.5f, 1.0f, "", false},
+    {"o6tailend", "Loop out", 5, "SOURCE 6", 0.0f, 1.0f, 1.0f, 1.0f, "", false},
+    {"o6tailfade", "Loop fade / ms", 5, "SOURCE 6", 0.0f, 200.0f, 5.0f, 1.0f, "", false},
+    {"o6detuneextra", "Detune extension / cents", 0, "OSC C2", 0.0f, 100.0f, 0.0f, 1.0f, "", false},
+    {"p1inputcx", "Input select / C extension", 0, "FILTER A", 0.0f, 4.0f, 0.0f, 1.0f,
+     "Original|C|A+C|B+C|A+B+C", false},
+    {"p2inputcx", "Input select / C extension", 0, "FILTER B", 0.0f, 4.0f, 0.0f, 1.0f,
+     "Original|C|A+C|B+C|A+B+C", false},
+    {"solocx", "Solo / C extension", 0, "PERFORMANCE", 0.0f, 1.0f, 0.0f, 1.0f, "Original|C", false},
+    {"env1dest1cx", "Destination 1 / C extension", 1, "MOD ENV 1", 0.0f, 32.0f, 0.0f, 1.0f,
+     "Original|Volume C|Volume A+B+C|Pitch C|Pitch A+B+C|Phase C|Phase A+B+C|Pan C|Pan "
+     "A+B+C|Cutoff C|Cutoff A+B+C|Resonance C|Resonance A+B+C|Mix C|Mix A+B+C|WT Pos / Start C|WT "
+     "Pos / Start A+B+C|Grain size C|Grain size A+B+C|WT Pos / Start C1|WT Pos / Start C2|FM C1|FM "
+     "C2|FM C|FM A+B+C|AM C1|AM C2|AM C|AM A+B+C|Pulse width C1|Pulse width C2|Pulse width C|Pulse "
+     "width A+B+C",
+     false},
+    {"env1dest2cx", "Destination 2 / C extension", 1, "MOD ENV 1", 0.0f, 32.0f, 0.0f, 1.0f,
+     "Original|Volume C|Volume A+B+C|Pitch C|Pitch A+B+C|Phase C|Phase A+B+C|Pan C|Pan "
+     "A+B+C|Cutoff C|Cutoff A+B+C|Resonance C|Resonance A+B+C|Mix C|Mix A+B+C|WT Pos / Start C|WT "
+     "Pos / Start A+B+C|Grain size C|Grain size A+B+C|WT Pos / Start C1|WT Pos / Start C2|FM C1|FM "
+     "C2|FM C|FM A+B+C|AM C1|AM C2|AM C|AM A+B+C|Pulse width C1|Pulse width C2|Pulse width C|Pulse "
+     "width A+B+C",
+     false},
+    {"env2dest1cx", "Destination 1 / C extension", 1, "MOD ENV 2", 0.0f, 32.0f, 0.0f, 1.0f,
+     "Original|Volume C|Volume A+B+C|Pitch C|Pitch A+B+C|Phase C|Phase A+B+C|Pan C|Pan "
+     "A+B+C|Cutoff C|Cutoff A+B+C|Resonance C|Resonance A+B+C|Mix C|Mix A+B+C|WT Pos / Start C|WT "
+     "Pos / Start A+B+C|Grain size C|Grain size A+B+C|WT Pos / Start C1|WT Pos / Start C2|FM C1|FM "
+     "C2|FM C|FM A+B+C|AM C1|AM C2|AM C|AM A+B+C|Pulse width C1|Pulse width C2|Pulse width C|Pulse "
+     "width A+B+C",
+     false},
+    {"env2dest2cx", "Destination 2 / C extension", 1, "MOD ENV 2", 0.0f, 32.0f, 0.0f, 1.0f,
+     "Original|Volume C|Volume A+B+C|Pitch C|Pitch A+B+C|Phase C|Phase A+B+C|Pan C|Pan "
+     "A+B+C|Cutoff C|Cutoff A+B+C|Resonance C|Resonance A+B+C|Mix C|Mix A+B+C|WT Pos / Start C|WT "
+     "Pos / Start A+B+C|Grain size C|Grain size A+B+C|WT Pos / Start C1|WT Pos / Start C2|FM C1|FM "
+     "C2|FM C|FM A+B+C|AM C1|AM C2|AM C|AM A+B+C|Pulse width C1|Pulse width C2|Pulse width C|Pulse "
+     "width A+B+C",
+     false},
+    {"lfo1dest1cx", "Destination 1 / C extension", 1, "LFO 1", 0.0f, 32.0f, 0.0f, 1.0f,
+     "Original|Volume C|Volume A+B+C|Pitch C|Pitch A+B+C|Phase C|Phase A+B+C|Pan C|Pan "
+     "A+B+C|Cutoff C|Cutoff A+B+C|Resonance C|Resonance A+B+C|Mix C|Mix A+B+C|WT Pos / Start C|WT "
+     "Pos / Start A+B+C|Grain size C|Grain size A+B+C|WT Pos / Start C1|WT Pos / Start C2|FM C1|FM "
+     "C2|FM C|FM A+B+C|AM C1|AM C2|AM C|AM A+B+C|Pulse width C1|Pulse width C2|Pulse width C|Pulse "
+     "width A+B+C",
+     false},
+    {"lfo1dest2cx", "Destination 2 / C extension", 1, "LFO 1", 0.0f, 32.0f, 0.0f, 1.0f,
+     "Original|Volume C|Volume A+B+C|Pitch C|Pitch A+B+C|Phase C|Phase A+B+C|Pan C|Pan "
+     "A+B+C|Cutoff C|Cutoff A+B+C|Resonance C|Resonance A+B+C|Mix C|Mix A+B+C|WT Pos / Start C|WT "
+     "Pos / Start A+B+C|Grain size C|Grain size A+B+C|WT Pos / Start C1|WT Pos / Start C2|FM C1|FM "
+     "C2|FM C|FM A+B+C|AM C1|AM C2|AM C|AM A+B+C|Pulse width C1|Pulse width C2|Pulse width C|Pulse "
+     "width A+B+C",
+     false},
+    {"lfo2dest1cx", "Destination 1 / C extension", 1, "LFO 2", 0.0f, 32.0f, 0.0f, 1.0f,
+     "Original|Volume C|Volume A+B+C|Pitch C|Pitch A+B+C|Phase C|Phase A+B+C|Pan C|Pan "
+     "A+B+C|Cutoff C|Cutoff A+B+C|Resonance C|Resonance A+B+C|Mix C|Mix A+B+C|WT Pos / Start C|WT "
+     "Pos / Start A+B+C|Grain size C|Grain size A+B+C|WT Pos / Start C1|WT Pos / Start C2|FM C1|FM "
+     "C2|FM C|FM A+B+C|AM C1|AM C2|AM C|AM A+B+C|Pulse width C1|Pulse width C2|Pulse width C|Pulse "
+     "width A+B+C",
+     false},
+    {"lfo2dest2cx", "Destination 2 / C extension", 1, "LFO 2", 0.0f, 32.0f, 0.0f, 1.0f,
+     "Original|Volume C|Volume A+B+C|Pitch C|Pitch A+B+C|Phase C|Phase A+B+C|Pan C|Pan "
+     "A+B+C|Cutoff C|Cutoff A+B+C|Resonance C|Resonance A+B+C|Mix C|Mix A+B+C|WT Pos / Start C|WT "
+     "Pos / Start A+B+C|Grain size C|Grain size A+B+C|WT Pos / Start C1|WT Pos / Start C2|FM C1|FM "
+     "C2|FM C|FM A+B+C|AM C1|AM C2|AM C|AM A+B+C|Pulse width C1|Pulse width C2|Pulse width C|Pulse "
+     "width A+B+C",
+     false},
+    {"misc1sourcecx", "Source / C extension", 1, "MISC 1 / SOURCE 1", 0.0f, 1.0f, 0.0f, 1.0f,
+     "Original|Amp Env C", false},
+    {"misc1dest1cx", "Destination 1 / C extension", 1, "MISC 1 / SOURCE 1", 0.0f, 32.0f, 0.0f, 1.0f,
+     "Original|Volume C|Volume A+B+C|Pitch C|Pitch A+B+C|Phase C|Phase A+B+C|Pan C|Pan "
+     "A+B+C|Cutoff C|Cutoff A+B+C|Resonance C|Resonance A+B+C|Mix C|Mix A+B+C|WT Pos / Start C|WT "
+     "Pos / Start A+B+C|Grain size C|Grain size A+B+C|WT Pos / Start C1|WT Pos / Start C2|FM C1|FM "
+     "C2|FM C|FM A+B+C|AM C1|AM C2|AM C|AM A+B+C|Pulse width C1|Pulse width C2|Pulse width C|Pulse "
+     "width A+B+C",
+     false},
+    {"misc1dest2cx", "Destination 2 / C extension", 1, "MISC 1 / SOURCE 1", 0.0f, 32.0f, 0.0f, 1.0f,
+     "Original|Volume C|Volume A+B+C|Pitch C|Pitch A+B+C|Phase C|Phase A+B+C|Pan C|Pan "
+     "A+B+C|Cutoff C|Cutoff A+B+C|Resonance C|Resonance A+B+C|Mix C|Mix A+B+C|WT Pos / Start C|WT "
+     "Pos / Start A+B+C|Grain size C|Grain size A+B+C|WT Pos / Start C1|WT Pos / Start C2|FM C1|FM "
+     "C2|FM C|FM A+B+C|AM C1|AM C2|AM C|AM A+B+C|Pulse width C1|Pulse width C2|Pulse width C|Pulse "
+     "width A+B+C",
+     false},
+    {"misc2sourcecx", "Source / C extension", 1, "MISC 1 / SOURCE 2", 0.0f, 1.0f, 0.0f, 1.0f,
+     "Original|Amp Env C", false},
+    {"misc2dest1cx", "Destination 1 / C extension", 1, "MISC 1 / SOURCE 2", 0.0f, 32.0f, 0.0f, 1.0f,
+     "Original|Volume C|Volume A+B+C|Pitch C|Pitch A+B+C|Phase C|Phase A+B+C|Pan C|Pan "
+     "A+B+C|Cutoff C|Cutoff A+B+C|Resonance C|Resonance A+B+C|Mix C|Mix A+B+C|WT Pos / Start C|WT "
+     "Pos / Start A+B+C|Grain size C|Grain size A+B+C|WT Pos / Start C1|WT Pos / Start C2|FM C1|FM "
+     "C2|FM C|FM A+B+C|AM C1|AM C2|AM C|AM A+B+C|Pulse width C1|Pulse width C2|Pulse width C|Pulse "
+     "width A+B+C",
+     false},
+    {"misc2dest2cx", "Destination 2 / C extension", 1, "MISC 1 / SOURCE 2", 0.0f, 32.0f, 0.0f, 1.0f,
+     "Original|Volume C|Volume A+B+C|Pitch C|Pitch A+B+C|Phase C|Phase A+B+C|Pan C|Pan "
+     "A+B+C|Cutoff C|Cutoff A+B+C|Resonance C|Resonance A+B+C|Mix C|Mix A+B+C|WT Pos / Start C|WT "
+     "Pos / Start A+B+C|Grain size C|Grain size A+B+C|WT Pos / Start C1|WT Pos / Start C2|FM C1|FM "
+     "C2|FM C|FM A+B+C|AM C1|AM C2|AM C|AM A+B+C|Pulse width C1|Pulse width C2|Pulse width C|Pulse "
+     "width A+B+C",
+     false},
+    {"misc3sourcecx", "Source / C extension", 1, "MISC 2 / SOURCE 1", 0.0f, 1.0f, 0.0f, 1.0f,
+     "Original|Amp Env C", false},
+    {"misc3dest1cx", "Destination 1 / C extension", 1, "MISC 2 / SOURCE 1", 0.0f, 32.0f, 0.0f, 1.0f,
+     "Original|Volume C|Volume A+B+C|Pitch C|Pitch A+B+C|Phase C|Phase A+B+C|Pan C|Pan "
+     "A+B+C|Cutoff C|Cutoff A+B+C|Resonance C|Resonance A+B+C|Mix C|Mix A+B+C|WT Pos / Start C|WT "
+     "Pos / Start A+B+C|Grain size C|Grain size A+B+C|WT Pos / Start C1|WT Pos / Start C2|FM C1|FM "
+     "C2|FM C|FM A+B+C|AM C1|AM C2|AM C|AM A+B+C|Pulse width C1|Pulse width C2|Pulse width C|Pulse "
+     "width A+B+C",
+     false},
+    {"misc3dest2cx", "Destination 2 / C extension", 1, "MISC 2 / SOURCE 1", 0.0f, 32.0f, 0.0f, 1.0f,
+     "Original|Volume C|Volume A+B+C|Pitch C|Pitch A+B+C|Phase C|Phase A+B+C|Pan C|Pan "
+     "A+B+C|Cutoff C|Cutoff A+B+C|Resonance C|Resonance A+B+C|Mix C|Mix A+B+C|WT Pos / Start C|WT "
+     "Pos / Start A+B+C|Grain size C|Grain size A+B+C|WT Pos / Start C1|WT Pos / Start C2|FM C1|FM "
+     "C2|FM C|FM A+B+C|AM C1|AM C2|AM C|AM A+B+C|Pulse width C1|Pulse width C2|Pulse width C|Pulse "
+     "width A+B+C",
+     false},
+    {"misc4sourcecx", "Source / C extension", 1, "MISC 2 / SOURCE 2", 0.0f, 1.0f, 0.0f, 1.0f,
+     "Original|Amp Env C", false},
+    {"misc4dest1cx", "Destination 1 / C extension", 1, "MISC 2 / SOURCE 2", 0.0f, 32.0f, 0.0f, 1.0f,
+     "Original|Volume C|Volume A+B+C|Pitch C|Pitch A+B+C|Phase C|Phase A+B+C|Pan C|Pan "
+     "A+B+C|Cutoff C|Cutoff A+B+C|Resonance C|Resonance A+B+C|Mix C|Mix A+B+C|WT Pos / Start C|WT "
+     "Pos / Start A+B+C|Grain size C|Grain size A+B+C|WT Pos / Start C1|WT Pos / Start C2|FM C1|FM "
+     "C2|FM C|FM A+B+C|AM C1|AM C2|AM C|AM A+B+C|Pulse width C1|Pulse width C2|Pulse width C|Pulse "
+     "width A+B+C",
+     false},
+    {"misc4dest2cx", "Destination 2 / C extension", 1, "MISC 2 / SOURCE 2", 0.0f, 32.0f, 0.0f, 1.0f,
+     "Original|Volume C|Volume A+B+C|Pitch C|Pitch A+B+C|Phase C|Phase A+B+C|Pan C|Pan "
+     "A+B+C|Cutoff C|Cutoff A+B+C|Resonance C|Resonance A+B+C|Mix C|Mix A+B+C|WT Pos / Start C|WT "
+     "Pos / Start A+B+C|Grain size C|Grain size A+B+C|WT Pos / Start C1|WT Pos / Start C2|FM C1|FM "
+     "C2|FM C|FM A+B+C|AM C1|AM C2|AM C|AM A+B+C|Pulse width C1|Pulse width C2|Pulse width C|Pulse "
+     "width A+B+C",
+     false},
+    {"o1fmsourcecx", "FM source / C extension", 5, "SOURCE 1", 0.0f, 2.0f, 0.0f, 1.0f,
+     "Original|C1|C2", false},
+    {"o1amsourcecx", "AM source / C extension", 5, "SOURCE 1", 0.0f, 2.0f, 0.0f, 1.0f,
+     "Original|C1|C2", false},
+    {"o2fmsourcecx", "FM source / C extension", 5, "SOURCE 2", 0.0f, 2.0f, 0.0f, 1.0f,
+     "Original|C1|C2", false},
+    {"o2amsourcecx", "AM source / C extension", 5, "SOURCE 2", 0.0f, 2.0f, 0.0f, 1.0f,
+     "Original|C1|C2", false},
+    {"o3fmsourcecx", "FM source / C extension", 5, "SOURCE 3", 0.0f, 2.0f, 0.0f, 1.0f,
+     "Original|C1|C2", false},
+    {"o3amsourcecx", "AM source / C extension", 5, "SOURCE 3", 0.0f, 2.0f, 0.0f, 1.0f,
+     "Original|C1|C2", false},
+    {"o4fmsourcecx", "FM source / C extension", 5, "SOURCE 4", 0.0f, 2.0f, 0.0f, 1.0f,
+     "Original|C1|C2", false},
+    {"o4amsourcecx", "AM source / C extension", 5, "SOURCE 4", 0.0f, 2.0f, 0.0f, 1.0f,
+     "Original|C1|C2", false},
+    {"m1target1cx", "Target / C extension", 5, "MORPH", 0.0f, 13.0f, 0.0f, 1.0f,
+     "Original|WT Pos / Start C1|WT Pos / Start C2|Pulse width C1|Pulse width C2|FM C1|FM C2|AM "
+     "C1|AM C2|Time factor C1|Time factor C2|Cutoff C|Resonance C|Mix C",
+     false},
+    {"m1target2cx", "Target / C extension", 5, "MORPH", 0.0f, 13.0f, 0.0f, 1.0f,
+     "Original|WT Pos / Start C1|WT Pos / Start C2|Pulse width C1|Pulse width C2|FM C1|FM C2|AM "
+     "C1|AM C2|Time factor C1|Time factor C2|Cutoff C|Resonance C|Mix C",
+     false},
+    {"m1target3cx", "Target / C extension", 5, "MORPH", 0.0f, 13.0f, 0.0f, 1.0f,
+     "Original|WT Pos / Start C1|WT Pos / Start C2|Pulse width C1|Pulse width C2|FM C1|FM C2|AM "
+     "C1|AM C2|Time factor C1|Time factor C2|Cutoff C|Resonance C|Mix C",
+     false},
+    {"m1target4cx", "Target / C extension", 5, "MORPH", 0.0f, 13.0f, 0.0f, 1.0f,
+     "Original|WT Pos / Start C1|WT Pos / Start C2|Pulse width C1|Pulse width C2|FM C1|FM C2|AM "
+     "C1|AM C2|Time factor C1|Time factor C2|Cutoff C|Resonance C|Mix C",
+     false},
+    {"m2target1cx", "Target / C extension", 5, "MORPH", 0.0f, 13.0f, 0.0f, 1.0f,
+     "Original|WT Pos / Start C1|WT Pos / Start C2|Pulse width C1|Pulse width C2|FM C1|FM C2|AM "
+     "C1|AM C2|Time factor C1|Time factor C2|Cutoff C|Resonance C|Mix C",
+     false},
+    {"m2target2cx", "Target / C extension", 5, "MORPH", 0.0f, 13.0f, 0.0f, 1.0f,
+     "Original|WT Pos / Start C1|WT Pos / Start C2|Pulse width C1|Pulse width C2|FM C1|FM C2|AM "
+     "C1|AM C2|Time factor C1|Time factor C2|Cutoff C|Resonance C|Mix C",
+     false},
+    {"m2target3cx", "Target / C extension", 5, "MORPH", 0.0f, 13.0f, 0.0f, 1.0f,
+     "Original|WT Pos / Start C1|WT Pos / Start C2|Pulse width C1|Pulse width C2|FM C1|FM C2|AM "
+     "C1|AM C2|Time factor C1|Time factor C2|Cutoff C|Resonance C|Mix C",
+     false},
+    {"m2target4cx", "Target / C extension", 5, "MORPH", 0.0f, 13.0f, 0.0f, 1.0f,
+     "Original|WT Pos / Start C1|WT Pos / Start C2|Pulse width C1|Pulse width C2|FM C1|FM C2|AM "
+     "C1|AM C2|Time factor C1|Time factor C2|Cutoff C|Resonance C|Mix C",
+     false},
+    {"m3target1cx", "Target / C extension", 5, "MORPH", 0.0f, 13.0f, 0.0f, 1.0f,
+     "Original|WT Pos / Start C1|WT Pos / Start C2|Pulse width C1|Pulse width C2|FM C1|FM C2|AM "
+     "C1|AM C2|Time factor C1|Time factor C2|Cutoff C|Resonance C|Mix C",
+     false},
+    {"m3target2cx", "Target / C extension", 5, "MORPH", 0.0f, 13.0f, 0.0f, 1.0f,
+     "Original|WT Pos / Start C1|WT Pos / Start C2|Pulse width C1|Pulse width C2|FM C1|FM C2|AM "
+     "C1|AM C2|Time factor C1|Time factor C2|Cutoff C|Resonance C|Mix C",
+     false},
+    {"m3target3cx", "Target / C extension", 5, "MORPH", 0.0f, 13.0f, 0.0f, 1.0f,
+     "Original|WT Pos / Start C1|WT Pos / Start C2|Pulse width C1|Pulse width C2|FM C1|FM C2|AM "
+     "C1|AM C2|Time factor C1|Time factor C2|Cutoff C|Resonance C|Mix C",
+     false},
+    {"m3target4cx", "Target / C extension", 5, "MORPH", 0.0f, 13.0f, 0.0f, 1.0f,
+     "Original|WT Pos / Start C1|WT Pos / Start C2|Pulse width C1|Pulse width C2|FM C1|FM C2|AM "
+     "C1|AM C2|Time factor C1|Time factor C2|Cutoff C|Resonance C|Mix C",
+     false},
+    {"m4target1cx", "Target / C extension", 5, "MORPH", 0.0f, 13.0f, 0.0f, 1.0f,
+     "Original|WT Pos / Start C1|WT Pos / Start C2|Pulse width C1|Pulse width C2|FM C1|FM C2|AM "
+     "C1|AM C2|Time factor C1|Time factor C2|Cutoff C|Resonance C|Mix C",
+     false},
+    {"m4target2cx", "Target / C extension", 5, "MORPH", 0.0f, 13.0f, 0.0f, 1.0f,
+     "Original|WT Pos / Start C1|WT Pos / Start C2|Pulse width C1|Pulse width C2|FM C1|FM C2|AM "
+     "C1|AM C2|Time factor C1|Time factor C2|Cutoff C|Resonance C|Mix C",
+     false},
+    {"m4target3cx", "Target / C extension", 5, "MORPH", 0.0f, 13.0f, 0.0f, 1.0f,
+     "Original|WT Pos / Start C1|WT Pos / Start C2|Pulse width C1|Pulse width C2|FM C1|FM C2|AM "
+     "C1|AM C2|Time factor C1|Time factor C2|Cutoff C|Resonance C|Mix C",
+     false},
+    {"m4target4cx", "Target / C extension", 5, "MORPH", 0.0f, 13.0f, 0.0f, 1.0f,
+     "Original|WT Pos / Start C1|WT Pos / Start C2|Pulse width C1|Pulse width C2|FM C1|FM C2|AM "
+     "C1|AM C2|Time factor C1|Time factor C2|Cutoff C|Resonance C|Mix C",
+     false},
 }};
+
+inline constexpr size_t legacyParameterCount = 736;
+inline constexpr size_t cPlayerParameterStride = 65;
+inline constexpr auto cPlayerIndices = [] {
+    std::array<size_t, legacyParameterCount> result{};
+    result[size_t(Param::o1wave)] = size_t(Param::o5wave);
+    result[size_t(Param::o1voices)] = size_t(Param::o5voices);
+    result[size_t(Param::o1level)] = size_t(Param::o5level);
+    result[size_t(Param::o1octave)] = size_t(Param::o5octave);
+    result[size_t(Param::o1tune)] = size_t(Param::o5tune);
+    result[size_t(Param::o1fine)] = size_t(Param::o5fine);
+    result[size_t(Param::o1phase)] = size_t(Param::o5phase);
+    result[size_t(Param::o1detune)] = size_t(Param::o5detune);
+    result[size_t(Param::o1stereo)] = size_t(Param::o5stereo);
+    result[size_t(Param::o1pan)] = size_t(Param::o5pan);
+    result[size_t(Param::o1retrig)] = size_t(Param::o5retrig);
+    result[size_t(Param::o1invert)] = size_t(Param::o5invert);
+    result[size_t(Param::o1engine)] = size_t(Param::o5engine);
+    result[size_t(Param::o1position)] = size_t(Param::o5position);
+    result[size_t(Param::o1end)] = size_t(Param::o5end);
+    result[size_t(Param::o1root)] = size_t(Param::o5root);
+    result[size_t(Param::o1loop)] = size_t(Param::o5loop);
+    result[size_t(Param::o1reverse)] = size_t(Param::o5reverse);
+    result[size_t(Param::o1size)] = size_t(Param::o5size);
+    result[size_t(Param::o1density)] = size_t(Param::o5density);
+    result[size_t(Param::o1spray)] = size_t(Param::o5spray);
+    result[size_t(Param::o1scan)] = size_t(Param::o5scan);
+    result[size_t(Param::o1warp)] = size_t(Param::o5warp);
+    result[size_t(Param::o1envelope)] = size_t(Param::o5envelope);
+    result[size_t(Param::o1enva)] = size_t(Param::o5enva);
+    result[size_t(Param::o1envd)] = size_t(Param::o5envd);
+    result[size_t(Param::o1envs)] = size_t(Param::o5envs);
+    result[size_t(Param::o1envr)] = size_t(Param::o5envr);
+    result[size_t(Param::o1gmodel)] = size_t(Param::o5gmodel);
+    result[size_t(Param::o1gattack)] = size_t(Param::o5gattack);
+    result[size_t(Param::o1ghold)] = size_t(Param::o5ghold);
+    result[size_t(Param::o1gspace)] = size_t(Param::o5gspace);
+    result[size_t(Param::o1gwave)] = size_t(Param::o5gwave);
+    result[size_t(Param::o1gpan)] = size_t(Param::o5gpan);
+    result[size_t(Param::o1gdepth)] = size_t(Param::o5gdepth);
+    result[size_t(Param::o1gspeed)] = size_t(Param::o5gspeed);
+    result[size_t(Param::o1grandom)] = size_t(Param::o5grandom);
+    result[size_t(Param::o1gtrans)] = size_t(Param::o5gtrans);
+    result[size_t(Param::o1gthold)] = size_t(Param::o5gthold);
+    result[size_t(Param::o1gfreeze)] = size_t(Param::o5gfreeze);
+    result[size_t(Param::o1gkey)] = size_t(Param::o5gkey);
+    result[size_t(Param::o1gsync)] = size_t(Param::o5gsync);
+    result[size_t(Param::o1gbeats)] = size_t(Param::o5gbeats);
+    result[size_t(Param::o1fmdepth)] = size_t(Param::o5fmdepth);
+    result[size_t(Param::o1fmratio)] = size_t(Param::o5fmratio);
+    result[size_t(Param::o1amdepth)] = size_t(Param::o5amdepth);
+    result[size_t(Param::o1amratio)] = size_t(Param::o5amratio);
+    result[size_t(Param::o1pulsewidth)] = size_t(Param::o5pulsewidth);
+    result[size_t(Param::o1pwmdepth)] = size_t(Param::o5pwmdepth);
+    result[size_t(Param::o1pwmrate)] = size_t(Param::o5pwmrate);
+    result[size_t(Param::o1stretchmode)] = size_t(Param::o5stretchmode);
+    result[size_t(Param::o1stretch)] = size_t(Param::o5stretch);
+    result[size_t(Param::o1interpolation)] = size_t(Param::o5interpolation);
+    result[size_t(Param::o1fmsource)] = size_t(Param::o5fmsource);
+    result[size_t(Param::o1amsource)] = size_t(Param::o5amsource);
+    result[size_t(Param::o1pwmsync)] = size_t(Param::o5pwmsync);
+    result[size_t(Param::o1pwmdivision)] = size_t(Param::o5pwmdivision);
+    result[size_t(Param::o1kickattack)] = size_t(Param::o5kickattack);
+    result[size_t(Param::o1trimstart)] = size_t(Param::o5trimstart);
+    result[size_t(Param::o1ssrate)] = size_t(Param::o5ssrate);
+    result[size_t(Param::o1sssemitones)] = size_t(Param::o5sssemitones);
+    result[size_t(Param::o1sstonality)] = size_t(Param::o5sstonality);
+    result[size_t(Param::o1ssformant)] = size_t(Param::o5ssformant);
+    result[size_t(Param::o1ssblock)] = size_t(Param::o5ssblock);
+    result[size_t(Param::o1ssoverlap)] = size_t(Param::o5ssoverlap);
+    return result;
+}();
+inline constexpr size_t playerParamIndex(Param first, int slot, int legacyStride) {
+    return slot < 4 ? size_t(first) + size_t(slot) * size_t(legacyStride)
+                    : cPlayerIndices[size_t(first)] + size_t(slot - 4) * cPlayerParameterStride;
+}
+inline constexpr size_t partParamIndex(Param first, int part, int legacyStride = 10) {
+    return part < 2 ? size_t(first) + size_t(part) * size_t(legacyStride)
+                    : size_t(Param::p3input) + size_t(first) - size_t(Param::p1input);
+}
+inline constexpr Param detuneExtra(int slot) {
+    return Param(size_t(Param::o1detuneextra) + size_t(slot) * 5);
+}
+inline constexpr Param tailParam(int slot) {
+    return Param(size_t(Param::o1tailon) + size_t(slot) * 5);
+}
+inline constexpr auto choiceExtensionIndices = [] {
+    std::array<Param, parameterCount> result{};
+    for (auto &id : result)
+        id = Param::Count;
+    result[size_t(Param::p1input)] = Param::p1inputcx;
+    result[size_t(Param::p2input)] = Param::p2inputcx;
+    result[size_t(Param::solo)] = Param::solocx;
+    result[size_t(Param::env1dest1)] = Param::env1dest1cx;
+    result[size_t(Param::env1dest2)] = Param::env1dest2cx;
+    result[size_t(Param::env2dest1)] = Param::env2dest1cx;
+    result[size_t(Param::env2dest2)] = Param::env2dest2cx;
+    result[size_t(Param::lfo1dest1)] = Param::lfo1dest1cx;
+    result[size_t(Param::lfo1dest2)] = Param::lfo1dest2cx;
+    result[size_t(Param::lfo2dest1)] = Param::lfo2dest1cx;
+    result[size_t(Param::lfo2dest2)] = Param::lfo2dest2cx;
+    result[size_t(Param::misc1source)] = Param::misc1sourcecx;
+    result[size_t(Param::misc1dest1)] = Param::misc1dest1cx;
+    result[size_t(Param::misc1dest2)] = Param::misc1dest2cx;
+    result[size_t(Param::misc2source)] = Param::misc2sourcecx;
+    result[size_t(Param::misc2dest1)] = Param::misc2dest1cx;
+    result[size_t(Param::misc2dest2)] = Param::misc2dest2cx;
+    result[size_t(Param::misc3source)] = Param::misc3sourcecx;
+    result[size_t(Param::misc3dest1)] = Param::misc3dest1cx;
+    result[size_t(Param::misc3dest2)] = Param::misc3dest2cx;
+    result[size_t(Param::misc4source)] = Param::misc4sourcecx;
+    result[size_t(Param::misc4dest1)] = Param::misc4dest1cx;
+    result[size_t(Param::misc4dest2)] = Param::misc4dest2cx;
+    result[size_t(Param::o1fmsource)] = Param::o1fmsourcecx;
+    result[size_t(Param::o1amsource)] = Param::o1amsourcecx;
+    result[size_t(Param::o2fmsource)] = Param::o2fmsourcecx;
+    result[size_t(Param::o2amsource)] = Param::o2amsourcecx;
+    result[size_t(Param::o3fmsource)] = Param::o3fmsourcecx;
+    result[size_t(Param::o3amsource)] = Param::o3amsourcecx;
+    result[size_t(Param::o4fmsource)] = Param::o4fmsourcecx;
+    result[size_t(Param::o4amsource)] = Param::o4amsourcecx;
+    result[size_t(Param::m1target1)] = Param::m1target1cx;
+    result[size_t(Param::m1target2)] = Param::m1target2cx;
+    result[size_t(Param::m1target3)] = Param::m1target3cx;
+    result[size_t(Param::m1target4)] = Param::m1target4cx;
+    result[size_t(Param::m2target1)] = Param::m2target1cx;
+    result[size_t(Param::m2target2)] = Param::m2target2cx;
+    result[size_t(Param::m2target3)] = Param::m2target3cx;
+    result[size_t(Param::m2target4)] = Param::m2target4cx;
+    result[size_t(Param::m3target1)] = Param::m3target1cx;
+    result[size_t(Param::m3target2)] = Param::m3target2cx;
+    result[size_t(Param::m3target3)] = Param::m3target3cx;
+    result[size_t(Param::m3target4)] = Param::m3target4cx;
+    result[size_t(Param::m4target1)] = Param::m4target1cx;
+    result[size_t(Param::m4target2)] = Param::m4target2cx;
+    result[size_t(Param::m4target3)] = Param::m4target3cx;
+    result[size_t(Param::m4target4)] = Param::m4target4cx;
+    return result;
+}();
+inline constexpr Param choiceExtension(Param base) {
+    return choiceExtensionIndices[size_t(base)];
+}
+template <class Read> float expandedChoiceValue(Param base, Read read) {
+    const auto extra = choiceExtension(base);
+    if (extra != Param::Count) {
+        const float selected = read(size_t(extra));
+        if (selected > 0)
+            return parameterSpecs[size_t(base)].high + selected;
+    }
+    return read(size_t(base));
+}
+
 } // namespace logisth

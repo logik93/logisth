@@ -43,6 +43,72 @@ float resample(const Data &data, double at, int channel, int quality, double spe
     }
     return std::abs(weight) > 1e-12 ? float(sum / weight) : 0;
 }
+struct TailLoopSettings {
+    bool enabled = false;
+    float start = .5f, end = 1, fadeMs = 5;
+    bool operator==(const TailLoopSettings &other) const {
+        return enabled == other.enabled && start == other.start && end == other.end &&
+               fadeMs == other.fadeMs;
+    }
+    bool operator!=(const TailLoopSettings &other) const {
+        return !(*this == other);
+    }
+};
+struct TailLoopBounds {
+    double first = 0, last = 2, span = 2, low = 0, high = 2, fade = 0;
+    bool reverse = false;
+    static TailLoopBounds make(double length, double begin, double end, bool backwards,
+                               double sampleRate, const TailLoopSettings &settings) {
+        TailLoopBounds b;
+        b.first = begin * (length - 2);
+        b.last = std::min(length - 1, std::max(b.first + 2., end * (length - 1)));
+        b.span = std::max(1., b.last - b.first);
+        b.reverse = backwards;
+        const double minimum = std::min(2., b.span);
+        const double a =
+            std::isfinite(settings.start) ? std::clamp(double(settings.start), 0., 1.) : .5;
+        const double z =
+            std::isfinite(settings.end) ? std::clamp(double(settings.end), 0., 1.) : 1.;
+        b.low = std::clamp(a * (length - 1) - b.first, 0., std::max(0., b.span - minimum));
+        b.high = std::clamp(z * (length - 1) - b.first, b.low + minimum, b.span);
+        if (backwards) {
+            const double oldLow = b.low;
+            b.low = b.span - b.high;
+            b.high = b.span - oldLow;
+        }
+        const double ms =
+            std::isfinite(settings.fadeMs) ? std::clamp(double(settings.fadeMs), 0., 200.) : 5.;
+        b.fade = std::min((b.high - b.low) * .25, sampleRate * ms * .001);
+        return b;
+    }
+    double mapped(double cursor) const {
+        if (cursor < span)
+            return cursor;
+        return low + fade + std::fmod(cursor - span, std::max(1e-9, high - low - fade));
+    }
+    template <class Data>
+    float read(const Data &data, double cursor, int channel, int quality, double speed) const {
+        if (cursor < 0)
+            return 0;
+        auto physical = [&](double distance, bool tail) {
+            double lo = first, hi = last;
+            if (tail) {
+                lo += reverse ? span - high : low;
+                hi = first + (reverse ? span - low : high);
+            }
+            return resample(data, reverse ? last - 1 - distance : first + distance, channel,
+                            quality, speed, lo, hi, false);
+        };
+        const bool entered = cursor >= span;
+        const double position = mapped(cursor), boundary = entered ? high : span;
+        const float a = physical(position, entered);
+        if (fade <= 0 || position < boundary - fade)
+            return a;
+        const double into = std::clamp(position - (boundary - fade), 0., fade);
+        const float mix = float(into / fade);
+        return a * (1 - mix) + physical(low + into, true) * mix;
+    }
+};
 struct SamplerPlayer {
     struct Grain {
         double position = 0;
@@ -52,7 +118,7 @@ struct SamplerPlayer {
     std::array<Grain, 16> grains{};
     double rateCache = 0, smoothing = 0;
     double cursor = 0, untilGrain = 0, lastStart = 0, stretch = 1;
-    double elapsedSamples = 0;
+    double elapsedSamples = 0, displayCursor = 0;
     float rateControl = 1, pitchControl = 0, tonalityControl = 0, formantControl = 0;
     bool controlsReady = false;
     SpectralStream *spectral = nullptr;
@@ -72,7 +138,8 @@ struct SamplerPlayer {
     std::array<float, 2> tick(const Data &data, double ratio, double sr, float begin, float end,
                               bool loop, bool reverse, int mode, float factor, int interpolation,
                               float width = .5f, double fmOffset = 0, float kickAttack = 25,
-                              const StretchControls &controls = {}) {
+                              const StretchControls &controls = {},
+                              const TailLoopSettings &tail = {}) {
         if (algorithm != mode) {
             reset();
             algorithm = mode;
@@ -89,6 +156,14 @@ struct SamplerPlayer {
         if (rateCache != sr) {
             rateCache = sr;
             smoothing = 1 - std::exp(-1 / (.02 * sr));
+        }
+        const bool tailOn = tail.enabled;
+        const auto tailBounds =
+            TailLoopBounds::make(length, begin, end, reverse, data.sampleRate, tail);
+        displayCursor = tailOn ? tailBounds.mapped(cursor) : cursor;
+        if (tailOn && finished) {
+            finished = false;
+            cursor = std::max(cursor, span);
         }
         const float rateTarget =
             std::isfinite(controls.rate) ? std::clamp(controls.rate, .125f, 8.f) : 1;
@@ -115,6 +190,12 @@ struct SamplerPlayer {
         double pitch = ratio * data.sampleRate / sr;
         auto read = [&](double offset, int ch) {
             offset = warpSamplePosition(offset, data.sampleRate * .04, width) + fmOffset;
+            if (tailOn)
+                return tailBounds.read(data, offset, ch, interpolation,
+                                       mode >= 6   ? data.sampleRate / sr
+                                       : mode == 1 ? pitch / stretch
+                                       : mode == 0 ? pitch * rateControl
+                                                   : pitch);
             double at = reverse ? last - 1 - offset : first + offset;
             if (!loop && (at < first || at >= last))
                 return 0.f;
@@ -146,7 +227,7 @@ struct SamplerPlayer {
                 bool savedFinished = finished;
                 spectral = nullptr;
                 auto old = tick(data, ratio, sr, begin, end, loop, reverse, mode, factor,
-                                interpolation, width, fmOffset, kickAttack, controls);
+                                interpolation, width, fmOffset, kickAttack, controls, tail);
                 spectral = savedStream;
                 cursor = savedCursor;
                 elapsedSamples = savedElapsed;
@@ -163,7 +244,7 @@ struct SamplerPlayer {
                     out[size_t(ch)] =
                         read(elapsedSamples * step, ch) * (1 - mix) + out[size_t(ch)] * mix;
             }
-            if (!loop) {
+            if (!loop && !tailOn) {
                 float fade = float(std::clamp((span - cursor) / (step * sr * .005), 0., 1.));
                 for (auto &x : out)
                     x *= fade;
@@ -171,7 +252,7 @@ struct SamplerPlayer {
             cursor += step / timeFactor;
             started = true;
             ++elapsedSamples;
-            if (cursor >= span) {
+            if (cursor >= span && !tailOn) {
                 if (loop)
                     cursor = std::fmod(cursor, span);
                 else {
@@ -184,7 +265,7 @@ struct SamplerPlayer {
         if (mode <= 1) {
             if (finished)
                 return {};
-            if (cursor >= span) {
+            if (cursor >= span && !tailOn) {
                 if (loop) {
                     double fade = std::min(span * .25, data.sampleRate * .005);
                     cursor = fade + std::fmod(cursor - span, span - fade);
@@ -197,7 +278,7 @@ struct SamplerPlayer {
             double fade = std::min(span * .25, data.sampleRate * .005);
             for (int ch = 0; ch < 2; ++ch) {
                 out[size_t(ch)] = read(cursor, ch);
-                if (loop && span - cursor < fade) {
+                if (loop && !tailOn && span - cursor < fade) {
                     float mix = float((span - cursor) / fade);
                     out[size_t(ch)] =
                         out[size_t(ch)] * mix + read(cursor - (span - fade), ch) * (1 - mix);
@@ -228,11 +309,14 @@ struct SamplerPlayer {
                     step = std::max(1, search / 24);
                 auto scoreAt = [&](int shift) {
                     double score = 0, a2 = 1e-12, b2 = 1e-12, candidate = cursor + shift;
-                    if (!loop && (candidate < 0 || candidate >= span))
+                    if ((!loop && !tailOn && candidate >= span) ||
+                        ((!loop || tailOn) && candidate < 0))
                         return -1e30;
                     for (int point = 0; point < 32; ++point) {
                         double delta = double(point) * hop / 32;
                         auto quick = [&](double o) {
+                            if (tailOn)
+                                return tailBounds.read(data, o, 0, 0, pitch);
                             double x = reverse ? last - 1 - o : first + o;
                             return resample(data, x, 0, 0, pitch, first, last, loop);
                         };
@@ -294,7 +378,7 @@ struct SamplerPlayer {
         ++elapsedSamples;
         cursor += data.sampleRate / sr /
                   (mode == 6 && elapsedSamples < kickAttack * .001 * sr ? 1 : stretch);
-        if (cursor >= span) {
+        if (cursor >= span && !tailOn) {
             if (loop)
                 cursor = std::fmod(cursor, span);
             else {

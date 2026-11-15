@@ -8,17 +8,18 @@ namespace logisth {
 // Single audio writer, GUI readers. Atomic cells also make ring wrap safe in C++.
 class ScopeBuffer {
     static constexpr int capacity = 8192;
-    using Cells = std::array<std::array<std::atomic<float>, capacity>, 3>;
+    using Cells = std::array<std::array<std::atomic<float>, capacity>, 4>;
     std::unique_ptr<Cells> cells = std::make_unique<Cells>();
     uint64_t writer = 0;
     std::atomic<uint64_t> published{0};
 
   public:
-    void push(float a, float b, float sum) {
+    void push(float a, float b, float sum, float c = 0) {
         size_t i = size_t(writer++ % capacity);
         (*cells)[0][i].store(a, std::memory_order_relaxed);
         (*cells)[1][i].store(b, std::memory_order_relaxed);
         (*cells)[2][i].store(sum, std::memory_order_relaxed);
+        (*cells)[3][i].store(c, std::memory_order_relaxed);
     }
     void commit() {
         published.store(writer, std::memory_order_release);
@@ -38,7 +39,7 @@ class ScopeBuffer {
             output[i] =
                 at < 0 || uint64_t(int64_t(end) - at) > available
                     ? 0
-                    : (*cells)[size_t(std::clamp(source, 0, 2))][size_t(at % capacity)].load(
+                    : (*cells)[size_t(std::clamp(source, 0, 3))][size_t(at % capacity)].load(
                           std::memory_order_relaxed);
         }
     }

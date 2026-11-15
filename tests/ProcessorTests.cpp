@@ -4,6 +4,7 @@
 #include "Features092Tests.h"
 #include "Features093Tests.h"
 #include "Features094Tests.h"
+#include "Features095Tests.h"
 #include "GainCalibration.h"
 #include "KickBenchmark.h"
 #include "PluginEditor.h"
@@ -980,6 +981,10 @@ int main(int argc, char **argv) {
             factorybank_test::search();
             return 0;
         }
+        if (argc > 1 && juce::String(argv[1]) == "--features095-check") {
+            features095_test::run();
+            return 0;
+        }
         if (argc > 1 && juce::String(argv[1]) == "--features094-check") {
             features094_test::run();
             return 0;
@@ -1023,6 +1028,7 @@ int main(int argc, char **argv) {
         features092_test::run();
         features093_test::run();
         features094_test::run();
+        features095_test::run();
         factorybank_test::run();
         factorybank_test::search();
         processor_phase_test::run();
@@ -1094,7 +1100,8 @@ int main(int argc, char **argv) {
         juce::AudioProcessor::copyXmlToBinary(*legacy.createXml(), saved);
         restored.setStateInformation(saved.getData(), int(saved.getSize()));
         check(restored.state.getRawParameterValue("misc1dest1")->load() ==
-                      int(logisth::Destination::Count) - 1 &&
+                      logisth::parameterSpecs[size_t(logisth::Param::misc1dest1)].high &&
+                  restored.state.getRawParameterValue("misc1dest1cx")->load() == 0 &&
                   restored.state.getRawParameterValue("p1cutoff")->load() == 20000,
               "state values are validated");
         for (int preset = 0; preset < 10; ++preset) {

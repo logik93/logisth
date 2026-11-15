@@ -5,34 +5,34 @@ Its initial size adapts to the monitor. Drag the lower-right corner to resize
 proportionally from 80% to 200%.
 
 SETTINGS opens in the central rack and offers Light, Midnight Blue, Cobalt,
-Graphite, Forest and AP always flexin'!, plus About. Menus, editors, keyboard and controls follow the
+Graphite, Forest, AP always flexin'! and four bokkenmmb themes, plus About. Menus, editors, keyboard and controls follow the
 palette. The selected appearance persists as a shared user preference; changing
 sounds keeps it and audio settings remain untouched. Midnight Blue is the default.
 Vector drawing and embedded Open Sans keep the design consistent across systems.
 
-- Top: factory/user presets and PATCH file menu, part A/B, Solo, Poly, Sync and Settings; below, two oscillators
+- Top: factory/user presets and PATCH file menu, part A/B/C, Solo, Poly, Sync and Settings; below, two oscillators
   and the selected part's amplitude envelope.
-- Left: the selected part's filter and shared Filter Control A+B.
+- Left: the selected part's filter and shared Filter Control A+B+C.
 - Centre: the arp and seven effects, selected by name, each with a separate enable square.
-- Right: A/B/L+R oscilloscope, Mix A/B, Main and stereo meters.
+- Right: A/B/C/L+R oscilloscope, Mix A/B/C, Main and stereo meters.
 - Bottom: two Mod Env, two LFO, four Misc sources, wheels, keyboard and glide.
 
 Each modulation block has two destinations and amounts. Destination menus use
-three grouped columns. Hover for tooltips and the bottom value readout.
+grouped columns with a compact Part C / A+B+C submenu. Hover for tooltips and the bottom value readout.
 Numeric values support units such as kHz, ms and percent. Sync displays musical
 divisions instead of free time/rate controls. Arp steps use 01–08 and 09–16 views.
 
-The current engine exposes 736 audio parameters. Tests check access, bounds, click
+The current engine exposes 954 audio parameters. Tests check access, bounds, click
 targets, view changes, bindings, scaling and independent theme persistence.
 See [the English user manual](MANUAL.md) for full operation.
 
 The oscillator header selects engine and only its relevant pages: VOICE/ENV for
-Classic, WAVETABLE for the table engine, SOURCE/PLAYBACK/STRETCH for Sampler, and GRAINS for
+Classic, WAVETABLE for the table engine, SOURCE/PLAYBACK/STRETCH/LOOP TAIL for Sampler, and GRAINS for
 Granular. MOTION/TIME are available only in the Granulizer model. File drops and
 IMPORT load audio into that slot. CHORDS is the ninth rack page. Pattern arp
 uses a seven-row drawing canvas with independent lane lengths, exact cell entry,
 playheads and two 16-step views; Legacy retains the original arp page. MIDI OUT
-is in the top header. Both themes use the same layout.
+is in the top header. All ten themes use the same layout.
 
 SAMPLE is the tenth rack page. For Sampler and Granular it shows the actual PCM
 waveform, live cursor and grain markers. For Wavetable it shows a perspective
@@ -58,7 +58,7 @@ imported PCM uses a 512 MiB aggregate memory budget.
 The comment box below the preset selector edits up to 4096 characters of preset
 metadata and is saved with both .logisth presets and DAW state. New instances
 select Init / saw with Main 65%; restoring an existing sound keeps its saved level.
-WT Pos / Start targets include individual A1/A2/B1/B2 plus A, B and A+B groups.
+WT Pos / Start targets include individual A1/A2/B1/B2/C1/C2 plus A, B, C, A+B and A+B+C groups.
 The ADSR curve uses actual attack/decay/release durations and a 0.5-second held
 segment; zero-length stages are vertical rather than forced to diagonal lines.
 
@@ -98,3 +98,9 @@ algorithms and Rate/Semitones for coupled playback modes.
 bringing the palette menu to ten entries. Existing editor text follows live font
 changes. Search also follows palette edits and closes on Settings/PATCH or Escape
 from its result list.
+
+0.9.5 adds Part C in the header: C1/C2, Amp Env C, Filter C, Mix C, Solo C and
+scope C. All players have the same four engines and source controls. LOOP TAIL
+adds independent IN/OUT/crossfade and Alt-drag handles below the sample waveform.
+DETUNE reaches 200 ct. Original parameter definitions are retained with appended
+additive detune and C-choice companions, combined into single editor controls.

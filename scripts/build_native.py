@@ -114,7 +114,7 @@ def main():
         record = json.loads(existing.read_text())
         fingerprint = source_fingerprint(source)
         name = record.get('archive', '')
-        expected_tests = 12 if args.platform.startswith('linux') else 10
+        expected_tests = 15 if args.platform.startswith('linux') else 13
         valid = (record.get('version') == version and record.get('platform') == args.platform
                  and record.get('source_fingerprint') == fingerprint
                  and record.get('tests', {}).get('passed', 0) >= expected_tests
@@ -147,7 +147,7 @@ def main():
     import xml.etree.ElementTree as ET
     tests = ET.parse(result_file).getroot()
     count = int(tests.attrib.get('tests', '0'))
-    if count < (12 if args.platform == 'linux-x86_64' else 10):
+    if count < (15 if args.platform == 'linux-x86_64' else 13):
         raise ValueError('Required tests did not execute')
     if any(int(tests.attrib.get(key, '0')) for key in ('failures', 'errors', 'skipped', 'disabled')):
         raise ValueError('Failed, skipped or disabled tests prevent packaging')
@@ -208,7 +208,7 @@ def main():
     metadata = json.dumps(info, indent=2) + '\n'
     (stage / 'BUILD_INFO.json').write_text(metadata)
     (output / f'build-info-{args.platform}.json').write_text(metadata)
-    for name in ['README.md', 'BUILD_STATUS.md', 'LICENSE', 'THIRD_PARTY_NOTICES.md', 'docs/IMPLEMENTATION.md', 'docs/STUDIO-0.5.md', 'docs/CALIBRATION.md', 'docs/ANTICLICK.md', 'docs/THEMES.md', 'docs/INTERFACE.md', 'docs/MANUAL.md', 'docs/ALGORITHM_AUDIT.json', 'docs/PROJECT_REVIEW.md', 'docs/REVIEW-v0.9.4.1.md', 'docs/FACTORY_PRESETS.md', f'docs/factory/after-{version}.csv', 'docs/logisth-Manual-English.pdf',
+    for name in ['README.md', 'BUILD_STATUS.md', 'LICENSE', 'THIRD_PARTY_NOTICES.md', 'docs/IMPLEMENTATION.md', 'docs/STUDIO-0.5.md', 'docs/CALIBRATION.md', 'docs/ANTICLICK.md', 'docs/THEMES.md', 'docs/INTERFACE.md', 'docs/MANUAL.md', 'docs/ALGORITHM_AUDIT.json', 'docs/PROJECT_REVIEW.md', f'docs/REVIEW-v{version}.md', 'docs/FACTORY_PRESETS.md', f'docs/factory/after-{version}.csv', 'docs/logisth-Manual-English.pdf',
                  'assets/fonts/LICENSE.txt', 'assets/fonts/NOTICE.txt']:
         if not (source / name).is_file():
             continue

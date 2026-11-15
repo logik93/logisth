@@ -1,4 +1,5 @@
 #pragma once
+#include "Topology.h"
 #include <algorithm>
 #include <array>
 #include <cmath>
@@ -67,6 +68,38 @@ enum class Destination {
     WidthA,
     WidthB,
     WidthAB,
+    VolumeC,
+    VolumeABC,
+    PitchC,
+    PitchABC,
+    PhaseC,
+    PhaseABC,
+    PanC,
+    PanABC,
+    CutoffC,
+    CutoffABC,
+    ResonanceC,
+    ResonanceABC,
+    MixC,
+    MixABC,
+    PositionC,
+    PositionABC,
+    GrainSizeC,
+    GrainSizeABC,
+    PositionC1,
+    PositionC2,
+    FmC1,
+    FmC2,
+    FmC,
+    FmABC,
+    AmC1,
+    AmC2,
+    AmC,
+    AmABC,
+    WidthC1,
+    WidthC2,
+    WidthC,
+    WidthABC,
     Count
 };
 enum class Source {
@@ -85,6 +118,7 @@ enum class Source {
     StepVelocity,
     Random,
     RandomBipolar,
+    AmpEnvC,
     Count
 };
 struct Route {
@@ -107,11 +141,58 @@ struct ModValues {
                 values[size_t(r.destination)] += source * r.amount * .1f;
     }
     float osc(Destination first, int slot) const {
-        return get(Destination(int(first) + slot)) + get(Destination(int(first) + 4 + slot / 2)) +
-               get(Destination(int(first) + 6));
+        const auto c = first == Destination::FmA1   ? Destination::FmC1
+                       : first == Destination::AmA1 ? Destination::AmC1
+                                                    : Destination::WidthC1;
+        if (slot < 4)
+            return get(Destination(int(first) + slot)) +
+                   get(Destination(int(first) + 4 + slot / 2)) + get(Destination(int(first) + 6)) +
+                   get(Destination(int(c) + 3));
+        return get(Destination(int(c) + slot - 4)) + get(Destination(int(c) + 2)) +
+               get(Destination(int(c) + 3));
+    }
+    float position(int slot) const {
+        return pair(Destination::PositionA, slot / 2) +
+               get(slot < 4 ? Destination(int(Destination::PositionA1) + slot)
+                            : Destination(int(Destination::PositionC1) + slot - 4));
     }
     float pair(Destination first, int part) const {
-        return get(Destination(int(first) + part)) + get(Destination(int(first) + 2));
+        Destination c = Destination::None;
+        switch (first) {
+        case Destination::VolumeA:
+            c = Destination::VolumeC;
+            break;
+        case Destination::PitchA:
+            c = Destination::PitchC;
+            break;
+        case Destination::PhaseA:
+            c = Destination::PhaseC;
+            break;
+        case Destination::PanA:
+            c = Destination::PanC;
+            break;
+        case Destination::CutoffA:
+            c = Destination::CutoffC;
+            break;
+        case Destination::ResonanceA:
+            c = Destination::ResonanceC;
+            break;
+        case Destination::MixA:
+            c = Destination::MixC;
+            break;
+        case Destination::PositionA:
+            c = Destination::PositionC;
+            break;
+        case Destination::GrainSizeA:
+            c = Destination::GrainSizeC;
+            break;
+        default:
+            return 0;
+        }
+        const float all = get(Destination(int(c) + 1));
+        return part < 2
+                   ? get(Destination(int(first) + part)) + get(Destination(int(first) + 2)) + all
+                   : get(c) + all;
     }
 };
 struct EnvelopeParams {

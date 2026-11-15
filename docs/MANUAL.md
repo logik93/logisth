@@ -1,6 +1,6 @@
-# logisth 0.9.4.1 — User Manual
+# logisth 0.9.5 — User Manual
 
-wavelogik logisth is a two-part polyphonic subtractive synthesizer for VST3, CLAP and standalone use.
+wavelogik logisth is a three-part polyphonic subtractive synthesizer for VST3, CLAP and standalone use.
 This manual describes logisth's controls, sound engines and preset workflow.
 
 ## Contents
@@ -59,7 +59,7 @@ listening to one part. The central rack changes its controls when you select a
 rack name. The small square beside each name independently enables that section.
 Selecting a rack page does not enable or disable its processing.
 
-The upper row contains the preset selector, previous/next preset buttons, A/B,
+The upper row contains the preset selector, previous/next preset buttons, A/B/C,
 SOLO, POLY, SYNC and SETTINGS. Filters are on the left, the rack in the centre, and
 the mixer on the right. Mod Env, LFO and Misc routing remain visible below them.
 The bottom row contains wheels, the keyboard and mono/portamento controls.
@@ -118,7 +118,7 @@ PHASE remains editable in Classic and Wavetable with RETRIG either off or on.
 
 ## 3. Oscillators and amplitude envelopes
 
-There are four oscillators: A1 and A2 feed source A; B1 and B2 feed source B.
+There are six oscillator players: A1/A2 feed source A, B1/B2 feed source B, and C1/C2 feed source C. Select A, B or C in the header to edit its two players, filter and amplitude envelope. C starts silent in Init and older presets; raise a C player Volume to add it.
 Each oscillator has a waveform menu, 0–8 unison voices, volume, octave, note,
 fine tuning, phase, detune, stereo width, pan, retrigger and invert.
 
@@ -129,7 +129,7 @@ fine tuning, phase, detune, stereo width, pan, retrigger and invert.
 | Volume | Sets its level before filtering and the part envelope. |
 | Octave / Note / Fine | Coarse octave, semitone and cent tuning. |
 | Phase / Retrig | Phase is a live 0–360-degree offset. Retrig gives fixed note starts; off keeps random starts while the Phase offset remains active. |
-| Detune | 0–100 cents of unison spread. At 100 ct the outer voices are one semitone below/above the note. With one voice, detune has no effect. |
+| Detune | 0–200 cents of unison spread. At 200 ct the outer voices are two semitones below/above the note. With one voice, detune has no effect. |
 | Stereo | Spreads unison voices across the stereo field. |
 | Pan | Positions the oscillator output left or right. |
 | Invert | Inverts oscillator polarity; it can affect cancellation when sources mix. |
@@ -149,7 +149,7 @@ phase modulation is added to the knob offset and retains its own modulation rate
 The amplitude envelope for each part has attack, decay, sustain and release.
 Attack rises from silence, decay approaches sustain, and release fades after
 note-off. Sustain is a level; the other three are times. The line above the
-faders illustrates the current envelope. Amp Env A and B remain independent.
+faders illustrates the current envelope. Amp Env A, B and C remain independent.
 Zero-time attack and decay enter sustain without emitting
 an extra peak sample. With A, D and S at zero, the note is silent. Amplitude
 envelopes use a short, approximately 1 ms anti-click smoothing window, so zero
@@ -164,15 +164,15 @@ There is no artificial minimum width added to these segments.
 
 ## 3.1 Four source engines
 
-Every oscillator slot A1/A2/B1/B2 has its own engine menu: Classic, Wavetable,
-Sampler or Granular. All four may use different engines and different audio files.
+Every oscillator slot A1/A2/B1/B2/C1/C2 has its own engine menu: Classic, Wavetable,
+Sampler or Granular. All six may use different engines and different audio files.
 The adjacent view menu shows only pages used by the selected engine. Classic
 has VOICE, ENV and MOD; Wavetable adds WAVETABLE, and Sampler adds SOURCE and
 PLAYBACK. All engines have MOD, with only the applicable controls. Granular
 also has GRAINS; only the Granulizer model exposes MOTION and TIME.
 VOICE holds the shared tuning, level, unison, stereo and pan controls. SOURCE
 holds the engine-specific controls; ENV holds that oscillator's optional ADSR.
-The central Amp Env A/B remains the final envelope for its part.
+The central Amp Env A/B/C remains the final envelope for its part.
 
 Classic offers Sine, Saw, Pulse, Triangle, White noise, Half pulse, Quarter pulse,
 Tri-saw, Pink noise, Brown noise, Organ and Folded sine. Pink and Brown have
@@ -180,7 +180,7 @@ progressively stronger low-frequency spectra. Organ adds octave harmonics;
 Folded sine applies sinusoidal waveshaping. Noise has no fixed periodic phase.
 
 MOD exposes FM INDEX (0–8 radians), FM RATIO, AM DEPTH and AM RATIO in each
-player. ROUTING selects the FM and AM modulator: internal Sine or A1/A2/B1/B2.
+player. ROUTING selects the FM and AM modulator: internal Sine or A1/A2/B1/B2/C1/C2.
 A selected player supplies its pre-level signal, so reducing its audible Volume
 to zero does not remove its modulation. Unison voices are averaged and modulation
 signals limited to ±1. Cross-player/self-feedback uses the preceding audio sample
@@ -197,7 +197,7 @@ Sampler/Granular warp 40 ms source-read windows. Noise uses variable-width gatin
 Width/Depth determines its strength, with pitched gates in free mode and clocked
 gates in synced mode. ROUTING / PWM SYNC selects musical divisions at host tempo.
 The base Width and both LFO route slots remain independently addressable for
-A1/A2/B1/B2, A, B and A+B. Live rings show the current value and recently observed
+A1/A2/B1/B2/C1/C2, A, B, C, A+B and A+B+C. Live rings show the current value and recently observed
 modulation range; SAMPLE shows actual player output or a warped table preview.
 Manual control changes retain short smoothing ramps. Strong warping adds harmonics
 and can increase aliasing; reduce depth or use a sinc interpolation mode for samples.
@@ -326,9 +326,9 @@ START sets the initial location; automation moves the active scanner. LOOP wraps
 over the sample to END; TIME HOLD keeps creating grains at the current location.
 
 Click an oscillator's waveform strip or select SAMPLE in the rack for the larger
-waveform view. Choose A1/A2/B1/B2. Drop a WAV/AIFF/FLAC onto the waveform or its
+waveform view. Choose A1/A2/B1/B2/C1/C2. Drop a WAV/AIFF/FLAC onto the waveform or its
 header to replace that selected slot. The slot selection is independent of the
-Part A/B editing tab. The existing frame-size choice is used. A Classic slot
+Part A/B/C editing tab. The existing frame-size choice is used. A Classic slot
 switches to Sampler after a successful import; Wavetable/Sampler/Granular retain
 their mode. An invalid file keeps the previous source and mode. While dragging,
 the waveform highlights the destination. Loading and waveform-peak generation
@@ -339,12 +339,12 @@ Shift-wheel pans. The display is a view of playback, not a sample editor.
 
 Enable OSC ENVELOPE in ENV to give a slot an additional attack, decay, sustain
 and release. A part's shared envelope still limits its final output. New
-WT Pos / Start A1/A2/B1/B2 targets individual players; A/B/A+B target groups.
-These destinations scan wavetable frames or sample locations. Grain size A/B/A+B
+WT Pos / Start A1/A2/B1/B2/C1/C2 targets individual players; A/B/C/A+B/A+B+C target groups.
+These destinations scan wavetable frames or sample locations. Grain size A/B/C/A+B/A+B+C
 scales grain duration. Position changes are smoothed.
 
 IMPORT accepts WAV, AIFF and FLAC at 8–96 kHz, without a fixed duration limit.
-The four imported sources share a 512 MiB decoded-stereo-PCM budget. Temporary
+The six imported sources share a 512 MiB decoded-stereo-PCM budget. Temporary
 decoding, wavetable, waveform-cache and state-saving buffers use additional RAM.
 Alternatively, drop one file onto an oscillator panel: a Classic slot switches
 to Sampler, while the other engine selections are retained. Import decoding and
@@ -355,10 +355,36 @@ recall: imported PCM data is compressed into the plug-in state, with a 1 GiB
 serialized-state limit. Save larger libraries separately; this is a single-sample
 source rather than a multisample instrument.
 
+### Loop Tail
+
+In Sampler, choose **LOOP TAIL** in that player's view menu. Enable LOOP TAIL,
+set TAIL IN and TAIL OUT within the main START/END selection, and adjust
+CROSSFADE (0–200 ms). Playback first traverses the complete main selection to
+END. It then repeats only the tail region while the note's amplitude envelope
+remains active. Note-off follows the usual release envelope. Reverse playback
+traverses the full selection backward, then repeats the marked tail backward.
+
+In SAMPLE, hold **Alt and drag** to mark the tail. Drag its lower IN/OUT handles
+to adjust it; ordinary dragging still edits the main START/END range. Wheel
+zoom and Shift-wheel pan remain available. Alt-right-click resets the tail to
+the main selection. The loop band and playhead show its real source positions.
+Each of the six players stores its own enable, points and crossfade in presets.
+
+Enabling LOOP TAIL in the editor turns off the earlier whole-selection LOOP.
+If both are enabled by host automation, LOOP TAIL takes priority. Turning it
+off resumes one-shot playback from the current source position. Crossfades are
+limited to a quarter of the tail's length so very short loops remain bounded;
+overlapping heads shorten each repeated cycle by the crossfade duration.
+Tail settings also work with sampler stretching and interpolation modes.
+
+![Loop Tail controls and independent region](images/logisth-loop-tail.png)
+
+![Part C players and shared mixer](images/logisth-part-c.png)
+
 ## 4. Filters and shared Filter Control
 
 Each part has an input selector, type, slope, cutoff, resonance and drive.
-Input A uses A1+A2, B uses B1+B2, A+B uses both, and None disconnects the input.
+Input A uses A1+A2, B uses B1+B2, and C uses C1+C2. A+B, A+C, B+C and A+B+C sum the named sources. None disconnects the input. Each of the three filters accepts all eight selections.
 Consequently, a part's filter can process the other oscillator source. Its output
 still passes through its own amplitude envelope and Mix level.
 
@@ -366,11 +392,11 @@ Choose low-pass, high-pass, band-pass or bypass. Slope selects 12 or 24 dB per
 octave. Cutoff is the local frequency. Resonance emphasises the cutoff region;
 high resonance can self-oscillate while a note is active. Drive adds saturation.
 
-The shared FILTER CONTROL affects both A and B while retaining their local
-settings. CUTOFF is an offset in semitones: +12 doubles both cutoff frequencies,
+The shared FILTER CONTROL affects A, B and C while retaining their local
+settings. CUTOFF is an offset in semitones: +12 doubles all three cutoff frequencies,
 -12 halves them. RESO adds a shared resonance offset. KEYTRACK ties cutoff to
 played pitch; at full tracking, an octave higher doubles cutoff. WARM changes
-the filter saturation characteristic. There is no third filter in this section.
+the filter saturation characteristic. Filter C has the same local controls as A and B.
 Modulation is combined with these settings before the effective cutoff is limited
 to a valid frequency for the current sample rate.
 
@@ -385,16 +411,16 @@ Choose a destination, then move its small amount knob away from zero. Amount
 ranges from -10 to +10; negative values reverse the modulation. None or amount
 zero makes a route inactive. Routes to the same destination are added together.
 The destination popup groups oscillators, filters and modulation/effects into
-three columns. The Source position / grains section contains WT Pos / Start
+several columns. New C and A+B+C routes are grouped in the **Part C / A+B+C** submenu. The Source position / grains section contains WT Pos / Start
 and grain-size destinations.
 
-Destinations include Volume, Pitch, Phase and Pan for A, B or A+B; Cutoff and
-Resonance for A, B or A+B; Mix A, B or A+B; Phaser Frequency; LFO 1/2 Rate and
+Destinations include Volume, Pitch, Phase and Pan for A, B, C, A+B or A+B+C; Cutoff and
+Resonance for A, B, C, A+B or A+B+C; Mix A, B, C, A+B or A+B+C; Phaser Frequency; LFO 1/2 Rate and
 Gain; Distortion Amount; WT Pos / Start; and Grain size. Modulating A+B affects
 both parts together.
 
 Misc sources include Velocity, Keytrack, Aftertouch, Mod Wheel, Pitch Wheel,
-Amp Env A/B, Mod Env 1/2, LFO 1/2, Step Velocity and random sources. Polyphonic
+Amp Env A/B/C, Mod Env 1/2, LFO 1/2, Step Velocity and random sources. Polyphonic
 pressure takes precedence over channel pressure for the affected note. Random
 values are generated at note-on. Step Velocity follows the active arp step and
 returns to zero after its gate ends.
@@ -406,10 +432,10 @@ Gain scales its output; Offset shifts it. The global fallback tempo is 120 BPM
 when no host tempo is available.
 
 To modulate wavetable position, set the oscillator to Wavetable and place WT POS
-near 50%. In LFO 1 or LFO 2 choose **WT Pos / Start A1**, **A2**, **B1**, **B2**,
-**A**, **B** or **A+B**, then raise
-its amount knob, for example to +5. Individual targets A1, A2, B1 and B2 affect
-only that player. A controls A1/A2, B controls B1/B2 and A+B controls all four.
+near 50%. In LFO 1 or LFO 2 choose **WT Pos / Start A1**, **A2**, **B1**, **B2**, **C1**, **C2**,
+**A**, **B**, **C**, **A+B** or **A+B+C**, then raise
+its amount knob, for example to +5. Individual targets A1, A2, B1, B2, C1 and C2 affect
+only that player. A controls A1/A2, B controls B1/B2, C controls C1/C2, A+B controls the original four, and A+B+C controls all six.
 Individual and grouped routes can be combined; their offsets add before the
 result is limited to the bank range. Both destination/amount pairs of either LFO support this route.
 Set LFO Gain above zero, then choose a waveform and a free Hz rate or synced
@@ -509,7 +535,7 @@ its shared gate. Legacy controls remain available in the Legacy view.
 
 Signal order is fixed: Distortion → Phaser → Chorus → EQ → Reverb → Delay →
 Compressor → Main. Click a name to edit it and use the adjacent square to bypass
-or enable it. All seven effects are global after the A/B mix.
+or enable it. All seven effects are global after the A/B/C mix.
 
 | Section | Controls and use |
 | --- | --- |
@@ -566,7 +592,7 @@ envelope times use seconds internally. The panel displays suitable units.
 
 ## 8. Mixer and performance
 
-The mixer scope has A, B and L+R source buttons. A/B show each part's stereo
+The mixer provides A, B, C and Main level faders. Its scope has A, B, C and L+R source buttons. A/B/C show each part's stereo
 sum after its filter, amplitude envelope and Mix level, before shared effects
 and Solo, scaled by MAIN. L+R shows the actual final left-plus-right output,
 after effects, MAIN and MIDI ONLY. It is a sum, not an average. The scope uses
@@ -658,7 +684,7 @@ library; it does not relocate files. Load file can open a preset from elsewhere.
 Save/load run on a worker, with completion/errors in the footer. Wait for the
 completion message before closing the instance or moving a newly saved file.
 
-Presets contain all 712 audio parameters, routing, compressed audio for all four
+Presets contain all 954 audio parameters, routing, compressed audio for all six
 slots, WAV regions, chord mappings, twelve named patterns, the preset comment and
 scope selection. Theme and editor size are separate user preferences and are
 retained when sounds change. The original sample files are unnecessary on recall. Saving uses a
@@ -666,15 +692,27 @@ temporary file and atomic replacement. Invalid files leave the current patch
 intact. State/preset files are limited to 1 GiB. These are logisth's own files;
 renaming another format to .logisth does not convert it.
 
-All 736 parameters are available for host automation. The first 514 parameter
+All 954 parameters are available for host automation. The first 514 parameter
 IDs and order from 0.4 are retained. Granulizer and global MIDI-only controls
-follow them; the former Graphs parameter block is removed. A/B views, rack pages,
+follow them; the former Graphs parameter block is removed. A/B/C views, rack pages,
 theme and scope source do not change the patch's audio settings. DAW state
 contains the same embedded material and pattern data as a user preset. Restoring
 older states automatically selects the corresponding earlier granular/arp engines.
-Destination menus now contain 59 entries, including individual and grouped
-WT position, FM index, AM depth and pulse-width targets. Numeric destination IDs are retained, but normalized
-host automation may need review after a destination-list expansion.
+Destination menus include individual and grouped WT position, FM index, AM depth
+and pulse-width targets for all six players. A+B still means A and B only;
+A+B+C includes C. C is also available as a Misc amplitude-envelope source,
+an FM/AM modulator, a solo source and a macro target.
+
+Version 0.9.5 preserves all 736 parameter IDs, indices, ranges, defaults and
+choice lists from 0.9.4.1. New C choices use appended companion parameters with
+an ID ending in **cx**. Original chooses the saved base choice; a C extension
+overrides it. The editor combines both into one menu. For host automation of a
+new C option, automate its companion; set that companion to Original when
+returning to an older choice. Each main DETUNE knob combines the original
+0–100 ct parameter with a new **detuneextra** parameter (0–100 ct). Values up
+to 100 ct use the base only; 100–200 ct use base 100 plus the extra amount.
+Existing normalized automation retains its original cents and choices. Older
+states default to silent C players, tail loops off and zero extra detune.
 
 Presets use the native .logisth format. Legacy prototype states
 receive a best-effort migration of filter and modulation settings; changes to
@@ -724,7 +762,7 @@ No modulation: check the source is active, destination is not None, and amount
 is nonzero. The mod wheel needs an assigned route. A source can be zero during
 part of a note; Step Velocity needs an active arp gate.
 
-Missing control: A/B selects the part, a rack name selects effect controls, and
+Missing control: A/B/C selects the part, a rack name selects effect controls, and
 SYNC/FREE selects time versus rhythmic controls. PHASE works independently of RETRIG in Classic and Wavetable.
 The second group of arp steps is under 09–16.
 

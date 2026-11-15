@@ -24,6 +24,7 @@ struct OscParams {
     bool pwmSync = false;
     float kickAttack = 25;
     StretchControls stretchControls;
+    TailLoopSettings tail;
     const SourceData *data = nullptr;
     GranularParams gran;
 };
@@ -34,8 +35,8 @@ struct PartParams {
 };
 struct Params {
     SpectralBank *spectralBank = nullptr;
-    std::array<OscParams, 4> osc{};
-    std::array<PartParams, 2> part{};
+    std::array<OscParams, playerCount> osc{};
+    std::array<PartParams, partCount> part{};
     std::array<EnvelopeParams, 2> envelopes{};
     std::array<Routes, 2> envelopeRoutes{};
     std::array<LfoParams, 2> lfo{};
@@ -47,7 +48,8 @@ struct Params {
     Params() {
         osc[1].level = .3f;
         osc[1].semitone = -12;
-        osc[2].level = osc[3].level = 0;
+        osc[2].level = osc[3].level = osc[4].level = osc[5].level = 0;
+        part[2].input = 4;
         part[1].input = 1;
         for (auto &e : envelopes)
             e = {0, 0, 0, 0};
@@ -83,30 +85,31 @@ class Engine {
         bool held = false, sustained = false;
         uint64_t age = 0;
         float velocity = 0, pressure = -1, random = 0, pitch = 60, glideStep = 0;
-        std::array<std::array<double, 8>, 4> phases{};
-        std::array<double, 4> phaseOffset{};
-        std::array<std::array<double, 8>, 4> fmPhase{}, amPhase{};
-        std::array<double, 4> pwmPhase{};
-        std::array<float, 4> modulationSignal{};
-        std::array<std::array<float, 7>, 4> oscillatorControls{};
+        std::array<std::array<double, 8>, playerCount> phases{};
+        std::array<double, playerCount> phaseOffset{};
+        std::array<std::array<double, 8>, playerCount> fmPhase{}, amPhase{};
+        std::array<double, playerCount> pwmPhase{};
+        std::array<float, playerCount> modulationSignal{};
+        std::array<std::array<float, 7>, playerCount> oscillatorControls{};
         struct NoiseState {
             std::array<float, 7> pink{};
             float brown = 0;
         };
-        std::array<std::array<NoiseState, 8>, 4> noiseState{};
-        std::array<AudioEnvelope, 2> amp;
+        std::array<std::array<NoiseState, 8>, playerCount> noiseState{};
+        std::array<AudioEnvelope, partCount> amp;
         std::array<Envelope, 2> env;
-        std::array<AudioEnvelope, 4> sourceEnv;
-        std::array<float, 4> sourcePosition{};
-        std::array<int, 4> sourceModes{-1, -1, -1, -1};
-        std::array<std::array<SourcePlayback, 8>, 4> playback{};
-        std::array<std::array<GranulizerPlayback, 8>, 4> granular{};
-        std::array<std::array<std::array<Filter, 2>, 2>, 2> filters{};
-        std::array<float, 2> cutoff{5000, 5000};
+        std::array<AudioEnvelope, playerCount> sourceEnv;
+        std::array<float, playerCount> sourcePosition{};
+        std::array<int, playerCount> sourceModes{-1, -1, -1, -1, -1, -1};
+        std::array<std::array<SourcePlayback, 8>, playerCount> playback{};
+        std::array<std::array<GranulizerPlayback, 8>, playerCount> granular{};
+        std::array<std::array<std::array<Filter, 2>, 2>, partCount> filters{};
+        std::array<float, partCount> cutoff{5000, 5000, 5000};
         std::array<LfoState, 2> lfo{};
         ModValues previous{};
+        bool cEnabled = false;
         bool active() const {
-            return amp[0].active() || amp[1].active();
+            return amp[0].active() || amp[1].active() || (cEnabled && amp[2].active());
         }
     };
     static_assert(std::is_trivially_copyable_v<Voice>,
@@ -118,7 +121,7 @@ class Engine {
         // even for placement construction. Copy an already prepared heap object.
         std::memcpy(&voice, initialVoice.get(), sizeof(Voice));
     }
-    std::array<PlaybackPicture, 4> pictures{};
+    std::array<PlaybackPicture, playerCount> pictures{};
     std::array<float, 16> bend{}, wheel{}, pressure{};
     std::array<bool, 16> sustain{};
     struct Key {
@@ -193,14 +196,35 @@ class Engine {
             return float((2 * t - 1 + 1 - 4 * std::abs(t - .5)) * .5 - blep(t, dt) * .5);
         }
     }
+    static bool wantsPartC(const Params &p) {
+        if (p.part[2].input != 4 && p.part[2].input != 3 && p.part[2].level > 0)
+            return true;
+        if ((p.osc[4].unison > 0 && p.osc[4].level > 0) ||
+            (p.osc[5].unison > 0 && p.osc[5].level > 0))
+            return true;
+        auto routed = [](const Routes &routes) {
+            for (const auto &route : routes)
+                if (route.amount != 0 && (route.destination == Destination::VolumeC ||
+                                          route.destination == Destination::VolumeABC))
+                    return true;
+            return false;
+        };
+        for (const auto &misc : p.misc)
+            if (misc.source == Source::AmpEnvC || routed(misc.routes))
+                return true;
+        for (int i = 0; i < 2; ++i)
+            if (routed(p.envelopeRoutes[i]) || routed(p.lfo[i].routes))
+                return true;
+        return false;
+    }
     void releaseVoice(Voice &v, const Params &p) {
         v.held = v.sustained = false;
-        for (int i = 0; i < 4; ++i)
+        for (int i = 0; i < playerCount; ++i)
             v.sourceEnv[size_t(i)].releaseNote(p.osc[size_t(i)].envelope.release, sr);
-        for (int i = 0; i < 2; ++i) {
+        for (int i = 0; i < partCount; ++i)
             v.amp[i].releaseNote(p.part[i].amp.release, sr);
+        for (int i = 0; i < 2; ++i)
             v.env[i].releaseNote(p.envelopes[i].release, sr);
-        }
     }
     float tickLfo(LfoState &state, const LfoParams &lp, const Params &p, float rateMod,
                   float gainMod) {
@@ -217,7 +241,7 @@ class Engine {
         }
         return result;
     }
-    static float sourceValue(Source s, const Voice &v, const std::array<float, 2> &amps,
+    static float sourceValue(Source s, const Voice &v, const std::array<float, partCount> &amps,
                              const std::array<float, 2> &envs, const std::array<float, 2> &lfos,
                              float aftertouch, float modwheel, float pitchwheel, float step) {
         switch (s) {
@@ -237,6 +261,8 @@ class Engine {
             return amps[0];
         case Source::AmpEnvB:
             return amps[1];
+        case Source::AmpEnvC:
+            return amps[2];
         case Source::ModEnv1:
             return envs[0];
         case Source::ModEnv2:
@@ -353,7 +379,10 @@ class Engine {
             if (p.lfo[i].free)
                 v.lfo[i] = freeLfo[i];
         }
-        for (size_t o = 0; o < 4; ++o) {
+        v.amp[2].on();
+        v.cutoff[2] = p.part[2].cutoff;
+        v.cEnabled = wantsPartC(p);
+        for (size_t o = 0; o < playerCount; ++o) {
             v.oscillatorControls[o] = {p.osc[o].fmDepth, p.osc[o].fmRatio,    p.osc[o].amDepth,
                                        p.osc[o].amRatio, p.osc[o].pulseWidth, p.osc[o].pwmDepth,
                                        p.osc[o].pwmRate};
@@ -361,8 +390,16 @@ class Engine {
             v.sourcePosition[o] = p.osc[o].position;
             v.phaseOffset[o] = double(p.osc[o].phase) / 360.;
             v.phaseOffset[o] -= std::floor(v.phaseOffset[o]);
-            for (auto &phase : v.phases[o])
-                phase = p.osc[o].retrigger ? 0 : (noise() + 1) * .5;
+            for (size_t u = 0; u < v.phases[o].size(); ++u) {
+                // C has an independent seed so adding a silent part never advances A/B's RNG.
+                uint32_t seed = uint32_t(v.age * 747796405u + o * 2891336453u + u * 277803737u);
+                seed ^= seed >> 16;
+                seed *= 2246822519u;
+                seed ^= seed >> 13;
+                v.phases[o][u] = p.osc[o].retrigger ? 0
+                                 : o < 4            ? (noise() + 1) * .5
+                                                    : double(seed) / 4294967296.;
+            }
         }
     }
     void noteOff(int note, int channel, const Params &p) {
@@ -450,8 +487,9 @@ class Engine {
     }
     void render(float *left, float *right, int count, const Params &p, float *distortion = nullptr,
                 float *phaser = nullptr, float *partA = nullptr, float *partB = nullptr,
-                const std::array<float *, 4> &oscScopes = {}) {
-        std::array<bool, 4> needed{};
+                const std::array<float *, playerCount> &oscScopes = {}, float *partC = nullptr) {
+        std::array<bool, playerCount> needed{};
+        const bool cWanted = wantsPartC(p);
         for (const auto &o : p.osc) {
             if (o.fmSource > 0)
                 needed[size_t(o.fmSource - 1)] = true;
@@ -459,7 +497,7 @@ class Engine {
                 needed[size_t(o.amSource - 1)] = true;
         }
         pictures = {};
-        std::array<uint64_t, 4> pictureAges{};
+        std::array<uint64_t, playerCount> pictureAges{};
         const float smoothing = float(1 - std::exp(-1 / (.01 * sr)));
         const double phaseSmoothing = 1 - std::exp(-1 / (.005 * sr));
         const int limit = p.monoLegato ? 1 : std::clamp(p.polyphony, 1, 16);
@@ -467,14 +505,16 @@ class Engine {
             clearVoice(voices[i]);
         for (int s = 0; s < count; ++s) {
             float out[2]{};
-            float parts[2]{};
-            std::array<float, 4> traces{};
+            float parts[partCount]{};
+            std::array<float, playerCount> traces{};
 
             float fxDrive = 0, fxPhaser = 0;
             uint64_t fxAge = 0;
             for (int i = 0; i < 2; ++i)
                 tickLfo(freeLfo[i], p.lfo[i], p, 0, 0);
             for (auto &v : voices) {
+                if (cWanted && v.note >= 0 && (v.held || v.sustained))
+                    v.cEnabled = true;
                 if (!v.active())
                     continue;
                 if (p.portamento > 0) {
@@ -482,7 +522,8 @@ class Engine {
                     v.pitch += clamp(float(v.note) - v.pitch, -step, step);
                 } else
                     v.pitch = float(v.note);
-                std::array<float, 2> amps{}, envs{}, lfos{};
+                std::array<float, partCount> amps{};
+                std::array<float, 2> envs{}, lfos{};
                 for (int i = 0; i < 2; ++i) {
                     amps[i] = v.amp[i].tick(p.part[i].amp, sr);
                     envs[i] = v.env[i].tick(p.envelopes[i], sr);
@@ -491,6 +532,7 @@ class Engine {
                     // Feedback destinations use the preceding sample, avoiding an algebraic loop.
                     lfos[i] = tickLfo(v.lfo[i], p.lfo[i], p, v.previous.get(r), v.previous.get(g));
                 }
+                amps[2] = v.amp[2].tick(p.part[2].amp, sr);
                 ModValues mods;
                 for (int i = 0; i < 2; ++i) {
                     mods.add(p.envelopeRoutes[i], envs[i]);
@@ -509,10 +551,10 @@ class Engine {
                     fxDrive = mods.get(Destination::DistortionAmount);
                     fxPhaser = mods.get(Destination::PhaserFrequency);
                 }
-                float oscillators[2][2]{};
+                float oscillators[partCount][2]{};
                 const auto previousSignals = v.modulationSignal;
                 v.modulationSignal = {};
-                for (int osc = 0; osc < 4; ++osc) {
+                for (int osc = 0; osc < playerCount; ++osc) {
                     const int part = osc / 2;
                     const auto &op = p.osc[size_t(osc)];
                     // PHASE is a live cyclic offset, independent of the note-start
@@ -551,10 +593,7 @@ class Engine {
                         continue;
                     const float pitch = bend[size_t(v.channel - 1)] * p.bendRange +
                                         mods.pair(Destination::PitchA, part) * 48;
-                    float targetPosition =
-                        clamp(op.position + mods.pair(Destination::PositionA, part) +
-                                  mods.get(Destination(int(Destination::PositionA1) + osc)),
-                              0, 1);
+                    float targetPosition = clamp(op.position + mods.position(osc), 0, 1);
                     auto &position = v.sourcePosition[size_t(osc)];
                     position += smoothing * (targetPosition - position);
                     float fm = clamp(control[0] + mods.osc(Destination::FmA1, osc) * 8, 0, 8);
@@ -655,7 +694,7 @@ class Engine {
                                             : 0,
                                         op.stretchMode, op.stretch, op.interpolation, duty,
                                         samplePhase, op.kickAttack, op.gran.trimStart,
-                                        op.stretchControls);
+                                        op.stretchControls, op.tail);
                                 }
                             }
                         }
@@ -716,7 +755,9 @@ class Engine {
                 }
                 for (auto &x : v.modulationSignal)
                     x = std::clamp(x, -1.f, 1.f);
-                for (int part = 0; part < 2; ++part) {
+                for (int part = 0; part < partCount; ++part) {
+                    if (part == 2 && !v.cEnabled)
+                        continue;
                     const auto &pp = p.part[size_t(part)];
                     const float key = (v.note - 60) * p.keytrack;
                     const float cutoff =
@@ -728,10 +769,12 @@ class Engine {
                                             0, 1);
                     const float mix = clamp(pp.level + mods.pair(Destination::MixA, part), 0, 2);
                     for (int ch = 0; ch < 2; ++ch) {
-                        float input = pp.input == 0   ? oscillators[0][ch]
-                                      : pp.input == 1 ? oscillators[1][ch]
-                                      : pp.input == 2 ? oscillators[0][ch] + oscillators[1][ch]
-                                                      : 0;
+                        const int masks[]{1, 2, 3, 0, 4, 5, 6, 7};
+                        const int mask = masks[std::clamp(pp.input, 0, 7)];
+                        float input = 0;
+                        for (int bus = 0; bus < partCount; ++bus)
+                            if (mask & (1 << bus))
+                                input += oscillators[bus][ch];
                         if (pp.filterType != 3) {
                             input = v.filters[part][ch][0].tick(input, v.cutoff[part], res,
                                                                 pp.filterType, sr, pp.drive,
@@ -748,7 +791,7 @@ class Engine {
                     }
                 }
             }
-            for (int osc = 0; osc < 4; ++osc)
+            for (int osc = 0; osc < playerCount; ++osc)
                 if (oscScopes[size_t(osc)])
                     oscScopes[size_t(osc)][s] = traces[size_t(osc)];
             left[s] = out[0] * engineOutputCalibration;
@@ -757,13 +800,15 @@ class Engine {
                 partA[s] = parts[0] * engineOutputCalibration;
             if (partB)
                 partB[s] = parts[1] * engineOutputCalibration;
+            if (partC)
+                partC[s] = parts[2] * engineOutputCalibration;
             if (distortion)
                 distortion[s] = fxDrive;
             if (phaser)
                 phaser[s] = fxPhaser;
         }
     }
-    const std::array<PlaybackPicture, 4> &playbackPictures() const {
+    const std::array<PlaybackPicture, playerCount> &playbackPictures() const {
         return pictures;
     }
     static float effectiveCutoff(float local, float global, float modulation, float key,

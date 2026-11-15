@@ -220,8 +220,15 @@ inline void preview(const File &folder) {
         write("theme-" + String(theme), editor->snapshotTheme(theme));
     for (int type = 0; type < 5; ++type)
         write("reverb-" + String(type), editor->snapshotPage(14 + type));
-    for (int page = 19; page <= 28; ++page)
+    for (int page = 19; page <= 30; ++page)
         write("feature-" + String(page), editor->snapshotPage(page));
+    for (auto pair : {std::pair<const char *, float>{"o1tailon", 1},
+                      {"o1tailstart", .45f},
+                      {"o1tailend", .9f}}) {
+        auto *parameter = p.state.getParameter(pair.first);
+        parameter->setValueNotifyingHost(parameter->convertTo0to1(pair.second));
+    }
+    write("feature-29", editor->snapshotPage(29));
     editor->snapshotPage(23);
     editor->setTheme(5);
     write("ap-morph", ui->createComponentSnapshot(ui->getLocalBounds()));
