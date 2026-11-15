@@ -959,6 +959,106 @@ enum class Param : size_t {
     m4target2cx,
     m4target3cx,
     m4target4cx,
+    // 0.9.6 additions retain the complete 0.9.5 host contract.
+    o1detunewide,
+    o1blend,
+    o2detunewide,
+    o2blend,
+    o3detunewide,
+    o3blend,
+    o4detunewide,
+    o4blend,
+    o5detunewide,
+    o5blend,
+    o6detunewide,
+    o6blend,
+    env1dest1cx2,
+    env1dest2cx2,
+    env2dest1cx2,
+    env2dest2cx2,
+    lfo1dest1cx2,
+    lfo1dest2cx2,
+    lfo2dest1cx2,
+    lfo2dest2cx2,
+    misc1dest1cx2,
+    misc1dest2cx2,
+    misc2dest1cx2,
+    misc2dest2cx2,
+    misc3dest1cx2,
+    misc3dest2cx2,
+    misc4dest1cx2,
+    misc4dest2cx2,
+    fixedvelocity,
+    eqb0type,
+    eqb0freq,
+    eqb0q,
+    eqb0on,
+    eqb1type,
+    eqb1freq,
+    eqb1q,
+    eqb1on,
+    eqb2type,
+    eqb2freq,
+    eqb2q,
+    eqb2on,
+    eqb3type,
+    eqb3freq,
+    eqb3q,
+    eqb3on,
+    eqb4type,
+    eqb4freq,
+    eqb4q,
+    eqb4on,
+    eqb5type,
+    eqb5freq,
+    eqb5q,
+    eqb5on,
+    eqb6type,
+    eqb6freq,
+    eqb6q,
+    eqb6on,
+    eqb7type,
+    eqb7freq,
+    eqb7q,
+    eqb7on,
+    eqb8type,
+    eqb8freq,
+    eqb8q,
+    eqb8on,
+    eqb9type,
+    eqb9freq,
+    eqb9q,
+    eqb9on,
+    eqb10type,
+    eqb10freq,
+    eqb10q,
+    eqb10on,
+    eqband10,
+    eqb11type,
+    eqb11freq,
+    eqb11q,
+    eqb11on,
+    eqband11,
+    eqb12type,
+    eqb12freq,
+    eqb12q,
+    eqb12on,
+    eqband12,
+    eqb13type,
+    eqb13freq,
+    eqb13q,
+    eqb13on,
+    eqband13,
+    eqb14type,
+    eqb14freq,
+    eqb14q,
+    eqb14on,
+    eqband14,
+    eqb15type,
+    eqb15freq,
+    eqb15q,
+    eqb15on,
+    eqband15,
     Count
 };
 constexpr size_t parameterCount = size_t(Param::Count);
@@ -2431,6 +2531,210 @@ inline const std::array<ParameterSpec, parameterCount> parameterSpecs{{
      "Original|WT Pos / Start C1|WT Pos / Start C2|Pulse width C1|Pulse width C2|FM C1|FM C2|AM "
      "C1|AM C2|Time factor C1|Time factor C2|Cutoff C|Resonance C|Mix C",
      false},
+    {"o1detunewide", "Wide detune / cents", 0, "OSC A1", 0.0f, 200.0f, 0.0f, 1.0f, "", false},
+    {"o1blend", "Unison blend", 0, "OSC A1", 0.0f, 1.0f, 1.0f, 1.0f, "", false},
+    {"o2detunewide", "Wide detune / cents", 0, "OSC A2", 0.0f, 200.0f, 0.0f, 1.0f, "", false},
+    {"o2blend", "Unison blend", 0, "OSC A2", 0.0f, 1.0f, 1.0f, 1.0f, "", false},
+    {"o3detunewide", "Wide detune / cents", 0, "OSC B1", 0.0f, 200.0f, 0.0f, 1.0f, "", false},
+    {"o3blend", "Unison blend", 0, "OSC B1", 0.0f, 1.0f, 1.0f, 1.0f, "", false},
+    {"o4detunewide", "Wide detune / cents", 0, "OSC B2", 0.0f, 200.0f, 0.0f, 1.0f, "", false},
+    {"o4blend", "Unison blend", 0, "OSC B2", 0.0f, 1.0f, 1.0f, 1.0f, "", false},
+    {"o5detunewide", "Wide detune / cents", 0, "OSC C1", 0.0f, 200.0f, 0.0f, 1.0f, "", false},
+    {"o5blend", "Unison blend", 0, "OSC C1", 0.0f, 1.0f, 1.0f, 1.0f, "", false},
+    {"o6detunewide", "Wide detune / cents", 0, "OSC C2", 0.0f, 200.0f, 0.0f, 1.0f, "", false},
+    {"o6blend", "Unison blend", 0, "OSC C2", 0.0f, 1.0f, 1.0f, 1.0f, "", false},
+    {"env1dest1cx2", "Destination 1 / paired C extension", 1, "MOD ENV 1", 0.0f, 24.0f, 0.0f, 1.0f,
+     "Original|Volume A+C|Volume B+C|Pitch A+C|Pitch B+C|Phase A+C|Phase B+C|Pan A+C|Pan "
+     "B+C|Cutoff A+C|Cutoff B+C|Resonance A+C|Resonance B+C|Mix A+C|Mix B+C|WT Pos / Start A+C|WT "
+     "Pos / Start B+C|Grain size A+C|Grain size B+C|FM index A+C|FM index B+C|AM depth A+C|AM "
+     "depth B+C|Pulse width A+C|Pulse width B+C",
+     false},
+    {"env1dest2cx2", "Destination 2 / paired C extension", 1, "MOD ENV 1", 0.0f, 24.0f, 0.0f, 1.0f,
+     "Original|Volume A+C|Volume B+C|Pitch A+C|Pitch B+C|Phase A+C|Phase B+C|Pan A+C|Pan "
+     "B+C|Cutoff A+C|Cutoff B+C|Resonance A+C|Resonance B+C|Mix A+C|Mix B+C|WT Pos / Start A+C|WT "
+     "Pos / Start B+C|Grain size A+C|Grain size B+C|FM index A+C|FM index B+C|AM depth A+C|AM "
+     "depth B+C|Pulse width A+C|Pulse width B+C",
+     false},
+    {"env2dest1cx2", "Destination 1 / paired C extension", 1, "MOD ENV 2", 0.0f, 24.0f, 0.0f, 1.0f,
+     "Original|Volume A+C|Volume B+C|Pitch A+C|Pitch B+C|Phase A+C|Phase B+C|Pan A+C|Pan "
+     "B+C|Cutoff A+C|Cutoff B+C|Resonance A+C|Resonance B+C|Mix A+C|Mix B+C|WT Pos / Start A+C|WT "
+     "Pos / Start B+C|Grain size A+C|Grain size B+C|FM index A+C|FM index B+C|AM depth A+C|AM "
+     "depth B+C|Pulse width A+C|Pulse width B+C",
+     false},
+    {"env2dest2cx2", "Destination 2 / paired C extension", 1, "MOD ENV 2", 0.0f, 24.0f, 0.0f, 1.0f,
+     "Original|Volume A+C|Volume B+C|Pitch A+C|Pitch B+C|Phase A+C|Phase B+C|Pan A+C|Pan "
+     "B+C|Cutoff A+C|Cutoff B+C|Resonance A+C|Resonance B+C|Mix A+C|Mix B+C|WT Pos / Start A+C|WT "
+     "Pos / Start B+C|Grain size A+C|Grain size B+C|FM index A+C|FM index B+C|AM depth A+C|AM "
+     "depth B+C|Pulse width A+C|Pulse width B+C",
+     false},
+    {"lfo1dest1cx2", "Destination 1 / paired C extension", 1, "LFO 1", 0.0f, 24.0f, 0.0f, 1.0f,
+     "Original|Volume A+C|Volume B+C|Pitch A+C|Pitch B+C|Phase A+C|Phase B+C|Pan A+C|Pan "
+     "B+C|Cutoff A+C|Cutoff B+C|Resonance A+C|Resonance B+C|Mix A+C|Mix B+C|WT Pos / Start A+C|WT "
+     "Pos / Start B+C|Grain size A+C|Grain size B+C|FM index A+C|FM index B+C|AM depth A+C|AM "
+     "depth B+C|Pulse width A+C|Pulse width B+C",
+     false},
+    {"lfo1dest2cx2", "Destination 2 / paired C extension", 1, "LFO 1", 0.0f, 24.0f, 0.0f, 1.0f,
+     "Original|Volume A+C|Volume B+C|Pitch A+C|Pitch B+C|Phase A+C|Phase B+C|Pan A+C|Pan "
+     "B+C|Cutoff A+C|Cutoff B+C|Resonance A+C|Resonance B+C|Mix A+C|Mix B+C|WT Pos / Start A+C|WT "
+     "Pos / Start B+C|Grain size A+C|Grain size B+C|FM index A+C|FM index B+C|AM depth A+C|AM "
+     "depth B+C|Pulse width A+C|Pulse width B+C",
+     false},
+    {"lfo2dest1cx2", "Destination 1 / paired C extension", 1, "LFO 2", 0.0f, 24.0f, 0.0f, 1.0f,
+     "Original|Volume A+C|Volume B+C|Pitch A+C|Pitch B+C|Phase A+C|Phase B+C|Pan A+C|Pan "
+     "B+C|Cutoff A+C|Cutoff B+C|Resonance A+C|Resonance B+C|Mix A+C|Mix B+C|WT Pos / Start A+C|WT "
+     "Pos / Start B+C|Grain size A+C|Grain size B+C|FM index A+C|FM index B+C|AM depth A+C|AM "
+     "depth B+C|Pulse width A+C|Pulse width B+C",
+     false},
+    {"lfo2dest2cx2", "Destination 2 / paired C extension", 1, "LFO 2", 0.0f, 24.0f, 0.0f, 1.0f,
+     "Original|Volume A+C|Volume B+C|Pitch A+C|Pitch B+C|Phase A+C|Phase B+C|Pan A+C|Pan "
+     "B+C|Cutoff A+C|Cutoff B+C|Resonance A+C|Resonance B+C|Mix A+C|Mix B+C|WT Pos / Start A+C|WT "
+     "Pos / Start B+C|Grain size A+C|Grain size B+C|FM index A+C|FM index B+C|AM depth A+C|AM "
+     "depth B+C|Pulse width A+C|Pulse width B+C",
+     false},
+    {"misc1dest1cx2", "Destination 1 / paired C extension", 1, "MISC 1 / SOURCE 1", 0.0f, 24.0f,
+     0.0f, 1.0f,
+     "Original|Volume A+C|Volume B+C|Pitch A+C|Pitch B+C|Phase A+C|Phase B+C|Pan A+C|Pan "
+     "B+C|Cutoff A+C|Cutoff B+C|Resonance A+C|Resonance B+C|Mix A+C|Mix B+C|WT Pos / Start A+C|WT "
+     "Pos / Start B+C|Grain size A+C|Grain size B+C|FM index A+C|FM index B+C|AM depth A+C|AM "
+     "depth B+C|Pulse width A+C|Pulse width B+C",
+     false},
+    {"misc1dest2cx2", "Destination 2 / paired C extension", 1, "MISC 1 / SOURCE 1", 0.0f, 24.0f,
+     0.0f, 1.0f,
+     "Original|Volume A+C|Volume B+C|Pitch A+C|Pitch B+C|Phase A+C|Phase B+C|Pan A+C|Pan "
+     "B+C|Cutoff A+C|Cutoff B+C|Resonance A+C|Resonance B+C|Mix A+C|Mix B+C|WT Pos / Start A+C|WT "
+     "Pos / Start B+C|Grain size A+C|Grain size B+C|FM index A+C|FM index B+C|AM depth A+C|AM "
+     "depth B+C|Pulse width A+C|Pulse width B+C",
+     false},
+    {"misc2dest1cx2", "Destination 1 / paired C extension", 1, "MISC 1 / SOURCE 2", 0.0f, 24.0f,
+     0.0f, 1.0f,
+     "Original|Volume A+C|Volume B+C|Pitch A+C|Pitch B+C|Phase A+C|Phase B+C|Pan A+C|Pan "
+     "B+C|Cutoff A+C|Cutoff B+C|Resonance A+C|Resonance B+C|Mix A+C|Mix B+C|WT Pos / Start A+C|WT "
+     "Pos / Start B+C|Grain size A+C|Grain size B+C|FM index A+C|FM index B+C|AM depth A+C|AM "
+     "depth B+C|Pulse width A+C|Pulse width B+C",
+     false},
+    {"misc2dest2cx2", "Destination 2 / paired C extension", 1, "MISC 1 / SOURCE 2", 0.0f, 24.0f,
+     0.0f, 1.0f,
+     "Original|Volume A+C|Volume B+C|Pitch A+C|Pitch B+C|Phase A+C|Phase B+C|Pan A+C|Pan "
+     "B+C|Cutoff A+C|Cutoff B+C|Resonance A+C|Resonance B+C|Mix A+C|Mix B+C|WT Pos / Start A+C|WT "
+     "Pos / Start B+C|Grain size A+C|Grain size B+C|FM index A+C|FM index B+C|AM depth A+C|AM "
+     "depth B+C|Pulse width A+C|Pulse width B+C",
+     false},
+    {"misc3dest1cx2", "Destination 1 / paired C extension", 1, "MISC 2 / SOURCE 1", 0.0f, 24.0f,
+     0.0f, 1.0f,
+     "Original|Volume A+C|Volume B+C|Pitch A+C|Pitch B+C|Phase A+C|Phase B+C|Pan A+C|Pan "
+     "B+C|Cutoff A+C|Cutoff B+C|Resonance A+C|Resonance B+C|Mix A+C|Mix B+C|WT Pos / Start A+C|WT "
+     "Pos / Start B+C|Grain size A+C|Grain size B+C|FM index A+C|FM index B+C|AM depth A+C|AM "
+     "depth B+C|Pulse width A+C|Pulse width B+C",
+     false},
+    {"misc3dest2cx2", "Destination 2 / paired C extension", 1, "MISC 2 / SOURCE 1", 0.0f, 24.0f,
+     0.0f, 1.0f,
+     "Original|Volume A+C|Volume B+C|Pitch A+C|Pitch B+C|Phase A+C|Phase B+C|Pan A+C|Pan "
+     "B+C|Cutoff A+C|Cutoff B+C|Resonance A+C|Resonance B+C|Mix A+C|Mix B+C|WT Pos / Start A+C|WT "
+     "Pos / Start B+C|Grain size A+C|Grain size B+C|FM index A+C|FM index B+C|AM depth A+C|AM "
+     "depth B+C|Pulse width A+C|Pulse width B+C",
+     false},
+    {"misc4dest1cx2", "Destination 1 / paired C extension", 1, "MISC 2 / SOURCE 2", 0.0f, 24.0f,
+     0.0f, 1.0f,
+     "Original|Volume A+C|Volume B+C|Pitch A+C|Pitch B+C|Phase A+C|Phase B+C|Pan A+C|Pan "
+     "B+C|Cutoff A+C|Cutoff B+C|Resonance A+C|Resonance B+C|Mix A+C|Mix B+C|WT Pos / Start A+C|WT "
+     "Pos / Start B+C|Grain size A+C|Grain size B+C|FM index A+C|FM index B+C|AM depth A+C|AM "
+     "depth B+C|Pulse width A+C|Pulse width B+C",
+     false},
+    {"misc4dest2cx2", "Destination 2 / paired C extension", 1, "MISC 2 / SOURCE 2", 0.0f, 24.0f,
+     0.0f, 1.0f,
+     "Original|Volume A+C|Volume B+C|Pitch A+C|Pitch B+C|Phase A+C|Phase B+C|Pan A+C|Pan "
+     "B+C|Cutoff A+C|Cutoff B+C|Resonance A+C|Resonance B+C|Mix A+C|Mix B+C|WT Pos / Start A+C|WT "
+     "Pos / Start B+C|Grain size A+C|Grain size B+C|FM index A+C|FM index B+C|AM depth A+C|AM "
+     "depth B+C|Pulse width A+C|Pulse width B+C",
+     false},
+    {"fixedvelocity", "Fixed MIDI velocity", 2, "SETTINGS", 0.0f, 1.0f, 0.0f, 1.0f, "Off|On",
+     false},
+    {"eqb0type", "Filter type", 3, "EQUALIZER", 0.0f, 7.0f, 0.0f, 1.0f,
+     "Bell|Low shelf|High shelf|High-pass|Low-pass|Notch|Band-pass|All-pass", false},
+    {"eqb0freq", "Frequency / Hz", 3, "EQUALIZER", 20.0f, 20000.0f, 31.5f, 0.25f, "", false},
+    {"eqb0q", "Q", 3, "EQUALIZER", 0.1f, 20.0f, 1.41421356237f, 0.5f, "", false},
+    {"eqb0on", "Band enabled", 3, "EQUALIZER", 0.0f, 1.0f, 1.0f, 1.0f, "Off|On", false},
+    {"eqb1type", "Filter type", 3, "EQUALIZER", 0.0f, 7.0f, 0.0f, 1.0f,
+     "Bell|Low shelf|High shelf|High-pass|Low-pass|Notch|Band-pass|All-pass", false},
+    {"eqb1freq", "Frequency / Hz", 3, "EQUALIZER", 20.0f, 20000.0f, 63.0f, 0.25f, "", false},
+    {"eqb1q", "Q", 3, "EQUALIZER", 0.1f, 20.0f, 1.41421356237f, 0.5f, "", false},
+    {"eqb1on", "Band enabled", 3, "EQUALIZER", 0.0f, 1.0f, 1.0f, 1.0f, "Off|On", false},
+    {"eqb2type", "Filter type", 3, "EQUALIZER", 0.0f, 7.0f, 0.0f, 1.0f,
+     "Bell|Low shelf|High shelf|High-pass|Low-pass|Notch|Band-pass|All-pass", false},
+    {"eqb2freq", "Frequency / Hz", 3, "EQUALIZER", 20.0f, 20000.0f, 125.0f, 0.25f, "", false},
+    {"eqb2q", "Q", 3, "EQUALIZER", 0.1f, 20.0f, 1.41421356237f, 0.5f, "", false},
+    {"eqb2on", "Band enabled", 3, "EQUALIZER", 0.0f, 1.0f, 1.0f, 1.0f, "Off|On", false},
+    {"eqb3type", "Filter type", 3, "EQUALIZER", 0.0f, 7.0f, 0.0f, 1.0f,
+     "Bell|Low shelf|High shelf|High-pass|Low-pass|Notch|Band-pass|All-pass", false},
+    {"eqb3freq", "Frequency / Hz", 3, "EQUALIZER", 20.0f, 20000.0f, 250.0f, 0.25f, "", false},
+    {"eqb3q", "Q", 3, "EQUALIZER", 0.1f, 20.0f, 1.41421356237f, 0.5f, "", false},
+    {"eqb3on", "Band enabled", 3, "EQUALIZER", 0.0f, 1.0f, 1.0f, 1.0f, "Off|On", false},
+    {"eqb4type", "Filter type", 3, "EQUALIZER", 0.0f, 7.0f, 0.0f, 1.0f,
+     "Bell|Low shelf|High shelf|High-pass|Low-pass|Notch|Band-pass|All-pass", false},
+    {"eqb4freq", "Frequency / Hz", 3, "EQUALIZER", 20.0f, 20000.0f, 500.0f, 0.25f, "", false},
+    {"eqb4q", "Q", 3, "EQUALIZER", 0.1f, 20.0f, 1.41421356237f, 0.5f, "", false},
+    {"eqb4on", "Band enabled", 3, "EQUALIZER", 0.0f, 1.0f, 1.0f, 1.0f, "Off|On", false},
+    {"eqb5type", "Filter type", 3, "EQUALIZER", 0.0f, 7.0f, 0.0f, 1.0f,
+     "Bell|Low shelf|High shelf|High-pass|Low-pass|Notch|Band-pass|All-pass", false},
+    {"eqb5freq", "Frequency / Hz", 3, "EQUALIZER", 20.0f, 20000.0f, 1000.0f, 0.25f, "", false},
+    {"eqb5q", "Q", 3, "EQUALIZER", 0.1f, 20.0f, 1.41421356237f, 0.5f, "", false},
+    {"eqb5on", "Band enabled", 3, "EQUALIZER", 0.0f, 1.0f, 1.0f, 1.0f, "Off|On", false},
+    {"eqb6type", "Filter type", 3, "EQUALIZER", 0.0f, 7.0f, 0.0f, 1.0f,
+     "Bell|Low shelf|High shelf|High-pass|Low-pass|Notch|Band-pass|All-pass", false},
+    {"eqb6freq", "Frequency / Hz", 3, "EQUALIZER", 20.0f, 20000.0f, 2000.0f, 0.25f, "", false},
+    {"eqb6q", "Q", 3, "EQUALIZER", 0.1f, 20.0f, 1.41421356237f, 0.5f, "", false},
+    {"eqb6on", "Band enabled", 3, "EQUALIZER", 0.0f, 1.0f, 1.0f, 1.0f, "Off|On", false},
+    {"eqb7type", "Filter type", 3, "EQUALIZER", 0.0f, 7.0f, 0.0f, 1.0f,
+     "Bell|Low shelf|High shelf|High-pass|Low-pass|Notch|Band-pass|All-pass", false},
+    {"eqb7freq", "Frequency / Hz", 3, "EQUALIZER", 20.0f, 20000.0f, 4000.0f, 0.25f, "", false},
+    {"eqb7q", "Q", 3, "EQUALIZER", 0.1f, 20.0f, 1.41421356237f, 0.5f, "", false},
+    {"eqb7on", "Band enabled", 3, "EQUALIZER", 0.0f, 1.0f, 1.0f, 1.0f, "Off|On", false},
+    {"eqb8type", "Filter type", 3, "EQUALIZER", 0.0f, 7.0f, 0.0f, 1.0f,
+     "Bell|Low shelf|High shelf|High-pass|Low-pass|Notch|Band-pass|All-pass", false},
+    {"eqb8freq", "Frequency / Hz", 3, "EQUALIZER", 20.0f, 20000.0f, 8000.0f, 0.25f, "", false},
+    {"eqb8q", "Q", 3, "EQUALIZER", 0.1f, 20.0f, 1.41421356237f, 0.5f, "", false},
+    {"eqb8on", "Band enabled", 3, "EQUALIZER", 0.0f, 1.0f, 1.0f, 1.0f, "Off|On", false},
+    {"eqb9type", "Filter type", 3, "EQUALIZER", 0.0f, 7.0f, 0.0f, 1.0f,
+     "Bell|Low shelf|High shelf|High-pass|Low-pass|Notch|Band-pass|All-pass", false},
+    {"eqb9freq", "Frequency / Hz", 3, "EQUALIZER", 20.0f, 20000.0f, 16000.0f, 0.25f, "", false},
+    {"eqb9q", "Q", 3, "EQUALIZER", 0.1f, 20.0f, 1.41421356237f, 0.5f, "", false},
+    {"eqb9on", "Band enabled", 3, "EQUALIZER", 0.0f, 1.0f, 1.0f, 1.0f, "Off|On", false},
+    {"eqb10type", "Filter type", 3, "EQUALIZER", 0.0f, 7.0f, 0.0f, 1.0f,
+     "Bell|Low shelf|High shelf|High-pass|Low-pass|Notch|Band-pass|All-pass", false},
+    {"eqb10freq", "Frequency / Hz", 3, "EQUALIZER", 20.0f, 20000.0f, 80.0f, 0.25f, "", false},
+    {"eqb10q", "Q", 3, "EQUALIZER", 0.1f, 20.0f, 1.41421356237f, 0.5f, "", false},
+    {"eqb10on", "Band enabled", 3, "EQUALIZER", 0.0f, 1.0f, 0.0f, 1.0f, "Off|On", false},
+    {"eqband10", "Gain / dB", 3, "EQUALIZER", -18.0f, 18.0f, 0.0f, 1.0f, "", false},
+    {"eqb11type", "Filter type", 3, "EQUALIZER", 0.0f, 7.0f, 0.0f, 1.0f,
+     "Bell|Low shelf|High shelf|High-pass|Low-pass|Notch|Band-pass|All-pass", false},
+    {"eqb11freq", "Frequency / Hz", 3, "EQUALIZER", 20.0f, 20000.0f, 180.0f, 0.25f, "", false},
+    {"eqb11q", "Q", 3, "EQUALIZER", 0.1f, 20.0f, 1.41421356237f, 0.5f, "", false},
+    {"eqb11on", "Band enabled", 3, "EQUALIZER", 0.0f, 1.0f, 0.0f, 1.0f, "Off|On", false},
+    {"eqband11", "Gain / dB", 3, "EQUALIZER", -18.0f, 18.0f, 0.0f, 1.0f, "", false},
+    {"eqb12type", "Filter type", 3, "EQUALIZER", 0.0f, 7.0f, 0.0f, 1.0f,
+     "Bell|Low shelf|High shelf|High-pass|Low-pass|Notch|Band-pass|All-pass", false},
+    {"eqb12freq", "Frequency / Hz", 3, "EQUALIZER", 20.0f, 20000.0f, 700.0f, 0.25f, "", false},
+    {"eqb12q", "Q", 3, "EQUALIZER", 0.1f, 20.0f, 1.41421356237f, 0.5f, "", false},
+    {"eqb12on", "Band enabled", 3, "EQUALIZER", 0.0f, 1.0f, 0.0f, 1.0f, "Off|On", false},
+    {"eqband12", "Gain / dB", 3, "EQUALIZER", -18.0f, 18.0f, 0.0f, 1.0f, "", false},
+    {"eqb13type", "Filter type", 3, "EQUALIZER", 0.0f, 7.0f, 0.0f, 1.0f,
+     "Bell|Low shelf|High shelf|High-pass|Low-pass|Notch|Band-pass|All-pass", false},
+    {"eqb13freq", "Frequency / Hz", 3, "EQUALIZER", 20.0f, 20000.0f, 3000.0f, 0.25f, "", false},
+    {"eqb13q", "Q", 3, "EQUALIZER", 0.1f, 20.0f, 1.41421356237f, 0.5f, "", false},
+    {"eqb13on", "Band enabled", 3, "EQUALIZER", 0.0f, 1.0f, 0.0f, 1.0f, "Off|On", false},
+    {"eqband13", "Gain / dB", 3, "EQUALIZER", -18.0f, 18.0f, 0.0f, 1.0f, "", false},
+    {"eqb14type", "Filter type", 3, "EQUALIZER", 0.0f, 7.0f, 0.0f, 1.0f,
+     "Bell|Low shelf|High shelf|High-pass|Low-pass|Notch|Band-pass|All-pass", false},
+    {"eqb14freq", "Frequency / Hz", 3, "EQUALIZER", 20.0f, 20000.0f, 6000.0f, 0.25f, "", false},
+    {"eqb14q", "Q", 3, "EQUALIZER", 0.1f, 20.0f, 1.41421356237f, 0.5f, "", false},
+    {"eqb14on", "Band enabled", 3, "EQUALIZER", 0.0f, 1.0f, 0.0f, 1.0f, "Off|On", false},
+    {"eqband14", "Gain / dB", 3, "EQUALIZER", -18.0f, 18.0f, 0.0f, 1.0f, "", false},
+    {"eqb15type", "Filter type", 3, "EQUALIZER", 0.0f, 7.0f, 0.0f, 1.0f,
+     "Bell|Low shelf|High shelf|High-pass|Low-pass|Notch|Band-pass|All-pass", false},
+    {"eqb15freq", "Frequency / Hz", 3, "EQUALIZER", 20.0f, 20000.0f, 12000.0f, 0.25f, "", false},
+    {"eqb15q", "Q", 3, "EQUALIZER", 0.1f, 20.0f, 1.41421356237f, 0.5f, "", false},
+    {"eqb15on", "Band enabled", 3, "EQUALIZER", 0.0f, 1.0f, 0.0f, 1.0f, "Off|On", false},
+    {"eqband15", "Gain / dB", 3, "EQUALIZER", -18.0f, 18.0f, 0.0f, 1.0f, "", false},
 }};
 
 inline constexpr size_t legacyParameterCount = 736;
@@ -2574,7 +2878,52 @@ inline constexpr auto choiceExtensionIndices = [] {
 inline constexpr Param choiceExtension(Param base) {
     return choiceExtensionIndices[size_t(base)];
 }
+inline constexpr Param detuneWide(int slot) {
+    return Param(size_t(Param::o1detunewide) + size_t(slot) * 2);
+}
+inline constexpr Param unisonBlend(int slot) {
+    return Param(size_t(Param::o1blend) + size_t(slot) * 2);
+}
+inline constexpr Param pairedChoiceExtension(Param base) {
+    if (base == Param::env1dest1)
+        return Param::env1dest1cx2;
+    if (base == Param::env1dest2)
+        return Param::env1dest2cx2;
+    if (base == Param::env2dest1)
+        return Param::env2dest1cx2;
+    if (base == Param::env2dest2)
+        return Param::env2dest2cx2;
+    if (base == Param::lfo1dest1)
+        return Param::lfo1dest1cx2;
+    if (base == Param::lfo1dest2)
+        return Param::lfo1dest2cx2;
+    if (base == Param::lfo2dest1)
+        return Param::lfo2dest1cx2;
+    if (base == Param::lfo2dest2)
+        return Param::lfo2dest2cx2;
+    if (base == Param::misc1dest1)
+        return Param::misc1dest1cx2;
+    if (base == Param::misc1dest2)
+        return Param::misc1dest2cx2;
+    if (base == Param::misc2dest1)
+        return Param::misc2dest1cx2;
+    if (base == Param::misc2dest2)
+        return Param::misc2dest2cx2;
+    if (base == Param::misc3dest1)
+        return Param::misc3dest1cx2;
+    if (base == Param::misc3dest2)
+        return Param::misc3dest2cx2;
+    if (base == Param::misc4dest1)
+        return Param::misc4dest1cx2;
+    if (base == Param::misc4dest2)
+        return Param::misc4dest2cx2;
+    return Param::Count;
+}
 template <class Read> float expandedChoiceValue(Param base, Read read) {
+    const auto paired = pairedChoiceExtension(base);
+    if (paired != Param::Count && read(size_t(paired)) > 0)
+        return parameterSpecs[size_t(base)].high +
+               parameterSpecs[size_t(choiceExtension(base))].high + read(size_t(paired));
     const auto extra = choiceExtension(base);
     if (extra != Param::Count) {
         const float selected = read(size_t(extra));
@@ -2584,4 +2933,14 @@ template <class Read> float expandedChoiceValue(Param base, Read read) {
     return read(size_t(base));
 }
 
+inline constexpr std::array<Param, 16> eqBandTypes{
+    Param::eqb0type,  Param::eqb1type,  Param::eqb2type,  Param::eqb3type,
+    Param::eqb4type,  Param::eqb5type,  Param::eqb6type,  Param::eqb7type,
+    Param::eqb8type,  Param::eqb9type,  Param::eqb10type, Param::eqb11type,
+    Param::eqb12type, Param::eqb13type, Param::eqb14type, Param::eqb15type};
+inline constexpr std::array<Param, 16> eqBandGains{
+    Param::eqband0,  Param::eqband1,  Param::eqband2,  Param::eqband3,
+    Param::eqband4,  Param::eqband5,  Param::eqband6,  Param::eqband7,
+    Param::eqband8,  Param::eqband9,  Param::eqband10, Param::eqband11,
+    Param::eqband12, Param::eqband13, Param::eqband14, Param::eqband15};
 } // namespace logisth

@@ -1,4 +1,5 @@
 #include "Engine.h"
+#include "Equalizer.h"
 #include "Morph.h"
 #include "SmallStackRegression.h"
 #include <atomic>
@@ -283,6 +284,59 @@ int main() {
             watchAlloc = false;
             check(allocations.load() == 0,
                   "prepared note-on, All Sound Off and voice resets never allocate");
+        }
+        {
+            auto params = clean();
+            params.polyphony = 1;
+            std::array<int, playerCount> capacity{};
+            capacity[4] = capacity[5] = 3;
+            std::array<SpectralConfig, playerCount> configs{};
+            StretchControls controls;
+            controls.blockMs = 20;
+            controls.overlap = 4;
+            configs[4] = configs[5] = SpectralConfig::from(controls);
+            auto bank = std::make_shared<SpectralBank>(48000, 48, capacity, nullptr, configs, 1);
+            params.spectralBank = bank.get();
+            for (int slot : {4, 5}) {
+                auto &o = params.osc[size_t(slot)];
+                o.data = SourceData::factory().get();
+                o.level = .15f;
+                o.engine = 2;
+                o.stretchMode = 7;
+                o.stretchControls = controls;
+                o.unison = 2;
+                o.blend = 0;
+                o.tail = {true, .4f, .8f, 5};
+            }
+            Engine realtime;
+            realtime.prepare(48000);
+            realtime.noteOn(60, .8f, 1, params);
+            float l[64]{}, r[64]{};
+            watchAlloc = true;
+            for (int block = 0; block < 200; ++block) {
+                params.osc[4].blend = params.osc[5].blend = float(block % 40) / 39;
+                realtime.render(l, r, 64, params);
+                for (float value : l)
+                    check(std::isfinite(value), "spectral blend/tail processing remains finite");
+            }
+            watchAlloc = false;
+            check(allocations.load() == 0,
+                  "prepared center streams, live blend and tail loops allocate no memory in audio");
+            Equalizer eq;
+            eq.prepare(48000);
+            EqualizerParams ep;
+            ep.eqMode = 1;
+            watchAlloc = true;
+            for (int block = 0; block < 50; ++block) {
+                ep.eqTypes[0] = block % 8;
+                ep.eqEnabled[10] = block % 2;
+                eq.configure(ep, 0, 200, 0, 6000);
+                for (int i = 0; i < 128; ++i)
+                    eq.tick(.01f, .02f);
+            }
+            watchAlloc = false;
+            check(allocations.load() == 0,
+                  "filter type/enable changes and all sixteen EQ stages allocate no audio memory");
         }
         check(small_stack_test::check(),
               "note-on, stealing, mono, polyphony changes and reset fit a 128 KiB audio stack");

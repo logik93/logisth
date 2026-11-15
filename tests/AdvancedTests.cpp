@@ -53,7 +53,7 @@ int main() {
     try {
         for (auto &spec : parameterSpecs) {
             std::string id = spec.id;
-            if (id.find("dest") != std::string::npos && id.substr(id.size() - 2) != "cx") {
+            if (id.find("dest") != std::string::npos && id.find("cx") == std::string::npos) {
                 int count = 1;
                 for (auto *p = spec.choices; *p; ++p)
                     if (*p == '|')
@@ -61,6 +61,9 @@ int main() {
                 auto extension = choiceExtension(Param(&spec - parameterSpecs.data()));
                 if (extension != Param::Count)
                     count += int(parameterSpecs[size_t(extension)].high);
+                auto paired = pairedChoiceExtension(Param(&spec - parameterSpecs.data()));
+                if (paired != Param::Count)
+                    count += int(parameterSpecs[size_t(paired)].high);
                 check(count == int(Destination::Count),
                       "every modulation menu exposes all appended FM/AM/PWM targets");
             }

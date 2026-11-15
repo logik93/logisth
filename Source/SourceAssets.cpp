@@ -487,7 +487,7 @@ void LogisthProcessor::ensureSpectral(bool synchronous) {
         const ScopedLock lock(assetLock);
         for (int i = 0; i < playerCount; ++i) {
             int voices = int(raw[playerParamIndex(Param::o1voices, i, 12)]->load());
-            unisons[size_t(i)] = jlimit(1, 8, voices);
+            unisons[size_t(i)] = voices > 1 && voices % 2 == 0 ? voices + 1 : jlimit(1, 8, voices);
             int mode = int(raw[playerParamIndex(Param::o1stretchmode, i, 10)]->load());
             if (voices > 0 && raw[playerParamIndex(Param::o1engine, i, 16)]->load() == 2 &&
                 (mode == 6 || mode == 7))
@@ -590,8 +590,10 @@ bool LogisthProcessor::spectralReady(int slot) const {
     int voices = raw[size_t(Param::monolegato)]->load() > 0
                      ? 1
                      : jlimit(1, 16, int(raw[size_t(Param::polyphony)]->load()));
+    int unison = jlimit(1, 8, int(raw[playerParamIndex(Param::o1voices, slot, 12)]->load()));
+    if (unison > 1 && unison % 2 == 0)
+        ++unison;
     return spectralOwner->voiceCapacity >= voices &&
            spectralOwner->configs[size_t(slot)] == SpectralConfig::from(controls) &&
-           spectralOwner->capacity[size_t(slot)] >=
-               jlimit(1, 8, int(raw[playerParamIndex(Param::o1voices, slot, 12)]->load()));
+           spectralOwner->capacity[size_t(slot)] >= unison;
 }

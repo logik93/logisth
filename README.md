@@ -1,10 +1,29 @@
-# logisth 0.9.5
+# logisth 0.9.6
 
 **wavelogik logisth — a three-part polyphonic subtractive synthesizer with a compact single-window console.**
 VST3, CLAP and Standalone for Windows, macOS and Linux. Built with JUCE and an
 independent synthesis engine.
 
 ![logisth dark interface](docs/images/logisth-dark.png)
+
+## New in 0.9.6
+
+- Symmetric modulation scopes **A, B, C, A+B, A+C, B+C and A+B+C**, with
+  individual player targets where applicable. Menus are grouped by function.
+- **400 ct detune**, with a finer low range (100 ct at the knob midpoint).
+  A new **BLEND** knob in every player's VOICE page controls its added unison
+  voices; 0% retains a single tuned center, including even unison counts.
+- **Settings → Appearance → Fix MIDI velocity to maximum** ignores note velocity
+  for synthesis and generated MIDI. Off by default; stored with the instance/patch.
+- **Graphic EQ**: 16 independent band slots, Add/Remove, per-band frequency, Q,
+  enable and eight filter shapes. A selected-band inspector replaces crowded
+  faders; graph axes and labels have separate space. Legacy shelves remain available.
+- **About** is scrollable and includes Logik, coldwave, Moander and bokkenmmb.
+- All 954 previous host parameter definitions remain intact; 99 additions follow
+  them, for 1053 total. Existing presets keep full unison blend and normal velocity.
+
+[Graphic EQ](docs/images/logisth-eq-graphic.png) · [Unison controls](docs/images/logisth-unison.png) ·
+[About credits](docs/images/logisth-credits.png) · [Release notes](docs/RELEASE-v0.9.6.md)
 
 ## New in 0.9.5
 
@@ -224,12 +243,12 @@ sounds. Parameter IDs remain stable; preserving old sound is not the objective.
 - Earlier releases included an experimental Graphs arp, removed in 0.7.0.
   Twelve A–L pattern memories remain available for Legacy and Pattern.
 - User preset library: save/load/delete .logisth files with embedded audio,
-  chords, all patterns and UI preferences. 954 current automatable audio parameters.
+  chords, all patterns and UI preferences. 1053 current automatable audio parameters.
 - Compact single-window interface with light/dark themes.
 
 [English manual](docs/MANUAL.md) · [PDF manual](docs/logisth-Manual-English.pdf) ·
 [Implementation references](docs/STUDIO-0.5.md) ·
-[Download 0.9.5](https://github.com/logik93/logisth/releases/tag/v0.9.5)
+[Download 0.9.6](https://github.com/logik93/logisth/releases/tag/v0.9.6)
 
 Native archives are built and tested on Windows, macOS and Linux. Each package
 contains the English manual and build metadata. Publication requires all platform

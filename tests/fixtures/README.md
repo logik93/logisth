@@ -11,3 +11,7 @@ same commit. CTest builds the old/current engines independently and compares
 The 2e-6 cross-compiler tolerance allows floating-point contraction differences;
 current local Linux renders are byte-identical. This covers the documented
 fixtures rather than claiming every possible DAW session is identical.
+
+`parameters-0.9.5.json` additionally freezes all 954 definitions from published
+commit 9754a5ca80833c7424acdd93d17bf1119e0e2088. The 0.9.6 integration test checks
+this contract, including the existing detune and C-choice companion ranges.

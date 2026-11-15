@@ -123,9 +123,9 @@ struct SpectralBank {
     int voiceCapacity;
     std::array<int, playerCount> capacity{};
     std::array<SpectralConfig, playerCount> configs{};
-    std::array<std::shared_ptr<SpectralStream>, 16 * playerCount * 8 * 2> cells{};
+    std::array<std::shared_ptr<SpectralStream>, 16 * playerCount * unisonCapacity * 2> cells{};
     static size_t index(int voice, int osc, int unison, int lane) {
-        return size_t((((voice * playerCount) + osc) * 8 + unison) * 2 + lane);
+        return size_t((((voice * playerCount) + osc) * unisonCapacity + unison) * 2 + lane);
     }
     static size_t estimatedBytes(double rate, unsigned mask,
                                  const std::array<int, playerCount> &unisons,
@@ -135,7 +135,7 @@ struct SpectralBank {
         for (int osc = 0; osc < playerCount; ++osc)
             if (mask & (1u << osc))
                 bytes += configs[size_t(osc)].estimatedBytes(rate) * size_t(voices) *
-                         size_t(std::clamp(unisons[size_t(osc)], 1, 8)) * 2;
+                         size_t(std::clamp(unisons[size_t(osc)], 1, unisonCapacity)) * 2;
         return bytes;
     }
     SpectralBank(double sampleRate, unsigned wanted, std::array<int, playerCount> unisons,

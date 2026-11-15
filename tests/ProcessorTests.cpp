@@ -5,6 +5,7 @@
 #include "Features093Tests.h"
 #include "Features094Tests.h"
 #include "Features095Tests.h"
+#include "Features096Tests.h"
 #include "GainCalibration.h"
 #include "KickBenchmark.h"
 #include "PluginEditor.h"
@@ -575,7 +576,7 @@ void checkWavetableRoutingAndDetune() {
                 const int target = int(Destination::PositionA) + slot / 2;
                 const int item = target + 1;
                 check(
-                    menu->getItemText(menu->indexOfItemId(item)).startsWith("WT Pos / Start"),
+                    menu->getItemText(menu->indexOfItemId(item)).startsWith("WT Pos"),
                     "LFO menu explicitly identifies WT position without changing destination IDs");
                 menu->setSelectedId(item, sendNotificationSync);
                 p.prepareToPlay(48000, 128);
@@ -981,6 +982,10 @@ int main(int argc, char **argv) {
             factorybank_test::search();
             return 0;
         }
+        if (argc > 1 && juce::String(argv[1]) == "--features096-check") {
+            features096_test::run();
+            return 0;
+        }
         if (argc > 1 && juce::String(argv[1]) == "--features095-check") {
             features095_test::run();
             return 0;
@@ -1029,6 +1034,7 @@ int main(int argc, char **argv) {
         features093_test::run();
         features094_test::run();
         features095_test::run();
+        features096_test::run();
         factorybank_test::run();
         factorybank_test::search();
         processor_phase_test::run();

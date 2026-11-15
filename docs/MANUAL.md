@@ -1,4 +1,4 @@
-# logisth 0.9.5 — User Manual
+# logisth 0.9.6 — User Manual
 
 wavelogik logisth is a three-part polyphonic subtractive synthesizer for VST3, CLAP and standalone use.
 This manual describes logisth's controls, sound engines and preset workflow.
@@ -108,7 +108,22 @@ readable. Use assets/themes as templates; docs/THEMES.md documents the format.
 The editable comment box below SOUND LIBRARY belongs to the sound. Type a note
 there, then save the user preset or DAW project. Comments support Unicode and up
 to 4096 characters. Loading a preset replaces its comment; Init starts with an
-empty comment. The About section lists the current version and framework credits.
+empty comment. The About tab is a scrollable read-only area. Use the wheel or its scrollbar to
+read the version, licenses, open-source projects and these project credits:
+
+| Name | Contribution |
+| --- | --- |
+| Logik | Prompt engineer, tester, and everything in between. |
+| coldwave | No. 1 tester with a head full of ideas. |
+| Moander | Tester with a head full of ideas. |
+| bokkenmmb | Tester, idea guy, and resident theme wizard (yes, the FoRReSkin one). |
+
+APPEARANCE includes **FIX MIDI VELOCITY TO MAXIMUM**. It is off by default,
+retaining normal note dynamics. When enabled, every generated or played Note On
+uses velocity 127, including arp output and the engine's Velocity modulation
+source. It does not change MIDI note-off or other controllers. The setting is
+saved with the instance's DAW state and sound presets, separately from shared
+appearance preferences. Older patches and Init use normal velocity.
 
 Drag knobs and faders to adjust values. Numeric fields can be dragged or edited.
 Examples of accepted values include 2.5k for 2500 Hz, 350ms and 65%.
@@ -129,10 +144,19 @@ fine tuning, phase, detune, stereo width, pan, retrigger and invert.
 | Volume | Sets its level before filtering and the part envelope. |
 | Octave / Note / Fine | Coarse octave, semitone and cent tuning. |
 | Phase / Retrig | Phase is a live 0–360-degree offset. Retrig gives fixed note starts; off keeps random starts while the Phase offset remains active. |
-| Detune | 0–200 cents of unison spread. At 200 ct the outer voices are two semitones below/above the note. With one voice, detune has no effect. |
+| Detune | 0–400 cents of unison spread. At 400 ct the outer voices are four semitones below/above the note. The knob midpoint is 100 ct for finer small adjustments. With one voice, detune has no effect. |
+| Blend | Sets the level of additional unison voices. 100% preserves the previous unison sound; 0% retains a single tuned center. One voice is unaffected. |
 | Stereo | Spreads unison voices across the stereo field. |
 | Pan | Positions the oscillator output left or right. |
 | Invert | Inverts oscillator polarity; it can affect cancellation when sources mix. |
+
+Detune is measured in cents: a frequency offset of c cents multiplies the note's
+frequency by 2^(c/1200). The knob's nonlinear travel provides precision at low
+values; typed values and host parameter values remain actual cents. BLEND uses
+power compensation as added voices fade. Odd counts retain their center voice;
+even counts crossfade toward an additional center stream. Its preparation is
+included in the spectral memory guard. BLEND changes are smoothed and work with
+all four source engines. Find DETUNE and BLEND beside each other in VOICE.
 
 PHASE applies to all unison voices in the selected oscillator and can be changed
 while notes are held or automated by the host. The offset is independent of
@@ -197,7 +221,7 @@ Sampler/Granular warp 40 ms source-read windows. Noise uses variable-width gatin
 Width/Depth determines its strength, with pitched gates in free mode and clocked
 gates in synced mode. ROUTING / PWM SYNC selects musical divisions at host tempo.
 The base Width and both LFO route slots remain independently addressable for
-A1/A2/B1/B2/C1/C2, A, B, C, A+B and A+B+C. Live rings show the current value and recently observed
+A1/A2/B1/B2/C1/C2, A, B, C, A+B, A+C, B+C and A+B+C. Live rings show the current value and recently observed
 modulation range; SAMPLE shows actual player output or a warped table preview.
 Manual control changes retain short smoothing ramps. Strong warping adds harmonics
 and can increase aliasing; reduce depth or use a sinc interpolation mode for samples.
@@ -339,8 +363,8 @@ Shift-wheel pans. The display is a view of playback, not a sample editor.
 
 Enable OSC ENVELOPE in ENV to give a slot an additional attack, decay, sustain
 and release. A part's shared envelope still limits its final output. New
-WT Pos / Start A1/A2/B1/B2/C1/C2 targets individual players; A/B/C/A+B/A+B+C target groups.
-These destinations scan wavetable frames or sample locations. Grain size A/B/C/A+B/A+B+C
+WT Pos / Start A1/A2/B1/B2/C1/C2 targets individual players; A/B/C/A+B/A+C/B+C/A+B+C target groups.
+These destinations scan wavetable frames or sample locations. Grain size A/B/C/A+B/A+C/B+C/A+B+C
 scales grain duration. Position changes are smoothed.
 
 IMPORT accepts WAV, AIFF and FLAC at 8–96 kHz, without a fixed duration limit.
@@ -410,12 +434,14 @@ in a Misc block chooses the signal used by both routes in that block.
 Choose a destination, then move its small amount knob away from zero. Amount
 ranges from -10 to +10; negative values reverse the modulation. None or amount
 zero makes a route inactive. Routes to the same destination are added together.
-The destination popup groups oscillators, filters and modulation/effects into
-several columns. New C and A+B+C routes are grouped in the **Part C / A+B+C** submenu. The Source position / grains section contains WT Pos / Start
-and grain-size destinations.
+The destination popup groups Oscillators, Filters, Mixer/effects and LFO controls,
+with separate WT position/sample start, Grain size, FM, AM and Width/PWM menus.
+Within a family, choose a player or scope. All shared families offer A, B, C,
+A+B, A+C, B+C and A+B+C. A+C affects A and C; B+C affects B and C. The selected
+field retains both the family and scope, so the route remains clear when closed.
 
-Destinations include Volume, Pitch, Phase and Pan for A, B, C, A+B or A+B+C; Cutoff and
-Resonance for A, B, C, A+B or A+B+C; Mix A, B, C, A+B or A+B+C; Phaser Frequency; LFO 1/2 Rate and
+Destinations include Volume, Pitch, Phase and Pan for A, B, C, A+B, A+C, B+C or A+B+C; Cutoff and
+Resonance for A, B, C, A+B, A+C, B+C or A+B+C; Mix A, B, C, A+B, A+C, B+C or A+B+C; Phaser Frequency; LFO 1/2 Rate and
 Gain; Distortion Amount; WT Pos / Start; and Grain size. Modulating A+B affects
 both parts together.
 
@@ -433,9 +459,9 @@ when no host tempo is available.
 
 To modulate wavetable position, set the oscillator to Wavetable and place WT POS
 near 50%. In LFO 1 or LFO 2 choose **WT Pos / Start A1**, **A2**, **B1**, **B2**, **C1**, **C2**,
-**A**, **B**, **C**, **A+B** or **A+B+C**, then raise
+**A**, **B**, **C**, **A+B**, **A+C**, **B+C** or **A+B+C**, then raise
 its amount knob, for example to +5. Individual targets A1, A2, B1, B2, C1 and C2 affect
-only that player. A controls A1/A2, B controls B1/B2, C controls C1/C2, A+B controls the original four, and A+B+C controls all six.
+only that player. A controls A1/A2, B controls B1/B2, C controls C1/C2, A+B controls the original four, A+C combines A/C, B+C combines B/C, and A+B+C controls all six.
 Individual and grouped routes can be combined; their offsets add before the
 result is limited to the bank range. Both destination/amount pairs of either LFO support this route.
 Set LFO Gain above zero, then choose a waveform and a free Hz rate or synced
@@ -542,26 +568,44 @@ or enable it. All seven effects are global after the A/B/C mix.
 | Distortion | Overdrive, Foldback, Clip, Decimate and Bitcrush; Amount and Dry/Wet set character and blend. |
 | Phaser | Six-stage stereo phasing with centre frequency, spread, L/R offset, width, LFO, feedback and Dry/Wet. Its frequency is a modulation destination. |
 | Chorus | Delay, depth, rate, feedback, dual mode, width and Dry/Wet thicken a sound. |
-| Equalizer | Legacy two-shelf or 10-band Graphic; response curve, Auto Gain and output trim. |
+| Equalizer | Legacy two-shelf or 16-slot Graphic/parametric; eight filter types, response curve, Auto Gain and output trim. |
 | Reverb | Hall, Room, Spring, Vintage and Shimmer, with shared size/damping/predelay/width/mix and mode-specific controls. |
 | Delay | Independent left/right times or divisions, feedback, ping-pong, spread, width, low/high cut, smear and Dry/Wet. |
 | Compressor | Stereo-linked threshold, ratio, attack and release control dynamics. |
 
 ### Equalizer
 
-MODE selects Legacy or Graphic. Legacy uses corrected bass/treble shelves with
-separate corner frequencies; a bass boost no longer applies an unrelated global
-attenuation. Graphic provides ten ISO bands at 31.5, 63, 125, 250, 500 Hz, 1, 2,
-4, 8 and 16 kHz. Each band has ±18 dB gain. Move its fader or drag its point
-vertically in the response display; double-click resets that band to zero.
-The display shows the combined response including output gain/compensation.
+MODE selects Legacy or Graphic. Legacy retains bass/treble shelves with separate
+corner frequencies. Graphic opens a response plot and the selected-band inspector.
+Ten enabled Bell bands initially occupy 31.5, 63, 125, 250, 500 Hz, 1, 2, 4, 8 and
+16 kHz, preserving older graphic presets. Six extra slots initially remain off.
 
-OUT adds ±18 dB after either EQ. AUTO GAIN is off by default: enabling it reduces
-gain by the maximum positive response estimated across the audible spectrum.
-It is peak-response compensation, not a loudness meter or limiter; boosts,
-multiple voices and the following effects can still overload the output.
-Band/frequency changes and Legacy/Graphic transitions are smoothed over about
-15 ms. Both modes keep their separate settings in presets and host state.
+**+ BAND** enables and selects the first unused slot; **REMOVE** bypasses the
+selected slot while retaining its settings. Use BAND 1–16 or click a plot point
+to select a band. ENABLED toggles it independently. Up to sixteen filters may run.
+
+| Per-band control | Operation |
+| --- | --- |
+| TYPE | Bell, Low shelf, High shelf, High-pass, Low-pass, Notch, Band-pass or All-pass. |
+| FREQ | 20 Hz–20 kHz; actual DSP cutoff is also limited below Nyquist. |
+| GAIN | ±18 dB for Bell/shelves. Other types do not use gain; its knob is disabled. |
+| Q | 0.1–20, controlling resonance/bandwidth. |
+
+Drag a point horizontally for frequency and vertically for Bell/shelf gain.
+Wheel over a point changes Q. Double-click resets its gain to 0 dB. Graph axes
+occupy separate margins; only the selected point is emphasized to avoid crowded
+labels. The combined curve includes enabled bands, output gain and compensation.
+High/low-pass are second-order filters (nominal 12 dB/octave); several slots can
+be combined for steeper slopes. All-pass changes phase while preserving magnitude.
+
+OUTPUT adds ±18 dB after either EQ. AUTO GAIN is off by default. It reduces gain
+by the maximum positive response estimated across the audible spectrum. This is
+peak-response compensation; later effects, resonance and several voices can
+still overload. Frequency/gain/Q, enable and Legacy/Graphic changes are smoothed
+around 15 ms. Filter-type changes crossfade over 20 ms; rapid requests settle to
+the latest type. Both EQ modes and every band setting are saved with presets.
+
+![Graphic EQ selected-band inspector](images/logisth-eq-graphic.png)
 
 ### Reverb types
 
@@ -684,7 +728,7 @@ library; it does not relocate files. Load file can open a preset from elsewhere.
 Save/load run on a worker, with completion/errors in the footer. Wait for the
 completion message before closing the instance or moving a newly saved file.
 
-Presets contain all 954 audio parameters, routing, compressed audio for all six
+Presets contain all 1053 audio parameters, routing, compressed audio for all six
 slots, WAV regions, chord mappings, twelve named patterns, the preset comment and
 scope selection. Theme and editor size are separate user preferences and are
 retained when sounds change. The original sample files are unnecessary on recall. Saving uses a
@@ -692,7 +736,7 @@ temporary file and atomic replacement. Invalid files leave the current patch
 intact. State/preset files are limited to 1 GiB. These are logisth's own files;
 renaming another format to .logisth does not convert it.
 
-All 954 parameters are available for host automation. The first 514 parameter
+All 1053 parameters are available for host automation. The first 514 parameter
 IDs and order from 0.4 are retained. Granulizer and global MIDI-only controls
 follow them; the former Graphs parameter block is removed. A/B/C views, rack pages,
 theme and scope source do not change the patch's audio settings. DAW state
@@ -703,16 +747,21 @@ and pulse-width targets for all six players. A+B still means A and B only;
 A+B+C includes C. C is also available as a Misc amplitude-envelope source,
 an FM/AM modulator, a solo source and a macro target.
 
-Version 0.9.5 preserves all 736 parameter IDs, indices, ranges, defaults and
-choice lists from 0.9.4.1. New C choices use appended companion parameters with
+Version 0.9.6 preserves all 954 parameter IDs, indices, ranges, defaults and
+choice lists from 0.9.5 (including the original 736 from 0.9.4.1). New C choices use appended companion parameters with
 an ID ending in **cx**. Original chooses the saved base choice; a C extension
 overrides it. The editor combines both into one menu. For host automation of a
 new C option, automate its companion; set that companion to Original when
-returning to an older choice. Each main DETUNE knob combines the original
-0–100 ct parameter with a new **detuneextra** parameter (0–100 ct). Values up
-to 100 ct use the base only; 100–200 ct use base 100 plus the extra amount.
-Existing normalized automation retains its original cents and choices. Older
-states default to silent C players, tail loops off and zero extra detune.
+returning to an older choice. Paired A+C/B+C destinations use a second companion
+ending in **cx2**, taking priority over cx. Set both companions to Original to
+use the base. The editor combines all three into a single grouped menu.
+
+Each main DETUNE knob combines the original 0–100 ct parameter, **detuneextra**
+(0–100 ct) and **detunewide** (0–200 ct). Up to 100 ct uses the base; 100–200 ct
+uses base 100 plus extra; 200–400 ct uses base/extra 100 plus wide. Existing
+normalized automation retains its previous cents and choices. Older presets
+use full blend, normal velocity, the previous ten Bell EQ bands, no added bands
+and zero wide detune. States predating C retain silent C and tail loops off.
 
 Presets use the native .logisth format. Legacy prototype states
 receive a best-effort migration of filter and modulation settings; changes to

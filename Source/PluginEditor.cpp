@@ -379,6 +379,13 @@ class LogisthEditor::Console : public Component,
                     added.remove(0);
                     choices.addArray(added);
                 }
+                const auto paired = pairedChoiceExtension(id);
+                if (paired != Param::Count) {
+                    auto added =
+                        StringArray::fromTokens(parameterSpecs[size_t(paired)].choices, "|", "");
+                    added.remove(0);
+                    choices.addArray(added);
+                }
                 if (choices == StringArray{"Off", "On"}) {
                     kind = Style::Toggle;
                     toggle.setButtonText(spec.label);
@@ -434,6 +441,8 @@ class LogisthEditor::Console : public Component,
                     }
                     if (cChoices.getNumItems() > 0)
                         menu.getRootMenu()->addSubMenu("Part C / A+B+C", cChoices);
+                    if (String(spec.id).contains("dest"))
+                        buildRoutingMenu(menu, choices);
                     if (extension != Param::Count)
                         bindComposite(extension, false);
                     else
@@ -444,17 +453,22 @@ class LogisthEditor::Console : public Component,
             } else {
                 kind = Style::Knob;
                 if (String(spec.id).startsWith("o") && String(spec.id).endsWith("detune")) {
-                    slider.setRange(0, 200, 0);
+                    slider.setRange(0, 400, 0);
+                    slider.setSkewFactorFromMidPoint(100);
                     bindComposite(detuneExtra(String(spec.id).substring(1).getIntValue() - 1),
                                   true);
                     slider.onDragStart = [this] {
                         compositeGesture = true;
                         compositeBase->beginGesture();
                         compositeExtra->beginGesture();
+                        if (compositeWide)
+                            compositeWide->beginGesture();
                     };
                     slider.onDragEnd = [this] {
                         compositeBase->endGesture();
                         compositeExtra->endGesture();
+                        if (compositeWide)
+                            compositeWide->endGesture();
                         compositeGesture = false;
                     };
                 } else
@@ -632,9 +646,11 @@ class LogisthEditor::Console : public Component,
                 return v < .5 ? String(CharPointer_UTF8("—")) : String(int(v));
             if (name == "filtercutoff")
                 return String(v, 0) + "st";
-            if (name == "p1cutoff" || name == "p2cutoff" || name.contains("freq") ||
-                name.contains("Freq") || name == "delaylowcut" || name == "delayhighcut")
-                return v >= 1000 ? String(v / 1000, 1) + "k" : String(int(v));
+            if (name == "p1cutoff" || name == "p2cutoff" || name == "p3cutoff" ||
+                name.contains("freq") || name.contains("Freq") || name == "delaylowcut" ||
+                name == "delayhighcut")
+                return std::round(v) >= 1000 ? String(std::round(v) / 1000, 1) + "k"
+                                             : String(int(std::round(v)));
             if (name.endsWith("ampa") || name.endsWith("ampd") || name.endsWith("ampr") ||
                 name == "env1a" || name == "env1d" || name == "env1r" || name == "env2a" ||
                 name == "env2d" || name == "env2r" || name == "portamento")
@@ -657,6 +673,75 @@ class LogisthEditor::Console : public Component,
                 return String(v, 0) + String(CharPointer_UTF8("°"));
             return String(v, std::abs(v) >= 10 ? 0 : 2);
         }
+        static void buildRoutingMenu(ComboBox &box, const StringArray &choices) {
+            std::array<std::vector<std::pair<String, int>>, 14> entries;
+            const StringArray families{"Volume",     "Pitch",     "Phase", "Pan",
+                                       "Cutoff",     "Resonance", "Mix",   "WT Pos / Start",
+                                       "Grain size", "FM",        "AM",    "Pulse width"};
+            for (int i = 1; i < choices.size(); ++i) {
+                String text = choices[i].replace(" and B", "+B");
+                int family = -1;
+                if (text.startsWith("Phaser") || text.startsWith("Distortion"))
+                    family = 13;
+                else if (text.startsWith("LFO"))
+                    family = 12;
+                else
+                    for (int k = 0; k < families.size(); ++k)
+                        if (text.startsWith(families[k])) {
+                            family = k;
+                            break;
+                        }
+                if (family < 0)
+                    family = 13;
+                String label =
+                    family < 12 ? text.substring(families[family].length()).trim() : text;
+                if (family == 9)
+                    label = label.replace("index ", "");
+                if (family == 10)
+                    label = label.replace("depth ", "");
+                entries[size_t(family)].emplace_back(label, i + 1);
+            }
+            const StringArray scopeOrder{"A1", "A2", "B1",  "B2",  "C1",  "C2",   "A",
+                                         "B",  "C",  "A+B", "A+C", "B+C", "A+B+C"};
+            std::array<PopupMenu, 14> menus;
+            for (size_t family = 0; family < entries.size(); ++family) {
+                auto &values = entries[family];
+                std::stable_sort(values.begin(), values.end(), [&](const auto &a, const auto &b) {
+                    int x = scopeOrder.indexOf(a.first), y = scopeOrder.indexOf(b.first);
+                    return (x < 0 ? 99 : x) < (y < 0 ? 99 : y);
+                });
+                for (const auto &entry : values) {
+                    const StringArray names{"Volume",     "Pitch", "Phase", "Pan",
+                                            "Cutoff",     "Reso",  "Mix",   "WT Pos",
+                                            "Grain size", "FM",    "AM",    "Width"};
+                    menus[family].addItem(entry.second, family < 12
+                                                            ? names[int(family)] + " " + entry.first
+                                                            : entry.first);
+                }
+            }
+            box.clear(dontSendNotification);
+            auto *root = box.getRootMenu();
+            root->addItem(1, "None");
+            root->addSeparator();
+            PopupMenu oscillators, filters, mixer;
+            for (int i = 0; i < 4; ++i)
+                oscillators.addSubMenu(families[i], menus[size_t(i)]);
+            filters.addSubMenu("Cutoff", menus[4]);
+            filters.addSubMenu("Resonance", menus[5]);
+            mixer.addSubMenu("Mix", menus[6]);
+            for (const auto &entry : entries[13])
+                mixer.addItem(entry.second, entry.first);
+            root->addSubMenu("Oscillators", oscillators);
+            root->addSubMenu("Filters", filters);
+            root->addSubMenu("Mixer / effects", mixer);
+            root->addSubMenu("LFO controls", menus[12]);
+            for (int i = 7; i < 12; ++i)
+                root->addSubMenu(i == 9    ? "FM index"
+                                 : i == 10 ? "AM depth"
+                                 : i == 11 ? "Width / PWM"
+                                           : families[i],
+                                 menus[size_t(i)]);
+        }
         void bindComposite(Param extra, bool detune) {
             compositeId = extra;
             compositeDetune = detune;
@@ -667,38 +752,60 @@ class LogisthEditor::Console : public Component,
                 *base, [this](float) { syncComposite(); }, nullptr);
             compositeExtra = std::make_unique<ParameterAttachment>(
                 *extension, [this](float) { syncComposite(); }, nullptr);
+            compositeWideId = detune ? detuneWide(String(spec.id).substring(1).getIntValue() - 1)
+                                     : pairedChoiceExtension(id);
+            if (compositeWideId != Param::Count) {
+                auto *wide =
+                    owner.processor.state.getParameter(parameterSpecs[size_t(compositeWideId)].id);
+                compositeWide = std::make_unique<ParameterAttachment>(
+                    *wide, [this](float) { syncComposite(); }, nullptr);
+            }
             compositeBase->sendInitialUpdate();
             compositeExtra->sendInitialUpdate();
+            if (compositeWide)
+                compositeWide->sendInitialUpdate();
         }
         void syncComposite() {
             if (compositeUpdate)
                 return;
             const ScopedValueSetter<bool> guard(compositeUpdate, true);
             if (compositeDetune)
-                slider.setValue(owner.value(id) + owner.value(compositeId), dontSendNotification);
+                slider.setValue(
+                    owner.value(id) + owner.value(compositeId) +
+                        (compositeWideId == Param::Count ? 0 : owner.value(compositeWideId)),
+                    dontSendNotification);
             else
                 menu.setSelectedId(int(owner.value(id)) + 1, dontSendNotification);
         }
         void writeComposite(float value) {
             const ScopedValueSetter<bool> guard(compositeUpdate, true);
-            const float base = compositeDetune     ? std::min(100.f, value)
-                               : value > spec.high ? 0
-                                                   : value;
-            const float extra = compositeDetune     ? std::max(0.f, value - 100)
-                                : value > spec.high ? value - spec.high
+            const float firstMaximum = parameterSpecs[size_t(compositeId)].high;
+            const float combinedMaximum = spec.high + firstMaximum;
+            const float base = compositeDetune      ? std::min(100.f, value)
+                               : value <= spec.high ? value
                                                     : 0;
-            if (compositeGesture) {
-                compositeBase->setValueAsPartOfGesture(base);
-                compositeExtra->setValueAsPartOfGesture(extra);
-            } else {
-                compositeBase->setValueAsCompleteGesture(base);
-                compositeExtra->setValueAsCompleteGesture(extra);
-            }
+            const float extra = compositeDetune ? std::clamp(value - 100, 0.f, 100.f)
+                                : value > spec.high && value <= combinedMaximum ? value - spec.high
+                                                                                : 0;
+            const float wide = compositeDetune           ? std::max(0.f, value - 200)
+                               : value > combinedMaximum ? value - combinedMaximum
+                                                         : 0;
+            auto write = [&](std::unique_ptr<ParameterAttachment> &attachment, float v) {
+                if (!attachment)
+                    return;
+                if (compositeGesture)
+                    attachment->setValueAsPartOfGesture(v);
+                else
+                    attachment->setValueAsCompleteGesture(v);
+            };
+            write(compositeBase, base);
+            write(compositeExtra, extra);
+            write(compositeWide, wide);
         }
-        Param compositeId = Param::Count;
+        Param compositeId = Param::Count, compositeWideId = Param::Count;
         bool compositeChoice = false, compositeDetune = false, compositeUpdate = false,
              compositeGesture = false;
-        std::unique_ptr<ParameterAttachment> compositeBase, compositeExtra;
+        std::unique_ptr<ParameterAttachment> compositeBase, compositeExtra, compositeWide;
         Console &owner;
         const ParameterSpec &spec;
         Param id;
@@ -931,6 +1038,43 @@ class LogisthEditor::Console : public Component,
         addChildComponent(waveView);
         addAndMakeVisible(scopeView);
         addChildComponent(eqView);
+        eqBandSelect.setComponentID("eq.band.select");
+        for (int i = 0; i < eqMaxBands; ++i)
+            eqBandSelect.addItem("BAND " + String(i + 1), i + 1);
+        eqBandSelect.setSelectedId(1, dontSendNotification);
+        eqBandSelect.onChange = [this] {
+            selectedEqBand = eqBandSelect.getSelectedId() - 1;
+            eqView.selectBand(selectedEqBand);
+            layout();
+            repaint();
+        };
+        eqView.onSelectionChanged = [this](int band) {
+            selectedEqBand = band;
+            eqBandSelect.setSelectedId(band + 1, dontSendNotification);
+            layout();
+        };
+        eqAdd.setComponentID("eq.band.add");
+        eqAdd.setButtonText("+ BAND");
+        eqAdd.onClick = [this] {
+            for (int i = 0; i < eqMaxBands; ++i)
+                if (value(Param(size_t(eqBandTypes[size_t(i)]) + 3)) < .5f) {
+                    logisth_ui::change(processor,
+                                       parameterSpecs[size_t(eqBandTypes[size_t(i)]) + 3].id, 1);
+                    eqBandSelect.setSelectedId(i + 1, sendNotificationSync);
+                    break;
+                }
+        };
+        eqRemove.setComponentID("eq.band.remove");
+        eqRemove.setButtonText("REMOVE");
+        eqRemove.onClick = [this] {
+            logisth_ui::change(
+                processor, parameterSpecs[size_t(eqBandTypes[size_t(selectedEqBand)]) + 3].id, 0);
+            eqView.repaint();
+        };
+        eqHelp.setFont(font(9));
+        eqHelp.setText("Drag: freq/gain\nWheel: Q", dontSendNotification);
+        for (Component *c : std::array<Component *, 4>{&eqBandSelect, &eqAdd, &eqRemove, &eqHelp})
+            addChildComponent(*c);
         setSize(canvasWidth, canvasHeight);
         for (size_t i = 0; i < parameterCount; ++i) {
             controls[i] = std::make_unique<Control>(*this, Param(i));
@@ -1348,6 +1492,9 @@ class LogisthEditor::Console : public Component,
             editor->applyColourToAllText(ink, true);
             editor->setColour(TextEditor::outlineColourId, line);
         }
+        aboutInfo.setColour(TextEditor::backgroundColourId, screen);
+        aboutInfo.setColour(TextEditor::outlineColourId, screenLine);
+        aboutInfo.applyColourToAllText(screenText, true);
         colourPicker.setColour(ColourSelector::backgroundColourId, screen);
         waveSlot.setColour(ComboBox::textColourId, screenText);
         for (ComboBox *box : {&patternSlot, &chordTrigger, &chordType})
@@ -1356,9 +1503,8 @@ class LogisthEditor::Console : public Component,
             button->setColour(TextButton::buttonColourId, screenLine);
             button->setColour(TextButton::textColourOffId, screenText);
         }
-        for (Label *label :
-             {&themeLabel, &themeHelp, &aboutLabel, &aboutInfo, &scaleLabel, &nameLabel, &roleLabel,
-              &hexLabel, &fontLabel, &backgroundLabel, &knobLabel})
+        for (Label *label : {&themeLabel, &themeHelp, &aboutLabel, &scaleLabel, &nameLabel,
+                             &roleLabel, &hexLabel, &fontLabel, &backgroundLabel, &knobLabel})
             label->setColour(Label::textColourId, screenText);
         searchQuery.setColour(TextEditor::backgroundColourId, screen);
         searchQuery.applyColourToAllText(screenText, true);
@@ -1412,6 +1558,28 @@ class LogisthEditor::Console : public Component,
     void showScenario(int index) {
         if (index != 28)
             showPresetSearch(false);
+        if (index == 31 || index == 32 || index == 33) {
+            previewPattern = previewGran = previewSource = previewWave = previewStretch =
+                previewReverb = -1;
+            settingsOpen = index == 33;
+            settingsTab = 3;
+            rack = 4;
+            selectedPart = index == 32 ? 2 : 0;
+            previewEq = index == 31 ? 1 : -1;
+            selectedEqBand = 5;
+            eqBandSelect.setSelectedId(6, dontSendNotification);
+            for (auto &view : sourceViews)
+                view.setSelectedId(1, dontSendNotification);
+            layout();
+            if (index == 33) {
+                aboutInfo.moveCaretToEnd();
+                for (auto *child : aboutInfo.getChildren())
+                    if (auto *viewport = dynamic_cast<Viewport *>(child))
+                        viewport->setViewPosition(0, jmax(0, viewport->getViewPositionY() - 26));
+            }
+            repaint();
+            return;
+        }
         if (index == 29 || index == 30) {
             settingsOpen = false;
             previewPattern = previewGran = previewWave = previewEq = previewReverb = -1;
@@ -1531,7 +1699,7 @@ class LogisthEditor::Console : public Component,
         const bool oldSettings = settingsOpen;
         settingsOpen = false;
         const int oldPart = selectedPart, oldRack = rack, oldStep = stepPage,
-                  oldMacro = selectedMacro;
+                  oldMacro = selectedMacro, oldEqBand = selectedEqBand;
         std::array<int, playerCount> views;
         for (int i = 0; i < playerCount; ++i)
             views[size_t(i)] = sourceViews[size_t(i)].getSelectedId();
@@ -1542,11 +1710,15 @@ class LogisthEditor::Console : public Component,
             for (size_t i = 0; i < controls.size(); ++i)
                 if (controls[i]->isVisible()) {
                     visited.insert(i);
+                    if (pairedChoiceExtension(Param(i)) != Param::Count)
+                        visited.insert(size_t(pairedChoiceExtension(Param(i))));
                     if (choiceExtension(Param(i)) != Param::Count)
                         visited.insert(size_t(choiceExtension(Param(i))));
                     for (int slot = 0; slot < playerCount; ++slot)
-                        if (i == playerParamIndex(Param::o1detune, slot, 12))
+                        if (i == playerParamIndex(Param::o1detune, slot, 12)) {
                             visited.insert(size_t(detuneExtra(slot)));
+                            visited.insert(size_t(detuneWide(slot)));
+                        }
                     auto *hit = getComponentAt(controls[i]->getBounds().getCentre());
                     if (hit != controls[i].get() && !controls[i]->isParentOf(hit) &&
                         hit != &patternCanvas)
@@ -1637,16 +1809,24 @@ class LogisthEditor::Console : public Component,
             previewEq = mode;
             inspect();
         }
+        previewEq = 1;
+        for (int band = 0; band < eqMaxBands; ++band) {
+            selectedEqBand = band;
+            inspect();
+        }
         previewEq = -1;
         rack = 10;
         for (int macro = 0; macro < 4; ++macro) {
             selectedMacro = macro;
             inspect();
         }
+        visited.insert(size_t(Param::fixedvelocity)); // Settings uses a dedicated attached button.
         for (size_t i = 0; i < controls.size(); ++i)
             if (!visited.count(i))
                 error = "Unreachable: " + String(parameterSpecs[i].id);
         selectedMacro = oldMacro;
+        selectedEqBand = oldEqBand;
+        eqBandSelect.setSelectedId(oldEqBand + 1, dontSendNotification);
         settingsOpen = oldSettings;
         selectedPart = oldPart;
         rack = oldRack;
@@ -1750,11 +1930,18 @@ class LogisthEditor::Console : public Component,
             };
             settingsPanel.addAndMakeVisible(b);
         }
-        for (Label *l : {&themeLabel, &themeHelp, &aboutLabel, &aboutInfo, &scaleLabel, &nameLabel,
-                         &roleLabel, &hexLabel}) {
+        for (Label *l : {&themeLabel, &themeHelp, &aboutLabel, &scaleLabel, &nameLabel, &roleLabel,
+                         &hexLabel}) {
             l->setFont(font(10));
             settingsPanel.addAndMakeVisible(*l);
         }
+        fixedVelocity.setComponentID("settings.fixedvelocity");
+        fixedVelocity.setButtonText("FIX MIDI VELOCITY TO MAXIMUM");
+        fixedVelocity.setTooltip("Ignore note velocity and use 127 for synthesis and generated "
+                                 "MIDI. Off retains normal dynamics.");
+        settingsPanel.addChildComponent(fixedVelocity);
+        fixedVelocityAttachment = std::make_unique<AudioProcessorValueTreeState::ButtonAttachment>(
+            processor.state, "fixedvelocity", fixedVelocity);
         themeLabel.setText("COLOUR THEME", dontSendNotification);
         scaleLabel.setText("UI SCALE / %", dontSendNotification);
         nameLabel.setText("NAME", dontSendNotification);
@@ -1954,13 +2141,27 @@ class LogisthEditor::Console : public Component,
         settingsPanel.addChildComponent(aboutLogo);
         aboutLabel.setFont(font(11, true));
         aboutLabel.setText("WAVELOGIK / LOGISTH", dontSendNotification);
+        settingsPanel.addChildComponent(aboutInfo);
+        aboutInfo.setComponentID("settings.about.credits");
+        aboutInfo.setMultiLine(true, true);
+        aboutInfo.setReadOnly(true);
+        aboutInfo.setCaretVisible(false);
+        aboutInfo.setScrollbarsShown(true);
         aboutInfo.setFont(font(11));
         aboutInfo.setText("wavelogik / logisth  " + String(JucePlugin_VersionString) +
                               "\nPolyphonic instrument / VST3, CLAP, Standalone"
                               "\nOriginal code: MIT / (c) 2026 wavelogik"
                               "\nBuilt with JUCE, CLAP extensions, Open Sans\n and Ioskeley Mono."
                               "\nDependencies retain their respective licenses."
-                              "\n\nTheme and size are independent of audio presets.",
+                              "\n\nCREDITS\n\n"
+                              "Logik - Prompt engineer, tester, and everything in between.\n\n"
+                              "coldwave - No. 1 tester with a head full of ideas.\n\n"
+                              "Moander - Tester with a head full of ideas.\n\n"
+                              "bokkenmmb - Tester, idea guy, and resident theme wizard (yes, the "
+                              "FoRReSkin one).\n\n"
+                              "Open-source projects: JUCE, clap-juce-extensions, Signalsmith "
+                              "Stretch, Signalsmith Linear, Open Sans and Ioskeley Mono.\n\n"
+                              "Theme and size are independent of audio presets.",
                           dontSendNotification);
     }
     void refreshThemeChoices() {
@@ -2019,7 +2220,8 @@ class LogisthEditor::Console : public Component,
             show(themeScan, {128, 125, 120, 26});
             show(themeFolder, {256, 125, 120, 26});
             show(themeChooseFolder, {384, 125, 126, 26});
-            show(themeHelp, {0, 165, 510, 60});
+            show(fixedVelocity, {0, 159, 510, 25});
+            show(themeHelp, {0, 188, 510, 40});
         } else if (settingsTab == 1) {
             show(nameLabel, {0, 33, 208, 19});
             show(themeName, {0, 54, 208, 25});
@@ -2372,16 +2574,16 @@ class LogisthEditor::Console : public Component,
                         {b.getX() + 88 + i * 117, b.getY() + 77, 104, 82}, Style::Knob,
                         StringArray{"LOOP IN", "LOOP OUT", "CROSSFADE"}[i]);
         } else if (view == 1) {
-            StringArray names{"VOLUME", "PHASE", "DETUNE", "STEREO", "PAN"};
-            StringArray suffix{"level", "phase", "detune", "stereo", "pan"};
+            StringArray names{"VOLUME", "PHASE", "DETUNE", "BLEND", "STEREO", "PAN"};
+            StringArray suffix{"level", "phase", "detune", "blend", "stereo", "pan"};
             for (int i = 0; i < 3; ++i)
                 control(id + StringArray{"octave", "tune", "fine"}[i],
                         {b.getX() + 12, b.getY() + 34 + i * 39, 62, 33}, Style::Number,
                         StringArray{"OCTAVE", "NOTE", "FINE"}[i]);
-            for (int i = 0; i < 5; ++i) {
+            for (int i = 0; i < 6; ++i) {
                 if (mode >= 2 && i == 1)
                     continue;
-                control(id + suffix[i], {b.getX() + 86 + i * 72, b.getY() + 35, 66, 86},
+                control(id + suffix[i], {b.getX() + 86 + i * 60, b.getY() + 35, 57, 86},
                         Style::Knob, names[i]);
             }
             if (mode == 0)
@@ -2612,21 +2814,36 @@ class LogisthEditor::Console : public Component,
             return;
         }
         if (rack == 4) {
-            put(Param::eqmode, {414, 289, 150, 24}, Style::Menu, {}, true);
-            put(Param::eqautogain, {574, 289, 133, 24}, Style::Toggle, "AUTO GAIN", true);
-            put(Param::eqoutput, {803, 289, 131, 24}, Style::Number, "OUT / dB", true);
+            put(Param::eqmode, {414, 289, 114, 24}, Style::Menu, {}, true);
+            put(Param::eqautogain, {536, 289, 100, 24}, Style::Toggle, "AUTO GAIN", true);
             eqView.setBounds(414, 320, 520, 96);
             eqView.setVisible(true);
             if (value(Param::eqmode) > 0) {
-                for (int i = 0; i < 10; ++i) {
-                    put(Param(size_t(Param::eqband0) + size_t(i)), {414 + i * 52, 420, 48, 100},
-                        Style::Fader,
-                        Equalizer::frequencies[size_t(i)] >= 1000
-                            ? String(Equalizer::frequencies[size_t(i)] / 1000, 0) + "k"
-                            : String(Equalizer::frequencies[size_t(i)], 0),
-                        true);
-                }
+                eqBandSelect.setBounds(644, 289, 112, 24);
+                eqBandSelect.setVisible(true);
+                eqAdd.setBounds(764, 289, 78, 24);
+                eqAdd.setVisible(true);
+                bool freeBand = false;
+                for (auto type : eqBandTypes)
+                    freeBand |= value(Param(size_t(type) + 3)) < .5f;
+                eqAdd.setEnabled(freeBand);
+                eqRemove.setBounds(850, 289, 84, 24);
+                eqRemove.setVisible(true);
+                size_t at = size_t(eqBandTypes[size_t(selectedEqBand)]);
+                put(Param(at), {414, 424, 158, 42}, Style::Menu, "TYPE", true);
+                put(Param(at + 3), {582, 437, 82, 25}, Style::Toggle, "ENABLED", true);
+                put(Param::eqoutput, {414, 474, 112, 42}, Style::Number, "OUTPUT", true);
+                eqHelp.setBounds(538, 477, 126, 42);
+                eqHelp.setVisible(true);
+                eqHelp.setColour(Label::textColourId, screenText);
+                put(Param(at + 1), {672, 430, 82, 86}, Style::Knob, "FREQ", true);
+                put(eqBandGains[size_t(selectedEqBand)], {762, 430, 82, 86}, Style::Knob, "GAIN",
+                    true);
+                put(Param(at + 2), {852, 430, 82, 86}, Style::Knob, "Q", true);
+                controls[size_t(eqBandGains[size_t(selectedEqBand)])]->enable(value(Param(at)) < 3);
+                eqView.selectBand(selectedEqBand);
             } else {
+                put(Param::eqoutput, {803, 289, 131, 24}, Style::Number, "OUT / dB", true);
                 for (int i = 0; i < 4; ++i)
                     put(Param(size_t(Param::eqbass) + size_t(i)), {414 + i * 130, 424, 122, 94},
                         Style::Knob, StringArray{"BASS", "BASS FREQ", "TREBLE", "TREBLE FREQ"}[i],
@@ -2810,6 +3027,8 @@ class LogisthEditor::Console : public Component,
         patternCanvas.setVisible(false);
         waveView.setVisible(false);
         eqView.setVisible(false);
+        for (Component *c : std::array<Component *, 4>{&eqBandSelect, &eqAdd, &eqRemove, &eqHelp})
+            c->setVisible(false);
         waveSlot.setVisible(false);
         for (auto &area : sourceWave)
             area.setVisible(false);
@@ -2902,8 +3121,8 @@ class LogisthEditor::Console : public Component,
             b->repaint();
         layoutStamp = currentLayoutState();
     }
-    std::array<int, 7 + 4 * playerCount> currentLayoutState() const {
-        std::array<int, 7 + 4 * playerCount> state{
+    std::array<int, 8 + 4 * playerCount> currentLayoutState() const {
+        std::array<int, 8 + 4 * playerCount> state{
             int(value(Param::sync)), int(value(Param::lfo1free)), int(value(Param::lfo2free)),
             int(value(Param::arpmode) >= 8), int(value(Param::arppattern))};
         for (int o = 0; o < playerCount; ++o) {
@@ -2917,6 +3136,11 @@ class LogisthEditor::Console : public Component,
         }
         state[5 + 2 * playerCount] = int(value(Param::reverbtype));
         state[6 + 2 * playerCount] = int(value(Param::eqmode));
+        int mask = 0;
+        for (int i = 0; i < eqMaxBands; ++i)
+            if (value(Param(size_t(eqBandTypes[size_t(i)]) + 3)) > 0)
+                mask |= 1 << i;
+        state.back() = mask + 65536 * int(value(eqBandTypes[size_t(selectedEqBand)]));
         return state;
     }
     void timerCallback() override {
@@ -3191,7 +3415,7 @@ class LogisthEditor::Console : public Component,
             drawCaption(g, "VELOCITY", {414, 460, 37, 14}, 7.5f, mint.withAlpha(.65f));
             drawCaption(g, "TRANSPOSE  /  VELOCITY  /  HOLD", {414, 512, 520, 14}, 7,
                         mint.withAlpha(.38f), Justification::centredRight);
-        } else
+        } else if (rack != 4)
             drawCaption(g, "DIST  /  PHASE  /  CHORUS  /  EQ  /  REVERB  /  DELAY  /  COMP",
                         {414, 513, 520, 13}, 7, mint.withAlpha(.38f), Justification::centredRight);
         shell(g, {16, 548, 152, 208}, "MOD ENV 1");
@@ -3239,7 +3463,10 @@ class LogisthEditor::Console : public Component,
     TextEditor presetNotes;
     Component settingsPanel;
     ComboBox themeChoice;
-    Label themeLabel, themeHelp, aboutLabel, aboutInfo, scaleLabel, nameLabel, roleLabel, hexLabel;
+    Label themeLabel, themeHelp, aboutLabel, scaleLabel, nameLabel, roleLabel, hexLabel;
+    TextEditor aboutInfo;
+    ToggleButton fixedVelocity;
+    std::unique_ptr<AudioProcessorValueTreeState::ButtonAttachment> fixedVelocityAttachment;
     ComboBox scaleChoice, colourRole, themeFont, themeBackground, themeKnobs;
     Label fontLabel, backgroundLabel, knobLabel;
     std::unique_ptr<FileChooser> themeChooser;
@@ -3261,6 +3488,10 @@ class LogisthEditor::Console : public Component,
     logisth_ui::WaveView waveView;
     logisth_ui::ScopeView scopeView;
     logisth_ui::EqView eqView;
+    ComboBox eqBandSelect;
+    TextButton eqAdd, eqRemove;
+    Label eqHelp;
+    int selectedEqBand = 0;
     std::array<logisth_ui::ClickArea, playerCount> sourceWave;
     std::array<ToggleButton, 4> scopeSources;
     TextButton presetFiles;
@@ -3280,7 +3511,7 @@ class LogisthEditor::Console : public Component,
     TooltipWindow tooltips;
     String readout, lastStatus;
     std::array<uint64_t, playerCount> displayedRevisions{};
-    std::array<int, 7 + 4 * playerCount> layoutStamp{};
+    std::array<int, 8 + 4 * playerCount> layoutStamp{};
     int selectedPart = 0, rack = 0, stepPage = 0, previewSync = -1;
 };
 LogisthEditor::LogisthEditor(LogisthProcessor &p) : AudioProcessorEditor(p) {

@@ -29,7 +29,7 @@ inline void run() {
         check(p.getParameters()[i] == p.state.getParameter(spec.id),
               "legacy host parameter ordering is retained");
     }
-    check(parameterCount == 954, "new parameters are appended after the legacy contract");
+    check(parameterCount >= 954, "new parameters are appended after the legacy contract");
     auto raw = [&](const String &id) { return p.state.getRawParameterValue(id)->load(); };
     for (int slot = 0; slot < playerCount; ++slot) {
         String id = "o" + String(slot + 1);
@@ -67,7 +67,7 @@ inline void run() {
             for (auto *child : widget(id + "detune")->getChildren())
                 if (auto *slider = dynamic_cast<Slider *>(child))
                     knob = slider;
-            check(knob && knob->isVisible() && knob->getMaximum() == 200,
+            check(knob && knob->isVisible() && knob->getMaximum() == 400,
                   "all six main detune knobs reach 200 cents");
             knob->setValue(175, sendNotificationSync);
             check(raw(id + "detune") == 100 && raw(id + "detuneextra") == 75,

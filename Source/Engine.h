@@ -11,6 +11,7 @@
 namespace logisth {
 struct OscParams {
     int wave = 1, unison = 1;
+    float blend = 1;
     float level = .65f, detune = 12, pan = 0, semitone = 0, phase = 0, stereo = .6f;
     bool retrigger = false, invert = false;
     int engine = 0, root = 60;
@@ -44,6 +45,7 @@ struct Params {
     float filterCutoff = 0, filterResonance = 0, keytrack = 0, portamento = 0, bendRange = 2;
     double bpm = 120;
     int polyphony = 16, solo = 0, portaMode = 0;
+    bool fixedVelocity = false;
     bool warmDrive = false, sync = true, monoLegato = false;
     Params() {
         osc[1].level = .3f;
@@ -85,9 +87,9 @@ class Engine {
         bool held = false, sustained = false;
         uint64_t age = 0;
         float velocity = 0, pressure = -1, random = 0, pitch = 60, glideStep = 0;
-        std::array<std::array<double, 8>, playerCount> phases{};
+        std::array<std::array<double, unisonCapacity>, playerCount> phases{};
         std::array<double, playerCount> phaseOffset{};
-        std::array<std::array<double, 8>, playerCount> fmPhase{}, amPhase{};
+        std::array<std::array<double, unisonCapacity>, playerCount> fmPhase{}, amPhase{};
         std::array<double, playerCount> pwmPhase{};
         std::array<float, playerCount> modulationSignal{};
         std::array<std::array<float, 7>, playerCount> oscillatorControls{};
@@ -95,14 +97,14 @@ class Engine {
             std::array<float, 7> pink{};
             float brown = 0;
         };
-        std::array<std::array<NoiseState, 8>, playerCount> noiseState{};
+        std::array<std::array<NoiseState, unisonCapacity>, playerCount> noiseState{};
         std::array<AudioEnvelope, partCount> amp;
         std::array<Envelope, 2> env;
         std::array<AudioEnvelope, playerCount> sourceEnv;
-        std::array<float, playerCount> sourcePosition{};
+        std::array<float, playerCount> sourcePosition{}, blend{};
         std::array<int, playerCount> sourceModes{-1, -1, -1, -1, -1, -1};
-        std::array<std::array<SourcePlayback, 8>, playerCount> playback{};
-        std::array<std::array<GranulizerPlayback, 8>, playerCount> granular{};
+        std::array<std::array<SourcePlayback, unisonCapacity>, playerCount> playback{};
+        std::array<std::array<GranulizerPlayback, unisonCapacity>, playerCount> granular{};
         std::array<std::array<std::array<Filter, 2>, 2>, partCount> filters{};
         std::array<float, partCount> cutoff{5000, 5000, 5000};
         std::array<LfoState, 2> lfo{};
@@ -205,7 +207,9 @@ class Engine {
         auto routed = [](const Routes &routes) {
             for (const auto &route : routes)
                 if (route.amount != 0 && (route.destination == Destination::VolumeC ||
-                                          route.destination == Destination::VolumeABC))
+                                          route.destination == Destination::VolumeABC ||
+                                          route.destination == Destination::VolumeAC ||
+                                          route.destination == Destination::VolumeBC))
                     return true;
             return false;
         };
@@ -339,7 +343,7 @@ class Engine {
                                       float(std::max(1., p.portamento * sr));
                 selected->note = note;
                 selected->channel = channel;
-                selected->velocity = velocity;
+                selected->velocity = p.fixedVelocity ? 1.f : velocity;
                 selected->held = true;
                 selected->sustained = false;
                 selected->age = counter;
@@ -360,7 +364,7 @@ class Engine {
         v.note = note;
         v.channel = channel;
         v.held = true;
-        v.velocity = clamp(velocity, 0, 1);
+        v.velocity = p.fixedVelocity ? 1.f : clamp(velocity, 0, 1);
         v.age = ++counter;
         v.random = (noise() + 1) * .5f;
         v.pitch = p.portamento > 0 && (overlap || p.portaMode == 1) ? lastPitch : float(note);
@@ -388,6 +392,7 @@ class Engine {
                                        p.osc[o].pwmRate};
             v.sourceEnv[o].on();
             v.sourcePosition[o] = p.osc[o].position;
+            v.blend[o] = p.osc[o].blend;
             v.phaseOffset[o] = double(p.osc[o].phase) / 360.;
             v.phaseOffset[o] -= std::floor(v.phaseOffset[o]);
             for (size_t u = 0; u < v.phases[o].size(); ++u) {
@@ -397,7 +402,7 @@ class Engine {
                 seed *= 2246822519u;
                 seed ^= seed >> 13;
                 v.phases[o][u] = p.osc[o].retrigger ? 0
-                                 : o < 4            ? (noise() + 1) * .5
+                                 : o < 4 && u < 8   ? (noise() + 1) * .5
                                                     : double(seed) / 4294967296.;
             }
         }
@@ -417,7 +422,7 @@ class Engine {
                     std::abs(float(k->note) - v.pitch) / float(std::max(1., p.portamento * sr));
                 v.note = k->note;
                 v.channel = k->channel;
-                v.velocity = k->velocity;
+                v.velocity = p.fixedVelocity ? 1.f : k->velocity;
                 if (p.portamento <= 0)
                     v.pitch = float(k->note);
                 return;
@@ -606,8 +611,24 @@ class Engine {
                         op.pwmSync ? float(p.bpm / (60 * beatLength(op.pwmDivision))) : control[6];
                     v.pwmPhase[size_t(osc)] += pwmRate / sr;
                     v.pwmPhase[size_t(osc)] -= std::floor(v.pwmPhase[size_t(osc)]);
-                    for (int u = 0; u < n; ++u) {
-                        const float spread = n == 1 ? 0 : 2.f * u / (n - 1) - 1;
+                    auto &blend = v.blend[size_t(osc)];
+                    const float blendTarget = clamp(op.blend, 0, 1);
+                    blend += smoothing * (blendTarget - blend);
+                    if (std::abs(blend - blendTarget) < 1e-5f)
+                        blend = blendTarget;
+                    const bool even = n > 1 && n % 2 == 0;
+                    const bool dryLane = even && blend < 1;
+                    const float norm = even ? n * blend * blend + (1 - blend) * (1 - blend)
+                                            : 1 + (n - 1) * blend * blend;
+                    const float weightSum = even ? n * blend + (1 - blend) : 1 + (n - 1) * blend;
+                    const int displayLane = dryLane && blend < .5f ? n : 0;
+                    for (int lane = 0; lane < n + int(dryLane); ++lane) {
+                        const int u = lane;
+                        const bool center = lane == n || (!even && u == n / 2);
+                        const float weight = center ? (even ? 1 - blend : 1.f) : blend;
+                        if (weight == 0)
+                            continue;
+                        const float spread = center ? 0 : 2.f * u / (n - 1) - 1;
                         const double hz = 440 * std::exp2((v.pitch - 69 + pitch + op.semitone +
                                                            spread * op.detune * .01) /
                                                           12.);
@@ -698,8 +719,9 @@ class Engine {
                                 }
                             }
                         }
-                        v.modulationSignal[size_t(osc)] += (signal[0] + signal[1]) * .5f / float(n);
-                        if (u == 0 && op.data && v.age >= pictureAges[size_t(osc)]) {
+                        v.modulationSignal[size_t(osc)] +=
+                            (signal[0] + signal[1]) * .5f * weight / weightSum;
+                        if (u == displayLane && op.data && v.age >= pictureAges[size_t(osc)]) {
                             pictureAges[size_t(osc)] = v.age;
                             auto &view = pictures[size_t(osc)];
                             view = {};
@@ -713,13 +735,13 @@ class Engine {
                                 view.position =
                                     op.data->framePosition(op.data->frameIndex(position));
                             else if (op.engine == 2) {
-                                auto &player = v.playback[size_t(osc)][0];
+                                auto &player = v.playback[size_t(osc)][size_t(displayLane)];
                                 view.active = !player.finished;
                                 view.position =
                                     float(op.reverse ? op.end - player.cursor / (length - 1)
                                                      : position + player.cursor / (length - 1));
                             } else if (op.engine == 3 && op.gran.enabled) {
-                                auto &player = v.granular[size_t(osc)][0];
+                                auto &player = v.granular[size_t(osc)][size_t(displayLane)];
                                 view.position = float(player.head / (length - 1));
                                 view.active =
                                     !player.finished ||
@@ -730,7 +752,7 @@ class Engine {
                                         view.grains[size_t(view.grainCount++)] =
                                             float(grain.cursor / (length - 1));
                             } else if (op.engine == 3) {
-                                auto &player = v.playback[size_t(osc)][0];
+                                auto &player = v.playback[size_t(osc)][size_t(displayLane)];
                                 view.position = float(position + player.elapsed * op.scan);
                                 view.position -= std::floor(view.position);
                                 for (const auto &grain : player.grains)
@@ -740,8 +762,8 @@ class Engine {
                             } else
                                 view.active = false;
                         }
-                        const float gain =
-                            float(amGain) * level * (op.invert ? -1.f : 1.f) / std::sqrt(float(n));
+                        const float gain = float(amGain) * level * (op.invert ? -1.f : 1.f) *
+                                           weight / std::sqrt(norm);
                         traces[size_t(osc)] +=
                             (signal[0] + signal[1]) * .5f * gain * amps[part] * v.velocity;
                         phase += dt;

@@ -27,7 +27,7 @@ A later explicit instruction to wait or avoid publishing overrides this default.
    its package and build metadata to the same release. Preserve existing download
    IDs and bytes; only SHA256SUMS and the release description are cumulative.
    Wait for every native build/test/architecture check and publication to finish.
-   Current minimum suites: Linux 15, Windows/macOS 13, with no failures or skips.
+   Current minimum suites: Linux 17, Windows/macOS 15, with no failures or skips.
    A separate Windows AddressSanitizer build must also pass before publication;
    its binaries are diagnostic only. Its receipt is `ci-check-v<version>-windows-asan`.
    Read the status branches `ci-build-v<version>-<platform>` and

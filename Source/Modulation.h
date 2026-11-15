@@ -100,6 +100,30 @@ enum class Destination {
     WidthC2,
     WidthC,
     WidthABC,
+    VolumeAC,
+    VolumeBC,
+    PitchAC,
+    PitchBC,
+    PhaseAC,
+    PhaseBC,
+    PanAC,
+    PanBC,
+    CutoffAC,
+    CutoffBC,
+    ResonanceAC,
+    ResonanceBC,
+    MixAC,
+    MixBC,
+    PositionAC,
+    PositionBC,
+    GrainSizeAC,
+    GrainSizeBC,
+    FmAC,
+    FmBC,
+    AmAC,
+    AmBC,
+    WidthAC,
+    WidthBC,
     Count
 };
 enum class Source {
@@ -144,11 +168,17 @@ struct ModValues {
         const auto c = first == Destination::FmA1   ? Destination::FmC1
                        : first == Destination::AmA1 ? Destination::AmC1
                                                     : Destination::WidthC1;
+        const auto paired = first == Destination::FmA1   ? Destination::FmAC
+                            : first == Destination::AmA1 ? Destination::AmAC
+                                                         : Destination::WidthAC;
+        const int part = slot / 2;
+        const float group =
+            (part != 1 ? get(paired) : 0) + (part != 0 ? get(Destination(int(paired) + 1)) : 0);
         if (slot < 4)
-            return get(Destination(int(first) + slot)) +
+            return group + get(Destination(int(first) + slot)) +
                    get(Destination(int(first) + 4 + slot / 2)) + get(Destination(int(first) + 6)) +
                    get(Destination(int(c) + 3));
-        return get(Destination(int(c) + slot - 4)) + get(Destination(int(c) + 2)) +
+        return group + get(Destination(int(c) + slot - 4)) + get(Destination(int(c) + 2)) +
                get(Destination(int(c) + 3));
     }
     float position(int slot) const {
@@ -157,39 +187,49 @@ struct ModValues {
                             : Destination(int(Destination::PositionC1) + slot - 4));
     }
     float pair(Destination first, int part) const {
-        Destination c = Destination::None;
+        Destination c = Destination::None, pair = Destination::None;
         switch (first) {
         case Destination::VolumeA:
             c = Destination::VolumeC;
+            pair = Destination::VolumeAC;
             break;
         case Destination::PitchA:
             c = Destination::PitchC;
+            pair = Destination::PitchAC;
             break;
         case Destination::PhaseA:
             c = Destination::PhaseC;
+            pair = Destination::PhaseAC;
             break;
         case Destination::PanA:
             c = Destination::PanC;
+            pair = Destination::PanAC;
             break;
         case Destination::CutoffA:
             c = Destination::CutoffC;
+            pair = Destination::CutoffAC;
             break;
         case Destination::ResonanceA:
             c = Destination::ResonanceC;
+            pair = Destination::ResonanceAC;
             break;
         case Destination::MixA:
             c = Destination::MixC;
+            pair = Destination::MixAC;
             break;
         case Destination::PositionA:
             c = Destination::PositionC;
+            pair = Destination::PositionAC;
             break;
         case Destination::GrainSizeA:
             c = Destination::GrainSizeC;
+            pair = Destination::GrainSizeAC;
             break;
         default:
             return 0;
         }
-        const float all = get(Destination(int(c) + 1));
+        const float all = get(Destination(int(c) + 1)) + (part != 1 ? get(pair) : 0) +
+                          (part != 0 ? get(Destination(int(pair) + 1)) : 0);
         return part < 2
                    ? get(Destination(int(first) + part)) + get(Destination(int(first) + 2)) + all
                    : get(c) + all;

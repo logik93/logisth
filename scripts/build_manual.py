@@ -70,6 +70,14 @@ for line in lines + ['']:
         story.append(Paragraph(inline(line[2:]), styles['Title']))
         story.append(Image(str(root / 'docs/images/logisth-dark.png'), width=468, height=468*860/1240))
         story.append(Spacer(1, 16))
+    elif re.fullmatch(r'!\[.*?\]\(.+?\)', line):
+        flush()
+        match = re.fullmatch(r'!\[(.*?)\]\((.+?)\)', line)
+        picture = Image(str(root / 'docs' / match.group(2)))
+        scale = min(468 / picture.imageWidth, 650 / picture.imageHeight)
+        picture.drawWidth = picture.imageWidth * scale
+        picture.drawHeight = picture.imageHeight * scale
+        story.extend([picture, Spacer(1, 6), Paragraph(inline(match.group(1)), styles['Normal'])])
     elif line.startswith('### '):
         flush()
         story.append(Paragraph(inline(line[4:]), styles['Heading3']))

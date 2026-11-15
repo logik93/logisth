@@ -42,6 +42,7 @@ LogisthProcessor::LogisthProcessor()
 }
 Params LogisthProcessor::snapshot() const {
     Params p;
+    p.fixedVelocity = get(Param::fixedvelocity) > 0;
     p.spectralBank = spectralPointer.load();
     for (int i = 0; i < playerCount; ++i) {
         size_t at = playerParamIndex(Param::o1wave, i, 12);
@@ -55,7 +56,8 @@ Params LogisthProcessor::snapshot() const {
         float fine = next();
         o.semitone = octave * 12 + note + fine * .01f;
         o.phase = next();
-        o.detune = next() + get(detuneExtra(i));
+        o.detune = next() + get(detuneExtra(i)) + get(detuneWide(i));
+        o.blend = get(unisonBlend(i));
         o.stereo = next();
         o.pan = next();
         o.retrigger = next() > 0;
@@ -216,8 +218,14 @@ EffectsParams LogisthProcessor::effectsSnapshot() const {
     p.eqMode = int(get(Param::eqmode));
     p.eqAutoGain = get(Param::eqautogain) > 0;
     p.eqOutput = get(Param::eqoutput);
-    for (int i = 0; i < 10; ++i)
-        p.eqBands[size_t(i)] = get(Param(size_t(Param::eqband0) + size_t(i)));
+    for (int i = 0; i < eqMaxBands; ++i) {
+        auto n = size_t(i), at = size_t(eqBandTypes[n]);
+        p.eqBands[n] = get(eqBandGains[n]);
+        p.eqTypes[n] = int(get(Param(at)));
+        p.eqFrequencies[n] = get(Param(at + 1));
+        p.eqQ[n] = get(Param(at + 2));
+        p.eqEnabled[n] = get(Param(at + 3)) > 0;
+    }
     p.bass = get(Param::eqbass);
     p.bassFreq = get(Param::eqbassfreq);
     p.treble = get(Param::eqtreble);
@@ -400,6 +408,8 @@ void LogisthProcessor::processBlock(AudioBuffer<float> &audio, MidiBuffer &midi)
             generatedMidi.addEvent(MidiMessage::allNotesOff(ch), 0);
     midiWasEnabled = output;
     auto emit = [&](MidiEvent event) {
+        if (p.fixedVelocity && event.type == EventType::NoteOn)
+            event.value = 1;
         if (output && event.time < n) {
             if (event.type == EventType::NoteOn)
                 generatedMidi.addEvent(MidiMessage::noteOn(event.channel, event.key, event.value),
