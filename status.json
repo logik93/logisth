@@ -5,8 +5,8 @@
   "run_url": "https://github.com/logik93/logisth/actions/runs/43754727931",
   "phase": "published",
   "pipeline_phase": "published",
-  "stage": "windows-linux",
-  "recorded_at": "2026-11-15T20:15:51.155017+00:00",
+  "stage": "final",
+  "recorded_at": "2026-11-15T20:31:20.469642+00:00",
   "jobs": {
     "started": {
       "result": "success",
@@ -23,16 +23,26 @@
     "publish": {
       "result": "success",
       "outputs": {}
+    },
+    "report_initial": {
+      "result": "success",
+      "outputs": {}
+    },
+    "macos": {
+      "result": "success",
+      "outputs": {}
+    },
+    "publish_macos": {
+      "result": "success",
+      "outputs": {}
     }
   },
   "release_url": "https://github.com/logik93/logisth/releases/tag/v0.9.6",
   "release_id": 446335953,
   "release_commit": "5c099871d459fea46752ca45f29e9111a2b30deb",
   "published_at": "2026-11-15T20:15:38Z",
-  "publication_stage": "windows-linux",
-  "pending_platforms": [
-    "macos-universal"
-  ],
+  "publication_stage": "complete",
+  "pending_platforms": [],
   "platforms": [
     {
       "version": "0.9.6",
@@ -130,13 +140,64 @@
       "signing": "unsigned",
       "archive": "logisth-0.9.6-windows-x86_64.zip",
       "archive_sha256": "209a1db9fc35734c3a45e0fe489f4924960a382e881313b210d827733e41fe13"
+    },
+    {
+      "version": "0.9.6",
+      "platform": "macos-universal",
+      "source_commit": "5c099871d459fea46752ca45f29e9111a2b30deb",
+      "source_fingerprint": {
+        "Source": "d2d3c14cd6bd2072db3b5f29ba9baeb0018c4f73",
+        "CMakeLists.txt": "3dafdc84186a9edec5f212c61bcbcb5c36d9dd3d",
+        "tests": "a1e74a99c70d532de1a763a900a0239742e707ef",
+        "assets": "d9d361fe6505e4d50e61064f667a29a68c0e035a"
+      },
+      "tests": {
+        "passed": 15,
+        "failed": 0,
+        "skipped": 0
+      },
+      "binaries": [
+        {
+          "path": "VST3/logisth.vst3/Contents/MacOS/logisth",
+          "architectures": [
+            "arm64",
+            "x86_64"
+          ],
+          "sha256": "8545d84e5f6c7678fe08cb205a4c9beaaec8eb9879f3a57191c01d4f86f73482"
+        },
+        {
+          "path": "CLAP/logisth.clap/Contents/MacOS/logisth",
+          "architectures": [
+            "arm64",
+            "x86_64"
+          ],
+          "sha256": "e80f72f79c20514ae7ab593f7dbefd7ec5625a00ce4295a0ebfbec5ecda206c2"
+        },
+        {
+          "path": "Standalone/logisth.app/Contents/MacOS/logisth",
+          "architectures": [
+            "arm64",
+            "x86_64"
+          ],
+          "sha256": "8dfb670714f91bb7c89722845fcc394796ddd933b994784b1263882055ec7ff2"
+        }
+      ],
+      "formats": [
+        "VST3",
+        "CLAP",
+        "Standalone"
+      ],
+      "run_url": "https://github.com/logik93/logisth/actions/runs/43754727931",
+      "signing": "ad-hoc, not notarized",
+      "archive": "logisth-0.9.6-macos-universal.zip",
+      "archive_sha256": "b3eb44a7f6e66d3743a634851e7632176150c71b9d0ce3e2be9f4fe71978bf9c"
     }
   ],
   "assets": [
     {
       "name": "SHA256SUMS",
-      "id": 752220807,
-      "size": 4446,
+      "id": 752263010,
+      "size": 4644,
       "url": "https://github.com/logik93/logisth/releases/download/v0.9.6/SHA256SUMS"
     },
     {
@@ -144,6 +205,12 @@
       "id": 752220780,
       "size": 1384,
       "url": "https://github.com/logik93/logisth/releases/download/v0.9.6/build-info-linux-x86_64.json"
+    },
+    {
+      "name": "build-info-macos-universal.json",
+      "id": 752263002,
+      "size": 1464,
+      "url": "https://github.com/logik93/logisth/releases/download/v0.9.6/build-info-macos-universal.json"
     },
     {
       "name": "build-info-windows-x86_64.json",
@@ -174,6 +241,12 @@
       "id": 752220776,
       "size": 41070816,
       "url": "https://github.com/logik93/logisth/releases/download/v0.9.6/logisth-0.9.6-linux-x86_64.tar.gz"
+    },
+    {
+      "name": "logisth-0.9.6-macos-universal.zip",
+      "id": 752263001,
+      "size": 65824866,
+      "url": "https://github.com/logik93/logisth/releases/download/v0.9.6/logisth-0.9.6-macos-universal.zip"
     },
     {
       "name": "logisth-0.9.6-source.tar.gz",
