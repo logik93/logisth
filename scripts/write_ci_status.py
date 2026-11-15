@@ -6,6 +6,7 @@ import re
 import subprocess
 from pathlib import Path
 from datetime import datetime, timezone
+from verify_release import validate_tag
 
 
 def git(*args, data=None):
@@ -39,8 +40,7 @@ def native_test_failures(folder):
 
 def main():
     tag = os.environ['RELEASE_TAG']
-    if not re.fullmatch(r'v\d+\.\d+\.\d+', tag):
-        raise ValueError('Invalid tag')
+    validate_tag(tag)
     platform = os.environ.get('REPORT_PLATFORM', '')
     if platform and platform not in ('linux-x86_64', 'windows-x86_64', 'macos-universal'):
         raise ValueError('Invalid platform')

@@ -167,6 +167,16 @@ def main():
             if len(bundles) != 1:
                 raise ValueError(f'Expected one macOS bundle: {pattern}')
             bundle = bundles[0]
+            import plistlib
+            bundle_info = plistlib.loads((bundle / 'Contents/Info.plist').read_bytes())
+            components = list(map(int, version.split('.')))
+            marketing = '.'.join(map(str, components[:3]))
+            revision = components[3] if len(components) == 4 else 0
+            apple_build = f'{components[0] * 100 + components[1]}.{components[2]}.{revision}'
+            if (bundle_info.get('CFBundleShortVersionString') != marketing
+                    or bundle_info.get('CFBundleVersion') != apple_build
+                    or bundle_info.get('CFBundleGetInfoString') != 'logisth ' + version):
+                raise ValueError(f'Incorrect macOS release/bundle version: {bundle}')
             run(['codesign', '--force', '--deep', '--sign', '-', bundle], logs / f'sign-{bundle.suffix}.log')
             run(['codesign', '--verify', '--deep', '--strict', bundle], logs / f'verify-{bundle.suffix}.log')
     binaries = []
@@ -198,14 +208,14 @@ def main():
     metadata = json.dumps(info, indent=2) + '\n'
     (stage / 'BUILD_INFO.json').write_text(metadata)
     (output / f'build-info-{args.platform}.json').write_text(metadata)
-    for name in ['README.md', 'BUILD_STATUS.md', 'LICENSE', 'THIRD_PARTY_NOTICES.md', 'docs/IMPLEMENTATION.md', 'docs/STUDIO-0.5.md', 'docs/CALIBRATION.md', 'docs/ANTICLICK.md', 'docs/THEMES.md', 'docs/INTERFACE.md', 'docs/MANUAL.md', 'docs/ALGORITHM_AUDIT.json', 'docs/PROJECT_REVIEW.md', 'docs/FACTORY_PRESETS.md', 'docs/factory/after-0.9.4.csv', 'docs/logisth-Manual-English.pdf',
+    for name in ['README.md', 'BUILD_STATUS.md', 'LICENSE', 'THIRD_PARTY_NOTICES.md', 'docs/IMPLEMENTATION.md', 'docs/STUDIO-0.5.md', 'docs/CALIBRATION.md', 'docs/ANTICLICK.md', 'docs/THEMES.md', 'docs/INTERFACE.md', 'docs/MANUAL.md', 'docs/ALGORITHM_AUDIT.json', 'docs/PROJECT_REVIEW.md', 'docs/REVIEW-v0.9.4.1.md', 'docs/FACTORY_PRESETS.md', f'docs/factory/after-{version}.csv', 'docs/logisth-Manual-English.pdf',
                  'assets/fonts/LICENSE.txt', 'assets/fonts/NOTICE.txt']:
         if not (source / name).is_file():
             continue
         destination = stage / name
         destination.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(source / name, destination)
-    for directory in ['licenses', 'assets/themes', 'assets/skins']:
+    for directory in ['licenses', 'assets/themes', 'assets/skins', 'assets/fonts/ioskeley']:
         if (source / directory).is_dir():
             shutil.copytree(source / directory, stage / directory, dirs_exist_ok=True)
     images = source / 'docs' / 'images'

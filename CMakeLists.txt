@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.22)
-project(Logisth VERSION 0.9.4 LANGUAGES C CXX)
+project(Logisth VERSION 0.9.4.1 LANGUAGES C CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 include(CTest)
@@ -33,21 +33,45 @@ if(LOGISTH_VST2)
   juce_set_vst2_sdk_path("${VST2_SDK_PATH}")
   list(APPEND formats VST)
 endif()
-juce_add_plugin(Logisth COMPANY_NAME "wavelogik" BUNDLE_ID "com.wavelogik.logisth"
+# Keep the full release string in plug-in metadata, with legal three-part Apple
+# bundle versions. The internal build tuple remains ordered for future releases.
+math(EXPR logisth_apple_major "${PROJECT_VERSION_MAJOR} * 100 + ${PROJECT_VERSION_MINOR}")
+set(logisth_revision 0)
+if(NOT "${PROJECT_VERSION_TWEAK}" STREQUAL "")
+  set(logisth_revision "${PROJECT_VERSION_TWEAK}")
+endif()
+set(logisth_apple_build "${logisth_apple_major}.${PROJECT_VERSION_PATCH}.${logisth_revision}")
+set(logisth_marketing "${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH}")
+set(logisth_bundle_options)
+if(APPLE)
+  set(logisth_bundle_options BUILD_VERSION "${logisth_apple_build}" PLIST_TO_MERGE
+    "<plist><dict><key>CFBundleShortVersionString</key><string>${logisth_marketing}</string><key>CFBundleGetInfoString</key><string>logisth ${PROJECT_VERSION}</string></dict></plist>")
+endif()
+juce_add_plugin(Logisth ${logisth_bundle_options} COMPANY_NAME "wavelogik" BUNDLE_ID "com.wavelogik.logisth"
   PLUGIN_MANUFACTURER_CODE Wvlg PLUGIN_CODE Lgst
   FORMATS ${formats} PRODUCT_NAME "logisth"
   IS_SYNTH TRUE NEEDS_MIDI_INPUT TRUE NEEDS_MIDI_OUTPUT TRUE
   IS_MIDI_EFFECT FALSE EDITOR_WANTS_KEYBOARD_FOCUS FALSE
   COPY_PLUGIN_AFTER_BUILD FALSE VST3_CATEGORIES Instrument Synth)
 juce_add_binary_data(LogisthFonts SOURCES
-  assets/fonts/OpenSans-Regular.ttf assets/fonts/OpenSans-Semibold.ttf assets/skins/ap-music-group-white.png)
-target_sources(Logisth PRIVATE Source/PluginProcessor.cpp Source/SourceAssets.cpp Source/PresetLibrary.cpp Source/PluginEditor.cpp)
+  assets/fonts/OpenSans-Regular.ttf assets/fonts/OpenSans-Semibold.ttf
+  assets/fonts/ioskeley/IoskeleyMonoTermNerdFontMono-Regular.ttf
+  assets/fonts/ioskeley/IoskeleyMonoTermNerdFontMono-Bold.ttf
+  assets/themes/bokkenmmb-Solarized.json "assets/themes/bokkenmmb-Tokyo Night.json"
+  "assets/themes/bokkenmmb-Solarized Osaka.json" assets/themes/bokkenmmb-gruvbox.json assets/skins/ap-music-group-white.png)
+target_sources(Logisth PRIVATE Source/PluginProcessor.cpp Source/SourceAssets.cpp Source/PresetLibrary.cpp Source/PluginEditor.cpp Source/ThemeSettings.cpp)
 target_link_libraries(Logisth PRIVATE LogisthFonts)
 target_compile_definitions(Logisth PUBLIC JUCE_WEB_BROWSER=0 JUCE_USE_CURL=0 JUCE_VST3_CAN_REPLACE_VST2=0)
 target_link_libraries(Logisth PRIVATE juce::juce_audio_utils juce::juce_dsp PUBLIC juce::juce_recommended_config_flags)
 FetchContent_Declare(clap_juce_extensions GIT_REPOSITORY https://github.com/free-audio/clap-juce-extensions.git GIT_TAG 6bde108329ff9fc24404b79b8b397261a75cf6a8)
 FetchContent_MakeAvailable(clap_juce_extensions)
 clap_juce_extensions_plugin(TARGET Logisth CLAP_ID "com.wavelogik.logisth" CLAP_FEATURES instrument synthesizer stereo)
+if(APPLE)
+  set_target_properties(Logisth_CLAP PROPERTIES
+    MACOSX_BUNDLE_BUNDLE_VERSION "${logisth_apple_build}"
+    MACOSX_BUNDLE_SHORT_VERSION_STRING "${logisth_marketing}"
+    MACOSX_BUNDLE_INFO_STRING "logisth ${PROJECT_VERSION}")
+endif()
 if(BUILD_TESTING)
   add_executable(processor_tests tests/ProcessorTests.cpp)
   target_include_directories(processor_tests PRIVATE Source)
@@ -59,6 +83,7 @@ if(BUILD_TESTING AND UNIX AND NOT APPLE)
   add_executable(clap_smoke tests/ClapSmoke.cpp)
   target_include_directories(clap_smoke PRIVATE Source  "${clap_juce_extensions_SOURCE_DIR}/clap-libs/clap/include")
   target_link_libraries(clap_smoke PRIVATE ${CMAKE_DL_LIBS})
+  target_compile_definitions(clap_smoke PRIVATE LOGISTH_EXPECTED_VERSION="${PROJECT_VERSION}")
   add_test(NAME clap_binary COMMAND clap_smoke $<TARGET_FILE:Logisth_CLAP>)
 endif()
 

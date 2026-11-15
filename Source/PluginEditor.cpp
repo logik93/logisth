@@ -8,6 +8,15 @@ using namespace juce;
 using namespace logisth;
 namespace {
 constexpr int canvasWidth = 1240, canvasHeight = 860;
+Typeface::Ptr embeddedMonoFace(bool bold) {
+    static const auto regularFace =
+        Typeface::createSystemTypefaceFor(BinaryData::IoskeleyMonoTermNerdFontMonoRegular_ttf,
+                                          BinaryData::IoskeleyMonoTermNerdFontMonoRegular_ttfSize);
+    static const auto boldFace =
+        Typeface::createSystemTypefaceFor(BinaryData::IoskeleyMonoTermNerdFontMonoBold_ttf,
+                                          BinaryData::IoskeleyMonoTermNerdFontMonoBold_ttfSize);
+    return bold ? boldFace : regularFace;
+}
 Typeface::Ptr embeddedFace(bool bold) {
     static const auto regularFace = Typeface::createSystemTypefaceFor(
         BinaryData::OpenSansRegular_ttf, BinaryData::OpenSansRegular_ttfSize);
@@ -46,6 +55,8 @@ void capsule(Graphics &g, Rectangle<float> b, Colour fill, Colour outline) {
 
 Font LogisthColours::font(float size, bool bold) const {
     float h = jmax(11.f, size * 1.18f);
+    if (fontFamily == "IoskeleyMonoTerm Nerd Font Mono")
+        return Font(FontOptions(embeddedMonoFace(bold)).withHeight(h));
     if (fontFamily == "Open Sans")
         return Font(FontOptions(embeddedFace(bold)).withHeight(h));
     return Font(FontOptions(fontFamily, h, bold ? Font::bold : Font::plain));
@@ -131,6 +142,9 @@ void LogisthLook::setPalette(const ThemeDefinition &theme) {
 }
 Typeface::Ptr LogisthLook::getTypefaceForFont(const Font &f) {
     return f.isBold() ? semibold : regular;
+}
+Font LogisthLook::getTextButtonFont(TextButton &, int) {
+    return font(12);
 }
 Font LogisthLook::getPopupMenuFont() {
     return font(12);
@@ -863,6 +877,7 @@ class LogisthEditor::Console : public Component,
         searchPanel.addAndMakeVisible(searchQuery);
         searchResults.setComponentID("preset.search.results");
         searchResults.setModel(this);
+        searchResults.addKeyListener(this);
         searchResults.setRowHeight(29);
         searchPanel.addAndMakeVisible(searchResults);
         searchEmpty.setText("No matching presets", dontSendNotification);
@@ -909,6 +924,7 @@ class LogisthEditor::Console : public Component,
         settings.setButtonText("SETTINGS");
         settings.setTooltip("Appearance and About logisth");
         settings.onClick = [this] {
+            showPresetSearch(false);
             settingsOpen = !settingsOpen;
             layout();
             repaint();
@@ -1112,6 +1128,7 @@ class LogisthEditor::Console : public Component,
     }
     ~Console() override {
         rememberDraft();
+        searchResults.removeKeyListener(this);
         searchResults.setModel(nullptr);
         searchQuery.removeKeyListener(this);
         searchQuery.onTextChange = nullptr;
@@ -1211,7 +1228,9 @@ class LogisthEditor::Console : public Component,
             }
             if (auto *edit = dynamic_cast<TextEditor *>(&node)) {
                 auto old = edit->getFont();
-                edit->setFont(font(old.getHeight() / 1.18f, old.isBold()));
+                auto desired = font(old.getHeight() / 1.18f, old.isBold());
+                if (old != desired)
+                    edit->applyFontToAllText(desired, true);
             }
             for (auto *child : node.getChildren())
                 updateFonts(*child);
@@ -1244,7 +1263,8 @@ class LogisthEditor::Console : public Component,
               &hexLabel, &fontLabel, &backgroundLabel, &knobLabel})
             label->setColour(Label::textColourId, screenText);
         searchQuery.setColour(TextEditor::backgroundColourId, screen);
-        searchQuery.setColour(TextEditor::textColourId, screenText);
+        searchQuery.applyColourToAllText(screenText, true);
+        searchQuery.setTextToShowWhenEmpty("Search factory and user presets...", muted);
         searchResults.setColour(ListBox::backgroundColourId, screen);
         searchEmpty.setColour(Label::textColourId, mint);
         presetNotes.setColour(TextEditor::backgroundColourId, panel);
@@ -1781,6 +1801,8 @@ class LogisthEditor::Console : public Component,
         }
         themeFont.setComponentID("settings.theme.font");
         auto families = Font::findAllTypefaceNames();
+        families.removeString("IoskeleyMonoTerm Nerd Font Mono");
+        families.insert(0, "IoskeleyMonoTerm Nerd Font Mono");
         families.removeString("Open Sans");
         families.insert(0, "Open Sans");
         themeFont.addItemList(families, 1);
@@ -1817,7 +1839,7 @@ class LogisthEditor::Console : public Component,
         aboutInfo.setText("wavelogik / logisth  " + String(JucePlugin_VersionString) +
                               "\nPolyphonic instrument / VST3, CLAP, Standalone"
                               "\nOriginal code: MIT / (c) 2026 wavelogik"
-                              "\nBuilt with JUCE, CLAP extensions and Open Sans."
+                              "\nBuilt with JUCE, CLAP extensions, Open Sans\n and Ioskeley Mono."
                               "\nDependencies retain their respective licenses."
                               "\n\nTheme and size are independent of audio presets.",
                           dontSendNotification);
@@ -2049,6 +2071,10 @@ class LogisthEditor::Console : public Component,
         chooseSearchResult();
     }
     bool keyPressed(const KeyPress &key, Component *origin) override {
+        if (searchPanel.isVisible() && key == KeyPress::escapeKey) {
+            showPresetSearch(false);
+            return true;
+        }
         if (origin != &searchQuery)
             return false;
         if (key == KeyPress::upKey || key == KeyPress::downKey) {
@@ -2073,6 +2099,7 @@ class LogisthEditor::Console : public Component,
         commentStamp = processor.commentRevision.load();
     }
     void presetMenu() {
+        showPresetSearch(false);
         if (notesRevision == processor.presetRevision.load())
             processor.setPresetComment(presetNotes.getText());
         else
@@ -2691,7 +2718,7 @@ class LogisthEditor::Console : public Component,
         put(Param::solo, {927, 28, 68, 24}, Style::Menu);
         put(Param::polyphony, {1010, 16, 60, 38}, Style::Number, "POLY");
         put(Param::sync, {1085, 28, 64, 24}, Style::Toggle, "SYNC");
-        settings.setBounds(1162, 28, 62, 24);
+        settings.setBounds(1160, 28, 64, 24);
         settings.setToggleState(settingsOpen, dontSendNotification);
         put(Param::arpout, {225, 29, 82, 24}, Style::Toggle, "MIDI OUT");
         put(Param::midionly, {225, 55, 82, 19}, Style::Toggle, "MIDI ONLY");
@@ -3071,7 +3098,7 @@ class LogisthEditor::Console : public Component,
     ListBox searchResults;
     Label searchEmpty;
     std::vector<PresetMatch> matches;
-    TextButton settings;
+    ToggleButton settings;
     TextEditor presetNotes;
     Component settingsPanel;
     ComboBox themeChoice;

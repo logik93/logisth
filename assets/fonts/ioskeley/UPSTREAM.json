@@ -1,0 +1,14 @@
+{
+  "release": "https://github.com/ahatem/IoskeleyMono/releases/tag/v2.2.0",
+  "tag_commit": "d674587a32439ec04f8a70076466a24b8be6d4d7",
+  "archive": "IoskeleyMono-Term-NerdFont.zip",
+  "archive_sha256": "25c601b1a561f73cbb0366931148861451a972463718d25e76bf869fd3d54754",
+  "family": "IoskeleyMonoTerm Nerd Font Mono",
+  "files": {
+    "IoskeleyMonoTermNerdFontMono-Bold.ttf": "a6a43887504705f83cd08141419b2c8049d97a46adeb0af7958c483a78dec87b",
+    "IoskeleyMonoTermNerdFontMono-Regular.ttf": "21818fd77b997b0a8226183ac5e83ad719c6bfe17737d45c627e070d0ecbf114",
+    "iosevka-LICENSE.txt": "4ba53c7c1cb39279aae5f8d7d22054c485c71169920e5a36ed098b115e2e3c5d",
+    "ioskeley-LICENSE.txt": "1084285bd2bddf706d566e11a92fcbae2706da4a8eafac49ed34c871d01fb7fe",
+    "nerd-fonts-LICENSE.txt": "1f6ad4edae6479aaace3112ede5279a23284ae54b2a34db66357aef5f64df160"
+  }
+}

@@ -37,6 +37,7 @@ class LogisthLook : public juce::LookAndFeel_V4, public LogisthColours {
     juce::Font getComboBoxFont(juce::ComboBox &) override;
     void positionComboBoxText(juce::ComboBox &, juce::Label &) override;
     juce::Font getPopupMenuFont() override;
+    juce::Font getTextButtonFont(juce::TextButton &, int) override;
     juce::PopupMenu::Options getOptionsForComboBoxPopupMenu(juce::ComboBox &,
                                                             juce::Label &) override;
     void drawToggleButton(juce::Graphics &, juce::ToggleButton &, bool, bool) override;

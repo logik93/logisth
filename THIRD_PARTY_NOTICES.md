@@ -9,6 +9,7 @@ remove their distribution requirements.
 | JUCE 8.0.6 | AGPLv3 or commercial JUCE license; see [upstream notice](licenses/JUCE-LICENSE.md) and its module notices. |
 | clap-juce-extensions | MIT; [copyright and license](licenses/CLAP-JUCE-EXTENSIONS-LICENSE.md). |
 | CLAP | MIT; [copyright and license](licenses/CLAP-LICENSE.txt). |
+| Ioskeley Mono Term Nerd Font Mono v2.2.0 | SIL OFL 1.1; unmodified Regular/Bold, [provenance and notices](assets/fonts/ioskeley/NOTICE.md), with Iosevka/Nerd Fonts notices. |
 | Open Sans | Apache-2.0; [license](assets/fonts/LICENSE.txt) and [notice](assets/fonts/NOTICE.txt). |
 | VST3 SDK bundled with the pinned JUCE dependency | Retains its upstream SDK licensing; see the SDK LICENSE.txt under JUCE's VST3_SDK directory. |
 | Optional VST2 SDK | Separately obtained licensed SDK; not included in this repository or binary packages. |

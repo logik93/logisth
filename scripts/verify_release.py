@@ -8,9 +8,14 @@ import zipfile
 from pathlib import Path
 
 
+def validate_tag(tag: str) -> str:
+    if not re.fullmatch(r"v\d+\.\d+\.\d+(?:\.\d+)?", tag):
+        raise ValueError("Expected a three- or four-part version tag")
+    return tag[1:]
+
+
 def verify(tag: str) -> None:
-    if not re.fullmatch(r"v\d+\.\d+\.\d+", tag):
-        raise ValueError("Expected a version tag such as v0.2.0")
+    validate_tag(tag)
     root = Path(__file__).resolve().parents[1]
     version = tag[1:]
     project = re.search(r"project\(Logisth VERSION ([\d.]+)",
@@ -62,6 +67,13 @@ def verify(tag: str) -> None:
             for name in ['factory-demo.wav', 'factory-measurements.csv', 'CATALOGUE.md', 'README.md', 'LICENSE']:
                 if not archive.read(name):
                     raise ValueError(f"Empty preset bank input: {name}")
+    if tuple(map(int, version.split('.'))) >= (0, 9, 4, 1):
+        from verify_theme_assets import verify as verify_themes
+        verify_themes(root)
+        with zipfile.ZipFile(folder / f"logisth-{version}-themes.zip") as archive:
+            for file in (root / 'assets/fonts/ioskeley').iterdir():
+                if file.is_file() and archive.read('fonts/ioskeley/' + file.name) != file.read_bytes():
+                    raise ValueError(f'Bundled theme font mismatch: {file.name}')
     print(f"Verified {len(names)} release assets for {tag}")
 
 

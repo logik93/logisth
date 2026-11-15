@@ -1,4 +1,4 @@
-# logisth 0.9.4 — User Manual
+# logisth 0.9.4.1 — User Manual
 
 wavelogik logisth is a two-part polyphonic subtractive synthesizer for VST3, CLAP and standalone use.
 This manual describes logisth's controls, sound engines and preset workflow.
@@ -74,7 +74,10 @@ window keeps its own size; changing one sets the default for subsequent windows.
 
 SETTINGS has APPEARANCE, THEME EDITOR, STYLE and ABOUT tabs inside the central
 rack. The standard themes are Light, Midnight Blue (default), Cobalt, Graphite,
-Forest and AP always flexin'!. The AP skin uses a white geometric AP mark without
+Forest, AP always flexin'!, bokkenmmb-Solarized, bokkenmmb-Tokyo Night,
+bokkenmmb-Solarized Osaka and bokkenmmb-gruvbox (ten themes). The four bokkenmmb
+themes use embedded IoskeleyMonoTerm Nerd Font Mono v2.2.0, Regular and Bold,
+so separate font installation is unnecessary. The AP skin uses a white geometric AP mark without
 the handwritten signature, on a black/blue/cyan/violet palette. Theme selection is shared by open instances and recalled by new
 ones; audio presets/projects preserve theme and scale. Preferences live in
 `logisth/appearance.json` under the system user application-data directory.
@@ -640,7 +643,8 @@ open at Main 65%.
 Click the **magnifying glass** beside the sound selector to search. Type words
 from a name or category; factory descriptions and user folder names also match.
 Multiple words narrow the results. Up/Down selects a row, Enter loads it, Escape
-closes the panel. Clicking a row loads that result. User presets are scanned
+closes the panel, including when the results list has focus. Opening Settings or
+PATCH also dismisses search. Clicking a row loads that result. User presets are scanned
 recursively under the chosen library folder, alongside the current file.
 The sound selector lists factory sounds and user presets from the library folder and its subfolders.
 Its arrows step through that list. Loading replaces the current patch.
@@ -738,7 +742,7 @@ not that it has been auditioned on Apple Silicon hardware.
 The filter is an independent SVF design. All five reverb algorithms, including
 the rebuilt Hall, are original wavelogik implementations. Signalsmith Stretch and Kick
 sampler modes use Signalsmith Stretch 1.3.2 and Signalsmith Linear 0.6.6 (MIT). Modulation
-scales and sequencer behaviour are defined by this manual. Open Sans font
+scales and sequencer behaviour are defined by this manual. Open Sans and Ioskeley Mono font
 notices are included in assets/fonts.
 
 ## License and manufacturer

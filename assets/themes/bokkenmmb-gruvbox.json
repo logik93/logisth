@@ -1,0 +1,24 @@
+{
+  "format": "logisth-theme",
+  "version": 2,
+  "font": "IoskeleyMonoTerm Nerd Font Mono",
+  "skin": "",
+  "backgroundStyle": 0,
+  "knobStyle": 2,
+  "name": "bokkenmmb-gruvbox",
+  "dark": true,
+  "colours": {
+    "body": "#272625",
+    "panel": "#32302F",
+    "border": "#282828",
+    "text": "#EBF4BE",
+    "muted": "#DBE996",
+    "accent": "#89B482",
+    "highlight": "#E78A4E",
+    "screen": "#282828",
+    "screenBorder": "#222C21",
+    "screenText": "#C5F4BE",
+    "knob": "#A6D39F",
+    "knobTrack": "#4C5747"
+  }
+}

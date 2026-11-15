@@ -1,0 +1,24 @@
+{
+  "format": "logisth-theme",
+  "version": 2,
+  "font": "IoskeleyMonoTerm Nerd Font Mono",
+  "skin": "",
+  "backgroundStyle": 0,
+  "knobStyle": 0,
+  "name": "bokkenmmb-Solarized Osaka",
+  "dark": true,
+  "colours": {
+    "body": "#001419",
+    "panel": "#012B36",
+    "border": "#063642",
+    "text": "#E0EDFF",
+    "muted": "#FDF6E3",
+    "accent": "#29A298",
+    "highlight": "#FEE999",
+    "screen": "#031B21",
+    "screenBorder": "#001014",
+    "screenText": "#E0EDFF",
+    "knob": "#29A298",
+    "knobTrack": "#0E3633"
+  }
+}

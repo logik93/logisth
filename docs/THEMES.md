@@ -2,7 +2,7 @@
 
 SETTINGS / APPEARANCE / OPEN FOLDER reveals the current theme directory (initially
 `logisth/themes` under your system user application-data directory). USE FOLDER
-selects another directory and remembers it. Six standard palettes are written
+selects another directory and remembers it. Ten standard palettes are written
 there on first use; source/native packages include them in `assets/themes`.
 Missing standard files are recreated; existing files are retained.
 
@@ -47,9 +47,20 @@ Version 2 adds font, background, knob styles and two dedicated knob colours:
 RGB values are six hexadecimal digits, optionally prefixed by #. Name is 1–64
 characters; dark is a boolean controlling light/dark controls. Background styles
 are 0 Flat, 1 Gradient, 2 Grid; knob styles are 0 Arc, 1 Solid, 2 Minimal. The
-font is an installed family name (up to 128 characters). Open Sans is embedded;
-other fonts must be installed on the destination machine and use system fallback
-if unavailable. Font files are not embedded into a theme.
+font is a family name (up to 128 characters). Open Sans and IoskeleyMonoTerm Nerd
+Font Mono are embedded in logisth. Other fonts must be installed on the destination
+machine and use system fallback if unavailable. JSON theme files do not contain font data.
+
+Version 0.9.4.1 adds the supplied bokkenmmb-Solarized, bokkenmmb-Tokyo Night,
+bokkenmmb-Solarized Osaka and bokkenmmb-gruvbox themes. Their original JSON files,
+all twelve colours and knob/background styles are retained. All four select
+IoskeleyMonoTerm Nerd Font Mono from Ioskeley Mono v2.2.0. Both Regular and Bold
+are bundled unchanged, so these themes work without installing fonts separately.
+The font and licenses are also included in the theme download under fonts/ioskeley.
+STYLE lists both embedded families before the installed system fonts.
+
+Changing font or palette updates existing text in comments, macro names and search
+fields. Editing selections and preset metadata are preserved.
 
 Version-1 files remain readable; missing extra knob colours default to accent
 and border, font to Open Sans, and styles to Flat/Arc. All twelve palette roles
@@ -76,3 +87,10 @@ the last accepted percentage; manual input accepts a decimal dot or comma.
 Invalid input restores the last accepted value. Resizing preserves the aspect
 ratio. Actual pixel dimensions and scale are stored in `appearance.json` and
 restored in new/reopened editors. Existing windows retain their own size.
+
+## Bundled bokkenmmb gallery
+
+[Solarized](images/logisth-bokkenmmb-solarized.png) ·
+[Tokyo Night](images/logisth-bokkenmmb-tokyo-night.png) ·
+[Solarized Osaka](images/logisth-bokkenmmb-solarized-osaka.png) ·
+[Gruvbox](images/logisth-bokkenmmb-gruvbox.png)

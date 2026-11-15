@@ -54,7 +54,7 @@ inline void run() {
           "renaming retains theme content");
     for (auto &stock : ThemeSettings::defaults())
         check(directory.getChildFile(stock.key + ".json").existsAsFile(),
-              "chosen theme folder contains the six standard files");
+              "chosen theme folder contains all standard files");
     auto pInstance = std::make_unique<LogisthProcessor>();
     auto &p = *pInstance;
     std::unique_ptr<AudioProcessorEditor> ui(p.createEditor());
@@ -66,10 +66,30 @@ inline void run() {
     hex->setText("#FF8040", false);
     hex->onReturnKey();
     dynamic_cast<Button *>(panel->findChildWithID("settings.tab.2"))->onClick();
+    auto *notes = dynamic_cast<TextEditor *>(console->findChildWithID("preset.comment"));
+    notes->setText("WWWiiiWWWiii", false);
+    notes->onTextChange();
+    notes->setHighlightedRegion({2, 7});
+    const auto selection = notes->getHighlightedRegion();
+    const auto comment = p.presetComment();
     auto *font = dynamic_cast<ComboBox *>(panel->findChildWithID("settings.theme.font"));
     if (font->getNumItems() > 1)
         font->setSelectedId(2, sendNotificationSync);
     auto family = dynamic_cast<LogisthLook &>(ui->getLookAndFeel()).fontFamily;
+    TextEditor expected;
+    expected.setFont(dynamic_cast<LogisthLook &>(ui->getLookAndFeel()).font(10));
+    expected.setText(notes->getText(), false);
+    const auto range = Range<int>(0, notes->getText().length());
+    const int actualWidth = notes->getTextBounds(range).getBounds().getWidth();
+    const int expectedWidth = expected.getTextBounds(range).getBounds().getWidth();
+    if (std::abs(actualWidth - expectedWidth) > 1)
+        std::cerr << "Existing text width " << actualWidth << " expected " << expectedWidth << '\n';
+    check(std::abs(actualWidth - expectedWidth) <= 1,
+          "theme font changes restyle existing characters");
+    check(notes->getHighlightedRegion() == selection,
+          "font changes preserve the editing selection");
+    check(p.presetComment() == comment, "font changes preserve preset comment metadata");
+
     dynamic_cast<ComboBox *>(panel->findChildWithID("settings.theme.background"))
         ->setSelectedId(2, sendNotificationSync);
     dynamic_cast<ComboBox *>(panel->findChildWithID("settings.theme.knobs"))

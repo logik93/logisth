@@ -1,4 +1,4 @@
-# logisth 0.9.4 factory collection
+# logisth 0.9.4.1 factory collection
 
 48 authored patches, six per category; 58 built-in entries including Init and the nine previous sounds. Each new patch has an editable description and four performance macros: Brightness, Harmonics, Warp, and Space/Drive. Zero preserves the authored sound.
 

@@ -170,6 +170,27 @@ inline void search() {
             "unmatched searches show no stale items");
     query->onEscapeKey();
     require(!panel->isVisible(), "Escape closes preset search");
+    const int oldTheme = logisth::ThemeSettings::current();
+    auto *editor = dynamic_cast<LogisthEditor *>(ui.get());
+    button->onClick();
+    query->setText("WWWiiiWWWiii", false);
+    editor->setTheme(6);
+    const auto target = dynamic_cast<LogisthLook &>(ui->getLookAndFeel()).screenText;
+    auto image = query->createComponentSnapshot(query->getLocalBounds());
+    int coloured = 0;
+    for (int y = 3; y < image.getHeight() - 3; ++y)
+        for (int x = 4; x < image.getWidth() - 4; ++x) {
+            auto pixel = image.getPixelAt(x, y);
+            coloured += std::abs(pixel.getFloatRed() - target.getFloatRed()) +
+                            std::abs(pixel.getFloatGreen() - target.getFloatGreen()) +
+                            std::abs(pixel.getFloatBlue() - target.getFloatBlue()) <
+                        .15f;
+        }
+    require(coloured > 15, "theme changes recolour existing search text");
+    auto *settings = dynamic_cast<Button *>(console->findChildWithID("ui.settings"));
+    settings->onClick();
+    require(!panel->isVisible(), "opening Settings dismisses the preset search overlay");
+    editor->setTheme(oldTheme);
     std::cout << "PASS preset search: magnifier, case-insensitive categories, multiple words, "
                  "Enter and Escape\n";
 }

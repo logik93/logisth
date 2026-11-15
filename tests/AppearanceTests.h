@@ -23,7 +23,7 @@ inline void run() {
             directory.deleteRecursively();
         }
     } isolation;
-    check(ThemeSettings::names().size() == 6, "fresh user folder seeds all six default themes");
+    check(ThemeSettings::names().size() == 10, "fresh user folder seeds all ten default themes");
     for (const auto &definition : ThemeSettings::defaults()) {
         auto f = isolation.directory.getChildFile(definition.key + ".json");
         ThemeDefinition fromDisk;
@@ -33,12 +33,33 @@ inline void run() {
         check(fromDisk.name == definition.name && fromDisk.colours == definition.colours,
               "factory JSON files retain every palette role");
     }
+    const char *names[]{"bokkenmmb-Solarized", "bokkenmmb-Tokyo Night", "bokkenmmb-Solarized Osaka",
+                        "bokkenmmb-gruvbox"};
+    const uint32 bodies[]{0xff012c37, 0xff16161f, 0xff001419, 0xff272625};
+    const uint32 knobColours[]{0xff31788d, 0xfffec87b, 0xff29a298, 0xffa6d39f};
+    for (int i = 0; i < 4; ++i) {
+        auto t = ThemeSettings::theme(6 + i);
+        check(t.name == names[i] && t.fontFamily == "IoskeleyMonoTerm Nerd Font Mono" &&
+                  t.colours[0] == Colour(bodies[i]) && t.colours[10] == Colour(knobColours[i]) &&
+                  t.knobStyle == (i == 0   ? 1
+                                  : i == 3 ? 2
+                                           : 0),
+              "supplied palettes keep their names, colours, styles and exact font family");
+        LogisthColours colours;
+        colours.applyPalette(t);
+        auto regular = colours.font(12).getTypefacePtr();
+        auto bold = colours.font(12, true).getTypefacePtr();
+        check(regular && bold && regular->getName() == t.fontFamily &&
+                  bold->getName() == t.fontFamily && regular != bold &&
+                  bold->getStyle().containsIgnoreCase("bold"),
+              "new themes resolve embedded Regular and Bold rather than a system fallback");
+    }
     auto custom = ThemeSettings::theme(1);
     custom.name = "Ocean / custom";
     custom.colours[5] = Colour(0xff12abef);
     check(ThemeSettings::saveAs(custom).wasOk(),
           "a custom theme is saved without replacing a factory file");
-    check(ThemeSettings::names().size() == 7 &&
+    check(ThemeSettings::names().size() == 11 &&
               ThemeSettings::theme(ThemeSettings::reload()).name == custom.name,
           "custom theme selection survives a preference reload");
     check(ThemeSettings::saveWindow(1705, 1183, 137.5),
@@ -55,7 +76,18 @@ inline void run() {
               "fresh editor recalls exact dimensions and fractional scale");
         auto *console = ui->getChildComponent(0);
         auto *settings = dynamic_cast<Button *>(console->findChildWithID("ui.settings"));
+        {
+            auto &look = dynamic_cast<LogisthLook &>(ui->getLookAndFeel());
+            TextButton button;
+            const auto face = look.getTextButtonFont(button, 26).getTypefacePtr();
+            check(face && face->getName() == look.fontFamily,
+                  "text buttons resolve the theme typeface instead of the system default");
+        }
+        const auto syncBefore = p.state.getRawParameterValue("sync")->load();
         settings->onClick();
+        check(settings->getToggleState() &&
+                  p.state.getRawParameterValue("sync")->load() == syncBefore,
+              "Settings shows its open state without altering audio Sync");
         auto *panel = console->findChildWithID("settings.panel");
         auto *scale = dynamic_cast<ComboBox *>(panel->findChildWithID("settings.scale"));
         check(scale && scale->getText() == "137.5%",
@@ -104,9 +136,9 @@ inline void run() {
         Thread::sleep(2100);
         Timer::callPendingTimersSynchronously();
         auto *themes = dynamic_cast<ComboBox *>(panel->findChildWithID("settings.theme"));
-        check(themes->getNumItems() == 8, "theme folder is not polled after only two seconds");
+        check(themes->getNumItems() == 12, "theme folder is not polled after only two seconds");
         dynamic_cast<Button *>(panel->findChildWithID("settings.theme.scan"))->onClick();
-        check(themes->getNumItems() == 9 &&
+        check(themes->getNumItems() == 13 &&
                   ThemeSettings::theme(ThemeSettings::current()).key == activeKey,
               "manual folder scanning discovers installed themes without changing stable "
               "selection");
@@ -140,7 +172,7 @@ inline void run() {
         isolation.directory.getChildFile("invalid-colour.json")
             .replaceWithText(JSON::toString(bad));
         ThemeSettings::scan(true);
-        check(ThemeSettings::names().size() == 9 && ThemeSettings::ignoredFiles() == 2,
+        check(ThemeSettings::names().size() == 13 && ThemeSettings::ignoredFiles() == 2,
               "malformed files and invalid colours are ignored without losing valid themes");
         ui->setSize(1550, 1075);
     }
@@ -159,7 +191,7 @@ inline void run() {
     check(ThemeSettings::saveAs(duplicate).wasOk() &&
               ThemeSettings::theme(ThemeSettings::current()).name == "Handmade Ocean (2)",
           "saving a copy with an existing name adds a readable suffix without overwriting a file");
-    std::cout << "PASS appearance: persisted size, typed scale, isolated instances, six JSON "
+    std::cout << "PASS appearance: persisted size, typed scale, isolated instances, ten JSON "
                  "defaults, custom editor, folder scanning and stable selection\n";
 }
 inline void preview(const File &folder) {
@@ -184,7 +216,7 @@ inline void preview(const File &folder) {
         dynamic_cast<Button *>(panel->findChildWithID("settings.tab." + String(tab)))->onClick();
         write("settings-" + String(tab), ui->createComponentSnapshot(ui->getLocalBounds()));
     }
-    for (int theme = 0; theme < 6; ++theme)
+    for (int theme = 0; theme < int(ThemeSettings::defaults().size()); ++theme)
         write("theme-" + String(theme), editor->snapshotTheme(theme));
     for (int type = 0; type < 5; ++type)
         write("reverb-" + String(type), editor->snapshotPage(14 + type));

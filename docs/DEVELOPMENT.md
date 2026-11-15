@@ -34,7 +34,7 @@ A later explicit instruction to wait or avoid publishing overrides this default.
    `ci-release-v<version>`. If branch HTTP responses are stale, resolve their
    current Git SHA and read status.json at that immutable revision.
 8. Download the public release assets, check SHA256SUMS and binary/build metadata,
-   both macOS architectures, English manual, MIT/third-party notices and all six
+   both macOS architectures, English manual, MIT/third-party notices and all bundled
    theme templates. Report completion with the release link only after verification.
 
 VST2 remains optional and requires a separately licensed SDK. macOS packages are
@@ -43,3 +43,8 @@ library/SDK/font licenses independently of the original-code MIT license.
 
 The owner resumed automatic small 0.9.x releases on 2026-11-15. Keep Windows/Linux
 first and append macOS afterward. Do not advance to 1.0.0 without a later request.
+
+Version 0.9.4.1 uses a fourth release component. Tags and scripts support either
+three or four numeric parts. Keep full plug-in strings; Apple marketing versions
+use major.minor.patch, and build versions use (major*100+minor).patch.revision.
+Always verify theme/font provenance with `python scripts/verify_theme_assets.py`.

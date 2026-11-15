@@ -43,7 +43,7 @@ class FakeGitHub:
                 return subprocess.CompletedProcess(args, 1, '', 'release not found')
             return subprocess.CompletedProcess(args, 0, json.dumps({'databaseId': 101}), '')
         if action == 'create':
-            self.release = {'id': 101, 'draft': True, 'html_url': 'https://example.test/v0.9.3',
+            self.release = {'id': 101, 'draft': True, 'html_url': 'https://example.test/' + args[3],
                             'published_at': None}
         elif action == 'download':
             folder = Path(args[args.index('--dir') + 1])
@@ -78,13 +78,13 @@ class PublisherTests(unittest.TestCase):
         self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name)
 
-    def artifact(self, platform):
+    def artifact(self, platform, version='0.9.3'):
         folder = self.root / 'artifacts' / platform
         folder.mkdir(parents=True, exist_ok=True)
-        archive = folder / f'logisth-0.9.3-{platform}.zip'
+        archive = folder / f'logisth-{version}-{platform}.zip'
         archive.write_bytes(('native ' + platform).encode())
         architectures = ['arm64', 'x86_64'] if platform.startswith('macos') else ['x86_64']
-        record = dict(version='0.9.3', platform=platform, source_commit='abc123',
+        record = dict(version=version, platform=platform, source_commit='abc123',
                       source_fingerprint='fingerprint', formats=['VST3', 'CLAP', 'Standalone'],
                       tests=dict(passed=12 if platform.startswith('linux') else 10,
                                  failed=0, skipped=0),
@@ -162,15 +162,21 @@ class PublisherTests(unittest.TestCase):
             publisher.verify_existing_manifest(self.root)
 
     def test_initial_publication_then_macos_append_preserves_native_ids_and_bytes(self):
-        originals = self.root / 'releases/logisth-0.9.3'
+        self.check_staged_publication('0.9.3')
+
+    def test_four_part_release_publishes_and_appends_to_the_same_release(self):
+        self.check_staged_publication('0.9.4.1')
+
+    def check_staged_publication(self, version):
+        originals = self.root / f'releases/logisth-{version}'
         originals.mkdir(parents=True)
         (originals / 'manual.pdf').write_bytes(b'English manual')
         (originals / 'SHA256SUMS').write_text('recomputed at publication')
         docs = self.root / 'docs'
         docs.mkdir()
-        (docs / 'RELEASE-v0.9.3.md').write_text('Release notes\n')
+        (docs / f'RELEASE-v{version}.md').write_text('Release notes\n')
         for platform in publisher.PLATFORMS:
-            self.artifact(platform)
+            self.artifact(platform, version)
         github = FakeGitHub()
         result = self.root / 'result.json'
         previous_cwd = Path.cwd()
@@ -183,7 +189,7 @@ class PublisherTests(unittest.TestCase):
                 patch.dict(os.environ, {'GITHUB_REPOSITORY': 'owner/logisth'}), \
                 contextlib.redirect_stdout(io.StringIO()):
             def publish(platforms):
-                with patch.object(sys, 'argv', ['publisher', '--tag', 'v0.9.3', '--artifacts',
+                with patch.object(sys, 'argv', ['publisher', '--tag', 'v' + version, '--artifacts',
                                               str(self.root / 'artifacts'), '--result', str(result),
                                               '--platforms', *platforms]):
                     publisher.main()

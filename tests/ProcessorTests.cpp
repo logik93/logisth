@@ -693,11 +693,12 @@ void checkStartupCommentsAndThemes() {
     settings->onClick();
     auto *panel = console->findChildWithID("settings.panel");
     auto *theme = dynamic_cast<ComboBox *>(panel->findChildWithID("settings.theme"));
-    check(panel->isVisible() && theme && theme->getNumItems() == 6,
-          "six themes share the settings panel");
+    check(panel->isVisible() && theme &&
+              theme->getNumItems() == int(logisth::ThemeSettings::defaults().size()),
+          "all bundled themes share the settings panel");
     notes->setText("Readable preset comment", false);
     notes->onTextChange();
-    for (int choice = 0; choice < 6; ++choice) {
+    for (int choice = 0; choice < int(logisth::ThemeSettings::defaults().size()); ++choice) {
         const float before = get("master");
         theme->setSelectedId(choice + 1, sendNotificationSync);
         check(editor->selectedTheme() == choice && ThemeSettings::current() == choice,
@@ -708,9 +709,21 @@ void checkStartupCommentsAndThemes() {
         int readable = 0;
         for (int y = 3; y < textImage.getHeight() - 3; ++y)
             for (int x = 5; x < textImage.getWidth() - 5; ++x) {
-                float brightness = textImage.getPixelAt(x, y).getBrightness();
-                readable += choice == 0 ? brightness < .5f : brightness > .6f;
+                auto pixel = textImage.getPixelAt(x, y);
+                const auto &colours = dynamic_cast<LogisthLook &>(ui->getLookAndFeel());
+                auto text = colours.ink, background = colours.panel;
+                const float dr = text.getFloatRed() - background.getFloatRed();
+                const float dg = text.getFloatGreen() - background.getFloatGreen();
+                const float db = text.getFloatBlue() - background.getFloatBlue();
+                const float norm = dr * dr + dg * dg + db * db;
+                const float coverage = ((pixel.getFloatRed() - background.getFloatRed()) * dr +
+                                        (pixel.getFloatGreen() - background.getFloatGreen()) * dg +
+                                        (pixel.getFloatBlue() - background.getFloatBlue()) * db) /
+                                       jmax(.001f, norm);
+                readable += coverage > .35f;
             }
+        if (readable <= 40)
+            std::cerr << "Theme " << choice << " visible comment pixels " << readable << '\n';
         check(readable > 40, "existing preset-comment text keeps contrast when switching between "
                              "dark and light themes");
         auto image = editor->snapshotTheme(choice);
@@ -740,7 +753,7 @@ void checkStartupCommentsAndThemes() {
     }
     std::cout
         << "PASS startup/comments/themes: clean saw spectrum, Main defaults/restoration, "
-           "Unicode preset notes, individual routing, six persistent themes and Settings/About\n";
+           "Unicode preset notes, individual routing, ten persistent themes and Settings/About\n";
 }
 void checkPointerInteraction() {
     using namespace juce;
@@ -1275,7 +1288,7 @@ int main(int argc, char **argv) {
             std::unique_ptr<juce::AudioProcessorEditor> gallery(p.createEditor());
             auto *galleryEditor = dynamic_cast<LogisthEditor *>(gallery.get());
             check(galleryEditor != nullptr, "theme gallery editor");
-            for (int theme = 0; theme < 6; ++theme) {
+            for (int theme = 0; theme < int(logisth::ThemeSettings::defaults().size()); ++theme) {
                 auto preview = galleryEditor->snapshotTheme(theme);
                 juce::FileOutputStream out(
                     folder.getChildFile("logisth-theme-" + juce::String(theme) + ".png"));

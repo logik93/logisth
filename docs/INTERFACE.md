@@ -93,3 +93,8 @@ arrow keys, Enter and Escape. The library has 58 entries, including 48 new patch
 with descriptions and four performance macros. Each player has a compact STRETCH
 page: six controls for Signalsmith Stretch/Kick, four for windowed time-domain
 algorithms and Rate/Semitones for coupled playback modes.
+
+0.9.4.1 adds four supplied bokkenmmb themes and embedded Ioskeley Mono Regular/Bold,
+bringing the palette menu to ten entries. Existing editor text follows live font
+changes. Search also follows palette edits and closes on Settings/PATCH or Escape
+from its result list.

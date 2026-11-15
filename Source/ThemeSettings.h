@@ -41,6 +41,7 @@ class ThemeSettings {
         virtual ~Listener() = default;
         virtual void themeChanged(int) = 0;
     };
+    static std::vector<ThemeDefinition> bundledThemes();
     static std::vector<ThemeDefinition> defaults() {
         static constexpr juce::uint32 values[5][10] = {
             {0xffe8e9e2, 0xfff4f3ed, 0xffced2c9, 0xff283632, 0xff667268, 0xff406f5d, 0xffbdd8bb,
@@ -78,6 +79,8 @@ class ThemeSettings {
         for (size_t i = 0; i < ap.colours.size(); ++i)
             ap.colours[i] = juce::Colour(apColours[i]);
         result.push_back(ap);
+        for (auto &theme : bundledThemes())
+            result.push_back(std::move(theme));
         return result;
     }
     static juce::var encode(const ThemeDefinition &theme) {

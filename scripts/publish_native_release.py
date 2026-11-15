@@ -10,7 +10,7 @@ import subprocess
 import tempfile
 from pathlib import Path
 from build_native import source_fingerprint
-from verify_release import verify
+from verify_release import verify, validate_tag
 
 PLATFORMS = ('linux-x86_64', 'windows-x86_64', 'macos-universal')
 
@@ -123,8 +123,7 @@ def main():
     parser.add_argument('--result', type=Path, required=True)
     parser.add_argument('--platforms', nargs='+', choices=PLATFORMS, default=list(PLATFORMS[:2]))
     args = parser.parse_args()
-    if not re.fullmatch(r'v\d+\.\d+\.\d+', args.tag):
-        raise ValueError('Invalid release tag')
+    validate_tag(args.tag)
     if len(args.platforms) != len(set(args.platforms)):
         raise ValueError('Duplicate selected platform')
     verify(args.tag)

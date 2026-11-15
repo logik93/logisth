@@ -1,0 +1,24 @@
+{
+  "format": "logisth-theme",
+  "version": 2,
+  "font": "IoskeleyMonoTerm Nerd Font Mono",
+  "skin": "",
+  "backgroundStyle": 0,
+  "knobStyle": 1,
+  "name": "bokkenmmb-Solarized",
+  "dark": true,
+  "colours": {
+    "body": "#012C37",
+    "panel": "#06313C",
+    "border": "#001B22",
+    "text": "#839496",
+    "muted": "#657B83",
+    "accent": "#31788D",
+    "highlight": "#B89014",
+    "screen": "#001B22",
+    "screenBorder": "#012C37",
+    "screenText": "#D4A738",
+    "knob": "#31788D",
+    "knobTrack": "#08404F"
+  }
+}

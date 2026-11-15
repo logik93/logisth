@@ -1,10 +1,24 @@
-# logisth 0.9.4
+# logisth 0.9.4.1
 
 **wavelogik logisth — a two-part polyphonic subtractive synthesizer with a compact single-window console.**
 VST3, CLAP and Standalone for Windows, macOS and Linux. Built with JUCE and an
 independent synthesis engine.
 
 ![logisth dark interface](docs/images/logisth-dark.png)
+
+## New in 0.9.4.1
+
+- Four supplied themes: **bokkenmmb-Solarized**, **bokkenmmb-Tokyo Night**,
+  **bokkenmmb-Solarized Osaka**, **bokkenmmb-gruvbox**; ten themes in total.
+- Embedded **IoskeleyMonoTerm Nerd Font Mono**, Regular/Bold from Ioskeley Mono
+  v2.2.0. The exact unmodified fonts and supplied JSON files are verified by hashes.
+- Theme changes now restyle existing editor text and search colours while retaining
+  selections. Search closes on Escape from the result list and when opening Settings/PATCH.
+- SETTINGS matches the adjacent SYNC button, including its theme font and state styling.
+- Four-part release tags, full version strings and native bundle metadata are validated.
+- The 58-entry sound library and 736 audio parameters are retained.
+
+[Theme gallery](docs/THEMES.md) · [Review and fixes](docs/REVIEW-v0.9.4.1.md)
 
 ## New in 0.9.4
 

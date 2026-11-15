@@ -1,0 +1,24 @@
+{
+  "format": "logisth-theme",
+  "version": 2,
+  "font": "IoskeleyMonoTerm Nerd Font Mono",
+  "skin": "",
+  "backgroundStyle": 0,
+  "knobStyle": 0,
+  "name": "bokkenmmb-Tokyo Night",
+  "dark": true,
+  "colours": {
+    "body": "#16161F",
+    "panel": "#1A1B27",
+    "border": "#545A77",
+    "text": "#9A9EBA",
+    "muted": "#8185B1",
+    "accent": "#99C56B",
+    "highlight": "#9B77C9",
+    "screen": "#1C1C1C",
+    "screenBorder": "#111015",
+    "screenText": "#B8F6FC",
+    "knob": "#FEC87B",
+    "knobTrack": "#FA727E"
+  }
+}

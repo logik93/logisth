@@ -60,6 +60,8 @@ int main(int argc, char **argv) {
         host.request_process = [](const clap_host_t *) {};
         host.request_callback = [](const clap_host_t *) {};
         auto *descriptor = factory->get_plugin_descriptor(factory, 0);
+        check(std::strcmp(descriptor->version, LOGISTH_EXPECTED_VERSION) == 0,
+              "complete release version");
         check(std::strcmp(descriptor->id, "com.wavelogik.logisth") == 0, "plugin identity");
         check(std::strcmp(descriptor->name, "logisth") == 0 &&
                   std::strcmp(descriptor->vendor, "wavelogik") == 0,

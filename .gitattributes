@@ -8,3 +8,5 @@ Source/vendor/signalsmith-stretch/** -text -whitespace
 *.zip binary
 *.gz binary
 *.logisth binary
+assets/themes/bokkenmmb*.json -text -whitespace
+assets/fonts/ioskeley/** -text -whitespace
