@@ -1061,6 +1061,21 @@ enum class Param : size_t {
     eqband15,
     reverbout,
     irnormalize,
+    compmode,
+    compknee,
+    compmakeup,
+    compmix,
+    clipon,
+    clipmode,
+    clipdrive,
+    clipceiling,
+    clipknee,
+    clipmix,
+    clipquality,
+    limiton,
+    limitceiling,
+    limitrelease,
+    limitdrive,
     Count
 };
 constexpr size_t parameterCount = size_t(Param::Count);
@@ -2756,6 +2771,21 @@ inline const std::array<ParameterSpec, parameterCount> parameterSpecs{{
     {"eqband15", "Gain / dB", 3, "EQUALIZER", -18.0f, 18.0f, 0.0f, 1.0f, "", false},
     {"reverbout", "Wet gain / dB", 3, "REVERB", -24.0f, 24.0f, 0.0f, 1.0f, "", false},
     {"irnormalize", "Normalize IR", 3, "REVERB", 0.0f, 1.0f, 1.0f, 1.0f, "Off|On", false},
+    {"compmode", "Model", 3, "COMPRESSOR", 0.0f, 1.0f, 1.0f, 1.0f, "Legacy|Modern", false},
+    {"compknee", "Knee / dB", 3, "COMPRESSOR", 0.0f, 24.0f, 6.0f, 1.0f, "", false},
+    {"compmakeup", "Makeup / dB", 3, "COMPRESSOR", -24.0f, 24.0f, 0.0f, 1.0f, "", false},
+    {"compmix", "Mix", 3, "COMPRESSOR", 0.0f, 1.0f, 1.0f, 1.0f, "", false},
+    {"clipon", "Enabled", 3, "CLIPPER", 0.0f, 1.0f, 0.0f, 1.0f, "Off|On", false},
+    {"clipmode", "Curve", 3, "CLIPPER", 0.0f, 1.0f, 1.0f, 1.0f, "Hard|Soft", false},
+    {"clipdrive", "Drive / dB", 3, "CLIPPER", 0.0f, 24.0f, 0.0f, 1.0f, "", false},
+    {"clipceiling", "Ceiling / dB", 3, "CLIPPER", -24.0f, 0.0f, -1.0f, 1.0f, "", false},
+    {"clipknee", "Knee", 3, "CLIPPER", 0.0f, 1.0f, 0.5f, 1.0f, "", false},
+    {"clipmix", "Mix", 3, "CLIPPER", 0.0f, 1.0f, 1.0f, 1.0f, "", false},
+    {"clipquality", "Quality", 3, "CLIPPER", 0.0f, 1.0f, 1.0f, 1.0f, "Direct|Antialiased", false},
+    {"limiton", "Enabled", 3, "LIMITER", 0.0f, 1.0f, 0.0f, 1.0f, "Off|On", false},
+    {"limitceiling", "Ceiling / dB", 3, "LIMITER", -24.0f, 0.0f, -1.0f, 1.0f, "", false},
+    {"limitrelease", "Release / ms", 3, "LIMITER", 5.0f, 2000.0f, 100.0f, 0.4f, "", false},
+    {"limitdrive", "Drive / dB", 3, "LIMITER", 0.0f, 24.0f, 0.0f, 1.0f, "", false},
 }};
 
 inline constexpr size_t legacyParameterCount = 736;

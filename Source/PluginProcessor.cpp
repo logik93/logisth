@@ -191,6 +191,9 @@ EffectsParams LogisthProcessor::effectsSnapshot() const {
     p.reverb = get(Param::reverbon) > 0;
     p.delay = get(Param::delayon) > 0;
     p.compressor = get(Param::compon) > 0;
+    p.convolution = &impulseRack;
+    if (!(p.distortion || p.phaser || p.chorus || p.eq || p.reverb || p.delay || p.compressor))
+        return p;
     p.sync = get(Param::sync) > 0;
     p.dual = get(Param::chorusdual) > 0;
     p.pingpong = get(Param::delaypingpong) > 0;
@@ -234,6 +237,11 @@ EffectsParams LogisthProcessor::effectsSnapshot() const {
     p.convolution = &impulseRack;
     p.irNormalize = get(Param::irnormalize) > 0;
     p.reverbOutput = get(Param::reverbout);
+    p.impulseSeconds = float(impulseDuration.load());
+    p.modernCompressor = get(Param::compmode) > 0;
+    p.compKnee = get(Param::compknee);
+    p.compMakeup = get(Param::compmakeup);
+    p.compMix = get(Param::compmix);
     p.reverbDecay = get(Param::reverbdecay);
     p.shimmerAmount = get(Param::shimmeramount);
     p.shimmerPitch = get(Param::shimmerpitch);
@@ -299,7 +307,8 @@ ArpParams LogisthProcessor::arpSnapshot() const {
     p.bpm = bpm;
     return p;
 }
-void LogisthProcessor::prepareToPlay(double sampleRate, int) {
+void LogisthProcessor::prepareToPlay(double sampleRate, int blockSize) {
+    setRateAndBufferSizeDetails(sampleRate, blockSize);
     impulseRate = sampleRate;
     impulseRack.detach();
     ensureImpulse(true);
@@ -319,6 +328,12 @@ void LogisthProcessor::reset() {
     chordMapper.reset();
     chordsWereEnabled = false;
     effects.reset();
+    clipper.reset();
+    limiter.reset();
+    dynamicsScope.clear();
+    effectSamples = 0;
+    for (auto &m : dynamicsMeters)
+        m.write(0, 0, 0);
     impulseRack.reset();
     arp.reset();
     masterSmooth = get(Param::master);
@@ -368,8 +383,27 @@ void LogisthProcessor::processBlock(AudioBuffer<float> &audio, MidiBuffer &midi)
         }
     keyboard.processNextMidiBuffer(midi, 0, n, true);
     const bool midiOnly = get(Param::midionly) > 0;
+    if (midiOnly != wasMidiOnly) {
+        engine.silenceVoices();
+        effects.reset();
+        clipper.reset();
+        limiter.reset();
+        wasMidiOnly = midiOnly;
+    }
     const auto p = snapshot();
     const auto fx = effectsSnapshot();
+    const ClipperSettings cp{get(Param::clipon) > 0,    get(Param::clipquality) > 0,
+                             int(get(Param::clipmode)), get(Param::clipdrive),
+                             get(Param::clipceiling),   get(Param::clipknee),
+                             get(Param::clipmix)};
+    const LimiterSettings lp{get(Param::limiton) > 0, get(Param::limitceiling),
+                             get(Param::limitrelease), get(Param::limitdrive)};
+    const int display = dynamicsView.load(std::memory_order_relaxed);
+    if (display != lastDynamicsDisplay) {
+        dynamicsScope.clear();
+        lastDynamicsDisplay = display;
+    }
+    uint64_t fxWork = 0;
     const auto ap = arpSnapshot();
     const float masterTarget = get(Param::master);
     const float smoothing = float(1 - std::exp(-1 / (.01 * getSampleRate())));
@@ -381,16 +415,35 @@ void LogisthProcessor::processBlock(AudioBuffer<float> &audio, MidiBuffer &midi)
             int count = jmin(512, end - rendered);
             auto *l = audio.getWritePointer(0) + rendered;
             auto *r = audio.getWritePointer(1) + rendered;
+            if (midiOnly) {
+                for (auto &m : dynamicsMeters)
+                    m.write(0, 0, 0);
+                dynamicsScope.clear();
+                rendered += count;
+                continue;
+            }
             engine.render(l, r, count, p, driveMod.data(), phaserMod.data(), partScopeA.data(),
                           partScopeB.data(),
                           {playerTraces[0].data(), playerTraces[1].data(), playerTraces[2].data(),
                            playerTraces[3].data(), playerTraces[4].data(), playerTraces[5].data()},
                           partScopeC.data());
-            effects.process(l, r, count, driveMod.data(), phaserMod.data(), fx);
-            for (int s = 0; s < count; ++s) {
+            effects.process(l, r, count, driveMod.data(), phaserMod.data(), fx, &dynamicsMeters[0],
+                            display == 0 ? &dynamicsScope : nullptr);
+            fxWork += effects.processedSamples;
+            clipper.process(l, r, count, cp, dynamicsMeters[1],
+                            display == 1 ? &dynamicsScope : nullptr);
+            std::array<float, 512> gains{};
+            for (int i = 0; i < count; ++i) {
                 masterSmooth += smoothing * (masterTarget - masterSmooth);
+                gains[size_t(i)] = masterSmooth;
+                l[i] *= masterSmooth;
+                r[i] *= masterSmooth;
+            }
+            limiter.process(l, r, count, lp, getSampleRate(), dynamicsMeters[2],
+                            display == 2 ? &dynamicsScope : nullptr);
+            for (int s = 0; s < count; ++s) {
                 for (auto *ch : {l, r}) {
-                    float x = midiOnly ? 0 : ch[s] * masterSmooth;
+                    float x = ch[s];
                     ch[s] = std::isfinite(x) ? x : 0;
                     maximum = jmax(maximum, std::abs(ch[s]));
                     const size_t channel = ch == l ? 0 : 1;
@@ -398,9 +451,9 @@ void LogisthProcessor::processBlock(AudioBuffer<float> &audio, MidiBuffer &midi)
                 }
                 for (int slot = 0; slot < playerCount; ++slot)
                     playerScopes[size_t(slot)].push(0, 0, playerTraces[size_t(slot)][size_t(s)]);
-                scope.push(partScopeA[size_t(s)] * masterSmooth,
-                           partScopeB[size_t(s)] * masterSmooth, l[s] + r[s],
-                           partScopeC[size_t(s)] * masterSmooth);
+                scope.push(partScopeA[size_t(s)] * gains[size_t(s)],
+                           partScopeB[size_t(s)] * gains[size_t(s)], l[s] + r[s],
+                           partScopeC[size_t(s)] * gains[size_t(s)]);
             }
             const auto &views = engine.playbackPictures();
             for (int i = 0; i < playerCount; ++i)
@@ -441,6 +494,8 @@ void LogisthProcessor::processBlock(AudioBuffer<float> &audio, MidiBuffer &midi)
                     event.time);
         }
         renderTo(jlimit(rendered, n, event.time));
+        if (midiOnly && (event.type == EventType::NoteOn || event.type == EventType::NoteOff))
+            return;
         switch (event.type) {
         case EventType::NoteOn:
             engine.noteOn(event.key, event.value, event.channel, p);
@@ -528,6 +583,7 @@ void LogisthProcessor::processBlock(AudioBuffer<float> &audio, MidiBuffer &midi)
     }
     arp.advance(scheduled, n, ap, emit);
     renderTo(n);
+    effectSamples = fxWork;
     scope.commit();
     for (auto &trace : playerScopes)
         trace.commit();
@@ -568,7 +624,8 @@ bool LogisthProcessor::applyState(const void *data, int size) try {
         if (source.hasProperty("uiScope"))
             safe.setProperty("uiScope", jlimit(0, 3, int(source["uiScope"])), nullptr);
         for (const auto &spec : parameterSpecs) {
-            float value = (String(spec.id) == "arppattern" || String(spec.id).endsWith("gmodel"))
+            float value = (String(spec.id) == "arppattern" || String(spec.id).endsWith("gmodel") ||
+                           String(spec.id) == "compmode")
                               ? 0
                               : spec.initial;
             for (auto child : source)

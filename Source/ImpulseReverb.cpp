@@ -3,6 +3,23 @@
 #include <cmath>
 #include <stdexcept>
 namespace logisth {
+void ImpulseData::buildPeaks() {
+    peak = 0;
+    for (size_t ch = 0; ch < 2; ++ch)
+        for (size_t bin = 0; bin < 512; ++bin) {
+            size_t start = bin * samples[ch].size() / 512,
+                   end = std::max(start + 1, (bin + 1) * samples[ch].size() / 512);
+            float lo = 0, hi = 0;
+            for (size_t at = start; at < std::min(end, samples[ch].size()); ++at) {
+                lo = std::min(lo, samples[ch][at]);
+                hi = std::max(hi, samples[ch][at]);
+            }
+            minimum[ch][bin] = lo;
+            maximum[ch][bin] = hi;
+            peak = std::max(peak, std::max(-lo, hi));
+        }
+}
+
 std::shared_ptr<const ImpulseData> ImpulseData::factory() {
     static const auto data = [] {
         auto result = std::make_shared<ImpulseData>();
@@ -32,6 +49,7 @@ std::shared_ptr<const ImpulseData> ImpulseData::factory() {
                     .3f * float(std::exp(-tap * .28)) * (tap % 3 == 1 ? -.7f : 1.f);
             }
         }
+        result->buildPeaks();
         return std::shared_ptr<const ImpulseData>(result);
     }();
     return data;

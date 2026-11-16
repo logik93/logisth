@@ -305,6 +305,11 @@ class Engine {
         lastPitch = 60;
         stepVelocity = 0;
     }
+    void silenceVoices() {
+        for (auto &v : voices)
+            clearVoice(v);
+        keys = {};
+    }
     void setStepVelocity(float value) {
         stepVelocity = clamp(value, 0, 1);
     }
@@ -485,6 +490,7 @@ class Engine {
                     releaseVoice(v, p);
         }
     }
+    uint64_t oscillatorSamples = 0;
     int activeVoices() const {
         int n = 0;
         for (auto &v : voices)
@@ -494,21 +500,87 @@ class Engine {
     void render(float *left, float *right, int count, const Params &p, float *distortion = nullptr,
                 float *phaser = nullptr, float *partA = nullptr, float *partB = nullptr,
                 const std::array<float *, playerCount> &oscScopes = {}, float *partC = nullptr) {
+        oscillatorSamples = 0;
+        pictures = {};
+        const int maxVoices = p.monoLegato ? 1 : std::clamp(p.polyphony, 1, 16);
+        for (size_t i = size_t(maxVoices); i < voices.size(); ++i)
+            if (voices[i].active())
+                clearVoice(voices[i]);
+        if (activeVoices() == 0) {
+            std::array<double, 2> step{};
+            for (size_t i = 0; i < 2; ++i)
+                step[i] = std::clamp(lfoRate(p.lfo[i], p.sync, p.bpm), .001, 200.) / sr;
+            for (int s = 0; s < count; ++s)
+                for (size_t i = 0; i < 2; ++i) {
+                    auto &l = freeLfo[i];
+                    l.phase += step[i];
+                    if (l.phase >= 1) {
+                        l.phase -= std::floor(l.phase);
+                        l.held = l.next;
+                        l.next = noise();
+                    }
+                }
+            for (auto *buffer : {left, right, distortion, phaser, partA, partB, partC})
+                if (buffer)
+                    std::fill_n(buffer, count, 0);
+            for (auto *buffer : oscScopes)
+                if (buffer)
+                    std::fill_n(buffer, count, 0);
+            return;
+        }
         std::array<bool, playerCount> needed{};
         const bool cWanted = wantsPartC(p);
-        for (const auto &o : p.osc) {
-            if (o.fmSource > 0)
-                needed[size_t(o.fmSource - 1)] = true;
-            if (o.amSource > 0)
-                needed[size_t(o.amSource - 1)] = true;
+        // Include only audible carriers and their active FM/AM dependencies.
+        // Route magnitudes bound bipolar modulation; retain smoothed depths while
+        // they decay after automation. This runs once per render, not per sample.
+        ModValues potential;
+        auto addPotential = [&](Routes routes) {
+            for (auto &r : routes)
+                r.amount = std::abs(r.amount);
+            potential.add(routes, 1);
+        };
+        for (const auto &r : p.envelopeRoutes)
+            addPotential(r);
+        for (const auto &l : p.lfo)
+            addPotential(l.routes);
+        for (const auto &m : p.misc)
+            if (m.source != Source::None)
+                addPotential(m.routes);
+        std::array<bool, playerCount> reachable{};
+        std::array<float, playerCount> fmDepth{}, amDepth{};
+        for (int i = 0; i < playerCount; ++i) {
+            reachable[size_t(i)] =
+                p.osc[size_t(i)].unison > 0 &&
+                (p.osc[size_t(i)].level > 0 || potential.pair(Destination::VolumeA, i / 2) > 0);
+            fmDepth[size_t(i)] = p.osc[size_t(i)].fmDepth + 8 * potential.osc(Destination::FmA1, i);
+            amDepth[size_t(i)] = p.osc[size_t(i)].amDepth + potential.osc(Destination::AmA1, i);
+            for (const auto &v : voices)
+                if (v.active()) {
+                    fmDepth[size_t(i)] =
+                        std::max(fmDepth[size_t(i)], v.oscillatorControls[size_t(i)][0]);
+                    amDepth[size_t(i)] =
+                        std::max(amDepth[size_t(i)], v.oscillatorControls[size_t(i)][2]);
+                }
         }
+        for (int pass = 0; pass < playerCount; ++pass)
+            for (int i = 0; i < playerCount; ++i)
+                if (reachable[size_t(i)]) {
+                    auto require = [&](int source, float depth) {
+                        if (source > 0 && source <= playerCount && depth > 1e-7f &&
+                            p.osc[size_t(source - 1)].unison > 0) {
+                            needed[size_t(source - 1)] = true;
+                            reachable[size_t(source - 1)] = true;
+                        }
+                    };
+                    require(p.osc[size_t(i)].fmSource, fmDepth[size_t(i)]);
+                    require(p.osc[size_t(i)].amSource, amDepth[size_t(i)]);
+                }
+        oscillatorSamples = 0;
         pictures = {};
         std::array<uint64_t, playerCount> pictureAges{};
         const float smoothing = float(1 - std::exp(-1 / (.01 * sr)));
         const double phaseSmoothing = 1 - std::exp(-1 / (.005 * sr));
-        const int limit = p.monoLegato ? 1 : std::clamp(p.polyphony, 1, 16);
-        for (size_t i = size_t(limit); i < voices.size(); ++i)
-            clearVoice(voices[i]);
+
         for (int s = 0; s < count; ++s) {
             float out[2]{};
             float parts[partCount]{};
@@ -597,6 +669,7 @@ class Engine {
                     const int n = std::clamp(op.unison, 0, 8);
                     if (n == 0 || (level <= 0 && !needed[size_t(osc)]))
                         continue;
+                    oscillatorSamples += uint64_t(n);
                     const float pitch = bend[size_t(v.channel - 1)] * p.bendRange +
                                         mods.pair(Destination::PitchA, part) * 48;
                     float targetPosition = clamp(op.position + mods.position(osc), 0, 1);

@@ -82,6 +82,12 @@ def verify(tag: str) -> None:
             for file in ('stereo-before.csv', 'stereo-after.csv', 'reverb-before.csv', 'reverb-after.csv', 'README.md'):
                 if not archive.read(file):
                     raise ValueError('Empty stereo/reverb measurements')
+    if tuple(map(int, version.split('.'))) >= (0,9,6,2):
+        name=f'logisth-{version}-dynamics-cpu-calibration.zip'
+        if name not in names:raise ValueError('Missing dynamics/CPU measurements')
+        with zipfile.ZipFile(folder/name) as archive:
+            for file in ('cpu-before.csv','cpu-after.csv','compressor-curves.csv','clipper-curves.csv','README.md'):
+                if not archive.read(file):raise ValueError('Empty dynamics/CPU measurement')
     print(f"Verified {len(names)} release assets for {tag}")
 
 

@@ -33,7 +33,7 @@ inline void run() {
                   p.getParameters()[i] == p.state.getParameter(s.id),
               "all original 954 ranges, choices, defaults and host indices remain intact");
     }
-    check(parameterCount == 1055, "0.9.6 additions are append-only");
+    check(parameterCount >= 1055, "0.9.6 additions are append-only");
     std::unique_ptr<AudioProcessorEditor> ui(p.createEditor());
     auto *editor = dynamic_cast<LogisthEditor *>(ui.get());
     auto *console = ui->getChildComponent(0);

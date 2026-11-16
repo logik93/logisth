@@ -10,7 +10,7 @@ inline void run() {
     };
     auto contract = JSON::parse(
         File(String(LOGISTH_SOURCE_DIR)).getChildFile("tests/fixtures/parameters-0.9.6.1.json"));
-    check(contract.isArray() && contract.size() == 1055 && parameterCount == 1055,
+    check(contract.isArray() && contract.size() == 1055 && parameterCount >= 1055,
           "complete v0.9.6.1 compatibility baseline");
     auto instance = std::make_unique<LogisthProcessor>();
     auto &p = *instance;

@@ -1,5 +1,6 @@
 #pragma once
 #include "ConvolutionInterface.h"
+#include "Dynamics.h"
 #include "Equalizer.h"
 #include "Modulation.h"
 #include "Reverb.h"
@@ -8,7 +9,9 @@ namespace logisth {
 struct EffectsParams : ReverbControls, EqualizerParams {
     ImpulseProcessor *convolution = nullptr;
     bool irNormalize = true;
-    float reverbOutput = 0;
+    float reverbOutput = 0, impulseSeconds = 1;
+    bool modernCompressor = true;
+    float compKnee = 6, compMakeup = 0, compMix = 1;
     bool distortion = false, phaser = false, chorus = false, eq = false, reverb = true,
          delay = false, compressor = false, sync = true, dual = false, pingpong = false;
     int distortionType = 0, phaserDivision = 12, chorusDivision = 12, delayDivisionL = 8,
@@ -34,6 +37,9 @@ class Effects {
     std::array<float, 2> phaserLast{}, lowState{}, highState{}, crushHold{};
     std::array<std::array<float, 3>, 2> smearState{};
     Equalizer equalizer;
+    Compressor modern;
+    bool compWasEnabled = false, compWasModern = true, sleeping = true;
+    uint64_t quietInput = 0, quietOutput = 0;
     std::array<float, 512> wetL{}, wetR{};
     std::array<CharacterReverb, 5> reverbModels;
     std::array<float, 6> reverbWeights{};
@@ -58,6 +64,7 @@ class Effects {
     }
 
   public:
+    uint64_t processedSamples = 0;
     void prepare(double sampleRate) {
         sr = sampleRate;
         for (auto &b : delayLines)
@@ -83,6 +90,10 @@ class Effects {
         phaserLast = lowState = highState = crushHold = {};
         smearState = {};
         equalizer.reset();
+        modern.reset();
+        compWasEnabled = false;
+        sleeping = true;
+        quietInput = quietOutput = 0;
         for (auto &model : reverbModels)
             model.reset();
         reverbWeights = {};
@@ -93,8 +104,17 @@ class Effects {
         distMix = 1;
     }
     void process(float *l, float *r, int n, const float *driveMod, const float *phaserMod,
-                 const EffectsParams &p) {
-        const float smooth = float(1 - std::exp(-1 / (.01 * sr)));
+                 const EffectsParams &p, DynamicsMeters *meter = nullptr,
+                 ScopeBuffer *trace = nullptr) {
+        processedSamples = 0;
+        if (compWasEnabled != p.compressor || compWasModern != p.modernCompressor) {
+            detector = 0;
+            modern.reset();
+            compWasEnabled = p.compressor;
+            compWasModern = p.modernCompressor;
+        }
+        if (meter && !p.compressor)
+            meter->write(0, 0, 0);
         if (initialProcess) {
             if (p.reverb) {
                 reverbMix = clamp(p.reverbMix, 0, 1);
@@ -114,6 +134,55 @@ class Effects {
             reverbStarted = false;
             reverbMix = 0;
         }
+        const bool any =
+            p.distortion || p.phaser || p.chorus || p.eq || p.reverb || p.delay || p.compressor;
+        if (!any)
+            return;
+        float inPeak = 0;
+        for (int i = 0; i < n; ++i)
+            inPeak = std::max(inPeak, std::max(std::abs(l[i]), std::abs(r[i])));
+        if (p.compressor && p.modernCompressor)
+            modern.configure(
+                {p.threshold, p.ratio, p.compKnee, p.attack, p.release, p.compMakeup, p.compMix},
+                sr);
+        if (sleeping && inPeak < 1e-10f) {
+            if (p.phaser) {
+                double hz = p.sync ? p.bpm / (60 * beatLength(p.phaserDivision)) : p.phaserRate;
+                phase += hz * n / sr;
+                phase -= std::floor(phase);
+            }
+            if (p.chorus) {
+                double hz = p.sync ? p.bpm / (60 * beatLength(p.chorusDivision)) : p.chorusRate;
+                chorusPhase += hz * n / sr;
+                chorusPhase -= std::floor(chorusPhase);
+            }
+            float reduction = 0;
+            if (p.compressor) {
+                if (p.modernCompressor)
+                    reduction = modern.advanceSilence(n);
+                else {
+                    detector *= float(std::exp(-n / (std::max(1.f, p.release) * .001 * sr)));
+                    reduction = compressionReduction(decibels(detector), p.threshold, p.ratio, 0);
+                }
+            }
+            if (meter)
+                meter->write(0, 0, reduction);
+            if (trace) {
+                for (int i = 0; i < n; i += 4)
+                    trace->push(0, 0, reduction);
+                trace->commit();
+            }
+            return;
+        }
+        sleeping = false;
+        processedSamples = uint64_t(n);
+        if (inPeak < 1e-10f)
+            quietInput += uint64_t(n);
+        else
+            quietInput = 0;
+        float compIn = 0, compOut = 0, compReduction = 0;
+
+        const float smooth = float(1 - std::exp(-1 / (.01 * sr)));
         const double phaserHz = p.sync ? p.bpm / (60 * beatLength(p.phaserDivision)) : p.phaserRate;
         const double chorusHz = p.sync ? p.bpm / (60 * beatLength(p.chorusDivision)) : p.chorusRate;
         if (p.eq)
@@ -233,8 +302,9 @@ class Effects {
                 reverbWeights[size_t(selected)] = 1;
                 reverbStarted = true;
             }
-            for (auto &model : reverbModels)
-                model.configure(p, p.reverbSize, p.reverbDamp);
+            for (size_t i = 0; i < 5; ++i)
+                if (int(i) == selected || reverbWeights[i] > 0)
+                    reverbModels[i].configure(p, p.reverbSize, p.reverbDamp);
             if (selected == 5 || reverbWeights[5] > 0) {
                 if (p.convolution)
                     p.convolution->process(reverbInputL.data(), reverbInputR.data(),
@@ -324,19 +394,51 @@ class Effects {
                     x[ch] += (echo[ch] - x[ch]) * delayMix;
                 delayPos = (delayPos + 1) % delayLines[0].size();
             }
-            if (p.compressor) {
+            const float before = std::abs(x[0]) >= std::abs(x[1]) ? x[0] : x[1];
+            if (p.compressor && p.modernCompressor)
+                modern.tick(x[0], x[1]);
+            if (p.compressor && !p.modernCompressor) {
                 float level = std::max(std::abs(x[0]), std::abs(x[1]));
                 float c = level > detector ? attack : release;
                 detector = level + c * (detector - level);
                 float db = 20 * std::log10(std::max(1e-8f, detector));
                 float reduction = std::max(0.f, db - p.threshold) * (1 - 1 / p.ratio);
                 float gain = std::pow(10.f, -reduction / 20);
+                gain *= amplitude(p.compMakeup);
+                if (p.compMix != 1)
+                    gain = 1 + p.compMix * (gain - 1);
+                compReduction = std::max(compReduction, reduction);
                 x[0] *= gain;
                 x[1] *= gain;
             }
+            compIn = std::max(compIn, std::abs(before));
+            compOut = std::max(compOut, std::max(std::abs(x[0]), std::abs(x[1])));
+            if (trace && s % 4 == 0)
+                trace->push(before, std::abs(x[0]) >= std::abs(x[1]) ? x[0] : x[1],
+                            p.modernCompressor ? modern.maximumReduction : compReduction);
             l[s] = x[0];
             r[s] = x[1];
         }
+        if (meter && p.compressor)
+            meter->write(compIn, compOut,
+                         p.modernCompressor ? modern.maximumReduction : compReduction);
+        if (trace)
+            trace->commit();
+        float outPeak = 0;
+        for (int i = 0; i < n; ++i)
+            outPeak = std::max(outPeak, std::max(std::abs(l[i]), std::abs(r[i])));
+        if (outPeak < 1e-10f)
+            quietOutput += uint64_t(n);
+        else
+            quietOutput = 0;
+        double horizon = .2;
+        if (p.reverb)
+            horizon = std::max(horizon, (p.reverbType == 5 ? double(p.impulseSeconds) : 2.) +
+                                            p.reverbPredelay * .001);
+        if (p.delay)
+            horizon = std::max(horizon, std::max(dl, dr) / sr + .2);
+        if (quietInput > uint64_t(horizon * sr) && quietOutput > uint64_t(.2 * sr))
+            sleeping = true;
     }
 };
 } // namespace logisth

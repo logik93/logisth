@@ -22,7 +22,7 @@ functional submenus with symmetric A/B/C and paired scopes. Hover for tooltips a
 Numeric values support units such as kHz, ms and percent. Sync displays musical
 divisions instead of free time/rate controls. Arp steps use 01–08 and 09–16 views.
 
-The current engine exposes 1055 audio parameters. Tests check access, bounds, click
+The current engine exposes 1070 audio parameters. Tests check access, bounds, click
 targets, view changes, bindings, scaling and independent theme persistence.
 See [the English user manual](MANUAL.md) for full operation.
 
@@ -116,3 +116,8 @@ available; original ten-band presets retain their Bell settings.
 panels. MORPH target menus group every part by function. REVERB / CONVOLUTION
 shows Load IR, Reset IR, IR metadata, Normalise, Mix, Predelay, Width and Wet Gain;
 model-specific algorithmic controls hide. The existing single rack window is used.
+
+0.9.6.2 places Chords first and retains signal order in the thirteen-row rack.
+Compressor, Clipper and Limiter have shared-size graph panels and compact control
+rows. IR gains a cached stereo waveform and drag/drop inside Convolution.
+The limiter is after Main; Sample and Morph remain editing tools.

@@ -146,6 +146,10 @@ class LogisthProcessor : public juce::AudioProcessor {
     std::atomic<float> peak{0};
     std::array<std::atomic<float>, 2> channelPeaks{};
     std::atomic<int> voices{0};
+    std::array<logisth::DynamicsMeters, 3> dynamicsMeters;
+    logisth::ScopeBuffer dynamicsScope;
+    std::atomic<int> dynamicsView{-1};
+    std::atomic<uint64_t> effectSamples{0};
 
   private:
     static juce::AudioProcessorValueTreeState::ParameterLayout layout();
@@ -155,6 +159,10 @@ class LogisthProcessor : public juce::AudioProcessor {
                                                 [this](size_t at) { return raw[at]->load(); });
         });
     }
+    logisth::Clipper clipper;
+    logisth::OutputLimiter limiter;
+    bool wasMidiOnly = false;
+    int lastDynamicsDisplay = -1;
     logisth::Params snapshot() const;
     logisth::EffectsParams effectsSnapshot() const;
     logisth::ArpParams arpSnapshot() const;

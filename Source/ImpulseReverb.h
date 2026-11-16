@@ -16,6 +16,9 @@ struct ImpulseData {
     juce::String name;
     int channels = 2;
     std::array<std::vector<float>, 2> samples;
+    std::array<std::array<float, 512>, 2> minimum{}, maximum{};
+    float peak = 0;
+    void buildPeaks();
     static std::shared_ptr<const ImpulseData> factory();
 };
 class PreparedImpulse {

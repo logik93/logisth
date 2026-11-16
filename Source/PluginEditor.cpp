@@ -80,6 +80,7 @@ class ThemeText {
         theme.drawCaption(g, t, r, s, c, a, b);
     }
 };
+#include "DynamicsViews.h"
 #include "EqView.h"
 #include "StudioViews.h"
 
@@ -1106,12 +1107,16 @@ class LogisthEditor::Console : public Component,
         : processor(p), look(skin), keyboard(p.keyboard, *this), patternCanvas(*this),
           waveView(p, *this, [this](float h) { return font(h); }),
           scopeView(p, *this, [this](float h) { return font(h); }),
+          impulseView(p, *this, [this](float h) { return font(h); }),
+          dynamicsView(p, *this, [this](float h) { return font(h); }),
           eqView(p, *this, [this] { return int(value(Param::eqmode)); }), tooltips(this, 650) {
         setLookAndFeel(&look);
         addChildComponent(patternCanvas);
         addChildComponent(waveView);
         addAndMakeVisible(scopeView);
         addChildComponent(eqView);
+        addChildComponent(impulseView);
+        addChildComponent(dynamicsView);
         eqBandSelect.setComponentID("eq.band.select");
         for (int i = 0; i < eqMaxBands; ++i)
             eqBandSelect.addItem("BAND " + String(i + 1), i + 1);
@@ -1161,10 +1166,12 @@ class LogisthEditor::Console : public Component,
             button.onClick = [this, i] { setPart(i); };
             addAndMakeVisible(button);
         }
-        StringArray names{"ARPEGGIATOR", "DISTORTION", "PHASER", "CHORUS", "EQUALIZER", "REVERB",
-                          "DELAY",       "COMPRESSOR", "CHORDS", "SAMPLE", "MORPH"};
-        for (int i = 0; i < 11; ++i) {
+        StringArray names{"ARPEGGIATOR", "DISTORTION", "PHASER",     "CHORUS", "EQUALIZER",
+                          "REVERB",      "DELAY",      "COMPRESSOR", "CHORDS", "SAMPLE",
+                          "MORPH",       "CLIPPER",    "LIMITER"};
+        for (int i = 0; i < 13; ++i) {
             rackButtons[size_t(i)] = std::make_unique<RackButton>(*this, i, names[i]);
+            rackButtons[size_t(i)]->setComponentID("rack." + String(i));
             addAndMakeVisible(*rackButtons[size_t(i)]);
         }
         for (int i = 0; i < 2; ++i) {
@@ -1499,6 +1506,7 @@ class LogisthEditor::Console : public Component,
         startTimerHz(24);
     }
     ~Console() override {
+        processor.dynamicsView = -1;
         rememberDraft();
         searchResults.removeKeyListener(this);
         searchResults.setModel(nullptr);
@@ -1520,6 +1528,11 @@ class LogisthEditor::Console : public Component,
     void filesDropped(const StringArray &files, int x, int y) override {
         if (!isInterestedInFileDrag(files))
             return;
+        if (rack == 5 && int(value(Param::reverbtype)) == 5 &&
+            Rectangle<int>(414, 289, 520, 244).contains(x, y)) {
+            processor.loadImpulseAsync(File(files[0]));
+            return;
+        }
         if (rack == 9 && Rectangle<int>(414, 289, 520, 244).contains(x, y)) {
             importDroppedSource(waveView.selectedSlot(), File(files[0]));
             return;
@@ -1681,13 +1694,21 @@ class LogisthEditor::Console : public Component,
     }
     void setRack(int page) {
         settingsOpen = false;
-        rack = jlimit(0, 10, page);
+        rack = jlimit(0, 12, page);
         layout();
         repaint();
     }
     void showScenario(int index) {
         if (index != 28)
             showPresetSearch(false);
+        if (index >= 35 && index <= 37) {
+            settingsOpen = false;
+            previewSource = previewReverb = previewEq = -1;
+            rack = index == 35 ? 7 : index == 36 ? 11 : 12;
+            layout();
+            repaint();
+            return;
+        }
         if (index == 34) {
             settingsOpen = false;
             rack = 5;
@@ -1892,7 +1913,7 @@ class LogisthEditor::Console : public Component,
         for (int clock = 0; clock < 2; ++clock) {
             previewSync = clock;
             for (int part = 0; part < partCount; ++part)
-                for (int page = 0; page < 11; ++page)
+                for (int page = 0; page < 13; ++page)
                     for (int step = 0; step < 2; ++step) {
                         selectedPart = part;
                         rack = page;
@@ -2940,12 +2961,16 @@ class LogisthEditor::Console : public Component,
             button.setVisible(false);
         mutateButton.setVisible(false);
         undoButton.setVisible(false);
-        for (int i = 0; i < 11; ++i) {
-            rackButtons[size_t(i)]->setBounds(291, 309 + i * 20, 108, 20);
-            if (i < 9)
-                put(enables[size_t(i)], {294, 309 + i * 20, 20, 20}, Style::Toggle, {}, true);
-            if (i < 9)
-                controls[size_t(enables[size_t(i)])]->toFront(false);
+        const std::array<int, 13> rackOrder{8, 0, 1, 2, 3, 4, 5, 6, 7, 11, 12, 9, 10};
+        for (int row = 0; row < 13; ++row) {
+            const int i = rackOrder[size_t(row)], y = 296 + row * 18;
+            rackButtons[size_t(i)]->setBounds(291, y, 108, 18);
+            if (i < 9 || i == 11 || i == 12) {
+                const Param enabled =
+                    i < 9 ? enables[size_t(i)] : (i == 11 ? Param::clipon : Param::limiton);
+                put(enabled, {294, y, 20, 18}, Style::Toggle, {}, true);
+                controls[size_t(enabled)]->toFront(false);
+            }
         }
         settingsPanel.setVisible(settingsOpen);
         if (settingsOpen) {
@@ -2954,20 +2979,54 @@ class LogisthEditor::Console : public Component,
             settingsPanel.toFront(false);
             return;
         }
+        if (rack == 7 || rack == 11 || rack == 12) {
+            const int mode = rack == 7 ? 0 : rack == 11 ? 1 : 2;
+            dynamicsView.setMode(mode);
+            dynamicsView.setBounds(414, 289, 520, 90);
+            dynamicsView.setVisible(true);
+            const std::vector<Param> ids =
+                mode == 0 ? std::vector<Param>{Param::compmode,   Param::compthreshold,
+                                               Param::compratio,  Param::compknee,
+                                               Param::compattack, Param::comprelease,
+                                               Param::compmakeup, Param::compmix}
+                : mode == 1
+                    ? std::vector<Param>{Param::clipmode, Param::clipdrive, Param::clipceiling,
+                                         Param::clipknee, Param::clipmix,   Param::clipquality}
+                    : std::vector<Param>{Param::limitdrive, Param::limitceiling,
+                                         Param::limitrelease};
+            const int columns = mode == 0 ? 4 : 3;
+            const int cellWidth = 520 / columns;
+            for (size_t i = 0; i < ids.size(); ++i) {
+                const auto &spec = parameterSpecs[size_t(ids[i])];
+                put(ids[i],
+                    {414 + int(i % columns) * cellWidth, 389 + int(i / columns) * 65, cellWidth - 8,
+                     mode == 2 ? 123 : 63},
+                    *spec.choices ? Style::Menu : Style::Knob,
+                    String(spec.label).upToFirstOccurrenceOf(" /", false, false).toUpperCase(),
+                    true);
+            }
+            if (mode == 0)
+                controls[size_t(Param::compknee)]->enable(value(Param::compmode) > 0);
+            if (mode == 1)
+                controls[size_t(Param::clipknee)]->enable(value(Param::clipmode) > 0);
+            return;
+        }
         if (rack == 5 && int(value(Param::reverbtype)) == 5) {
             put(Param::reverbtype, {414, 289, 180, 25}, Style::Menu, {}, true);
             impulseLoad.setBounds(608, 289, 108, 25);
             impulseLoad.setVisible(true);
             impulseReset.setBounds(728, 289, 108, 25);
             impulseReset.setVisible(true);
-            impulseName.setBounds(414, 326, 520, 38);
+            impulseName.setBounds(414, 320, 520, 30);
+            impulseView.setBounds(414, 354, 520, 70);
+            impulseView.setVisible(true);
             impulseName.setVisible(true);
             refreshImpulseLabel();
-            put(Param::irnormalize, {414, 368, 190, 24}, Style::Toggle, "NORMALIZE IR", true);
+            put(Param::irnormalize, {846, 289, 88, 25}, Style::Toggle, "NORMALIZE", true);
             for (int i = 0; i < 4; ++i)
                 put(std::array<Param, 4>{Param::reverb, Param::reverbpredelay, Param::reverbwidth,
                                          Param::reverbout}[size_t(i)],
-                    {414 + i * 130, 404, 122, 106}, Style::Knob,
+                    {414 + i * 130, 432, 122, 85}, Style::Knob,
                     StringArray{"MIX", "PREDELAY", "WIDTH", "WET GAIN"}[i], true);
             return;
         }
@@ -3190,6 +3249,13 @@ class LogisthEditor::Console : public Component,
         patternCanvas.setVisible(false);
         waveView.setVisible(false);
         eqView.setVisible(false);
+        impulseView.setVisible(false);
+        dynamicsView.setVisible(false);
+        processor.dynamicsView = !settingsOpen && (rack == 7 || rack == 11 || rack == 12)
+                                     ? (rack == 7    ? 0
+                                        : rack == 11 ? 1
+                                                     : 2)
+                                     : -1;
         for (Component *c : std::array<Component *, 4>{&eqBandSelect, &eqAdd, &eqRemove, &eqHelp})
             c->setVisible(false);
         waveSlot.setVisible(false);
@@ -3291,8 +3357,8 @@ class LogisthEditor::Console : public Component,
             b->repaint();
         layoutStamp = currentLayoutState();
     }
-    std::array<int, 8 + 4 * playerCount> currentLayoutState() const {
-        std::array<int, 8 + 4 * playerCount> state{
+    std::array<int, 10 + 4 * playerCount> currentLayoutState() const {
+        std::array<int, 10 + 4 * playerCount> state{
             int(value(Param::sync)), int(value(Param::lfo1free)), int(value(Param::lfo2free)),
             int(value(Param::arpmode) >= 8), int(value(Param::arppattern))};
         for (int o = 0; o < playerCount; ++o) {
@@ -3310,7 +3376,9 @@ class LogisthEditor::Console : public Component,
         for (int i = 0; i < eqMaxBands; ++i)
             if (value(Param(size_t(eqBandTypes[size_t(i)]) + 3)) > 0)
                 mask |= 1 << i;
-        state.back() = mask + 65536 * int(value(eqBandTypes[size_t(selectedEqBand)]));
+        state[7 + 4 * playerCount] = mask + 65536 * int(value(eqBandTypes[size_t(selectedEqBand)]));
+        state[8 + 4 * playerCount] = int(value(Param::compmode));
+        state[9 + 4 * playerCount] = int(value(Param::clipmode));
         return state;
     }
     void refreshImpulseLabel() {
@@ -3327,8 +3395,12 @@ class LogisthEditor::Console : public Component,
     void timerCallback() override {
         for (auto &button : oscPaste)
             button.setEnabled(LogisthProcessor::hasOscillatorClipboard());
-        if (impulseName.isVisible())
+        if (impulseName.isVisible()) {
             refreshImpulseLabel();
+            impulseView.repaint();
+        }
+        if (dynamicsView.isVisible())
+            dynamicsView.repaint();
         auto now = Time::getMillisecondCounter();
         if (ThemeSettings::scanDue(now, lastThemeScan)) {
             ThemeSettings::scan();
@@ -3540,9 +3612,10 @@ class LogisthEditor::Console : public Component,
         g.setColour(screenLine);
         g.drawRoundedRectangle(Rectangle<float>(280.5f, 278.5f, 667, 257), 8, 1);
         g.drawVerticalLine(404, 292, 523);
-        drawCaption(g, "SIGNAL RACK", {292, 290, 108, 16}, 8, mint.withAlpha(.5f));
-        StringArray titles{"ARPEGGIATOR", "DISTORTION", "PHASER", "CHORUS", "EQUALIZER", "REVERB",
-                           "DELAY",       "COMPRESSOR", "CHORDS", "SAMPLE", "MORPH"};
+        drawCaption(g, "SIGNAL RACK", {292, 281, 108, 13}, 8, mint.withAlpha(.5f));
+        StringArray titles{"ARPEGGIATOR", "DISTORTION", "PHASER",     "CHORUS", "EQUALIZER",
+                           "REVERB",      "DELAY",      "COMPRESSOR", "CHORDS", "SAMPLE",
+                           "MORPH",       "CLIPPER",    "LIMITER"};
         drawCaption(g,
                     settingsOpen                ? "SETTINGS"
                     : (rack == 9 || rack == 10) ? String{}
@@ -3624,7 +3697,7 @@ class LogisthEditor::Console : public Component,
     std::array<std::unique_ptr<Control>, parameterCount> controls;
     std::array<ToggleButton, partCount> parts;
     std::array<ToggleButton, 2> stepPages;
-    std::array<std::unique_ptr<RackButton>, 11> rackButtons;
+    std::array<std::unique_ptr<RackButton>, 13> rackButtons;
     std::array<ComboBox, playerCount> sourceViews, sourceFrame;
     std::array<int, playerCount> sourceMenuStates{-1, -1, -1, -1, -1, -1};
     std::array<TextButton, playerCount> sourceLoad, sourceClear, oscCopy, oscPaste;
@@ -3673,6 +3746,8 @@ class LogisthEditor::Console : public Component,
     PatternCanvas patternCanvas;
     logisth_ui::WaveView waveView;
     logisth_ui::ScopeView scopeView;
+    logisth_ui::ImpulseView impulseView;
+    logisth_ui::DynamicsView dynamicsView;
     logisth_ui::EqView eqView;
     ComboBox eqBandSelect;
     TextButton eqAdd, eqRemove;
@@ -3697,7 +3772,7 @@ class LogisthEditor::Console : public Component,
     TooltipWindow tooltips;
     String readout, lastStatus;
     std::array<uint64_t, playerCount> displayedRevisions{};
-    std::array<int, 8 + 4 * playerCount> layoutStamp{};
+    std::array<int, 10 + 4 * playerCount> layoutStamp{};
     int selectedPart = 0, rack = 0, stepPage = 0, previewSync = -1;
 };
 LogisthEditor::LogisthEditor(LogisthProcessor &p) : AudioProcessorEditor(p) {

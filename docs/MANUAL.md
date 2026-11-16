@@ -1,4 +1,4 @@
-# logisth 0.9.6.1 — User Manual
+# logisth 0.9.6.2 — User Manual
 
 wavelogik logisth is a three-part polyphonic subtractive synthesizer for VST3, CLAP and standalone use.
 This manual describes logisth's controls, sound engines and preset workflow.
@@ -56,7 +56,9 @@ All sections occupy one console. No page needs vertical scrolling. Select A, B o
 at the top to edit that part's two oscillators, filter and amplitude envelope.
 This selects the editing view; it does not mute the other part. Use SOLO for
 listening to one part. The central rack changes its controls when you select a
-rack name. The small square beside each name independently enables that section.
+rack name. Its order is CHORDS, ARPEGGIATOR, DISTORTION, PHASER, CHORUS,
+EQUALIZER, REVERB, DELAY, COMPRESSOR, CLIPPER, LIMITER, SAMPLE and MORPH.
+SAMPLE/MORPH are editing tools. Main precedes the final Limiter in the audio path. The small square beside each name independently enables that section.
 Selecting a rack page does not enable or disable its processing.
 
 The upper row contains the preset selector, previous/next preset buttons, A/B/C,
@@ -576,8 +578,8 @@ its shared gate. Legacy controls remain available in the Legacy view.
 ## 7. Effects rack
 
 Signal order is fixed: Distortion → Phaser → Chorus → EQ → Reverb → Delay →
-Compressor → Main. Click a name to edit it and use the adjacent square to bypass
-or enable it. All seven effects are global after the A/B/C mix.
+Compressor → Clipper → Main → Limiter. Click a name to edit it and use the adjacent square to bypass
+or enable it. All nine effects are global after the A/B/C mix.
 
 | Section | Controls and use |
 | --- | --- |
@@ -585,9 +587,11 @@ or enable it. All seven effects are global after the A/B/C mix.
 | Phaser | Six-stage stereo phasing with centre frequency, spread, L/R offset, width, LFO, feedback and Dry/Wet. Its frequency is a modulation destination. |
 | Chorus | Delay, depth, rate, feedback, dual mode, width and Dry/Wet thicken a sound. |
 | Equalizer | Legacy two-shelf or 16-slot Graphic/parametric; eight filter types, response curve, Auto Gain and output trim. |
-| Reverb | Hall, Room, Spring, Vintage and Shimmer, with shared size/damping/predelay/width/mix and mode-specific controls. |
+| Reverb | Hall, Room, Spring, Vintage, Shimmer or Convolution; waveform/import for IR and relevant model controls. |
 | Delay | Independent left/right times or divisions, feedback, ping-pong, spread, width, low/high cut, smear and Dry/Wet. |
-| Compressor | Stereo-linked threshold, ratio, attack and release control dynamics. |
+| Compressor | Legacy/Modern, stereo link, threshold, ratio, knee, attack/release, makeup, Mix and live graphs. |
+| Clipper | Hard/Soft, Drive, Ceiling, Knee, Mix and Direct/Antialiased quality, with curve and waveform. |
+| Limiter | Final stereo-linked sample ceiling, release, drive, reduction history and activity. |
 
 ### Equalizer
 
@@ -623,6 +627,61 @@ the latest type. Both EQ modes and every band setting are saved with presets.
 
 ![Graphic EQ selected-band inspector](images/logisth-eq-graphic.png)
 
+### Compressor
+
+The compressor sits after Delay and before Clipper/Main. **MODEL** chooses
+Legacy or Modern. Modern is the starting choice for new patches; presets from
+before 0.9.6.2 automatically restore Legacy to retain their existing compression.
+Legacy keeps the original peak-envelope detector and hard knee. Modern smooths
+the gain reduction computed from a stereo-linked instantaneous peak detector.
+The maximum L/R peak controls both channels, preserving the stereo image.
+
+| Control | Operation |
+| --- | --- |
+| Threshold | −60 to 0 dB; the level around which compression begins. |
+| Ratio | 1:1 to 100:1; reduces the amount of level increase above threshold. |
+| Knee | 0–24 dB in Modern. Zero is hard; larger values spread the transition around threshold. Disabled in Legacy. |
+| Attack / Release | 0.1–100 ms / 5–2000 ms. Time constants for reaching/recovering reduction, not exact time-to-completion. |
+| Makeup | −24 to +24 dB after compression. |
+| Mix | Parallel dry/wet mix, 0–100%. |
+
+The left plot shows the current transfer curve, including Makeup/Mix, and
+highlights the knee region. The right side shows actual input/output waveform,
+peak readings and gain reduction. GR excludes Makeup. Compression permits attack
+transients; use the output limiter when an exact sample ceiling is needed.
+
+![Compressor and knee](images/logisth-compressor.png)
+
+### Clipper
+
+Clipper follows Compressor and precedes Main. **CURVE** chooses Hard or Soft.
+Drive adds 0–24 dB before shaping; Ceiling sets −24 to 0 dBFS. Soft **KNEE**
+controls the width of its rounded transition. At zero it becomes hard clipping.
+The curve remains linear below the knee and reaches a flat ceiling above it.
+Hard mode ignores Knee. **MIX** blends original dry audio with the shaped return.
+At partial Mix, the dry component can exceed the clipper ceiling.
+
+**QUALITY** chooses Direct or Antialiased. Antialiased uses first-order ADAA
+with the analytic integral of the selected curve. It reduces aliasing without
+oversampling buffers or added host latency; its wet path has approximately
+half a sample of phase lag. Direct applies the curve to each sample. The graph
+shows the static curve including Drive/Mix, while the waveform overlays actual
+input and output. Enable the final limiter for a ceiling after Main.
+
+![Clipper curve and waveform](images/logisth-clipper.png)
+
+### Output limiter
+
+Limiter is the last audio stage, after Main. Its stereo-linked instantaneous
+attack prevents output samples from exceeding **CEILING** (−24 to 0 dBFS),
+including during ceiling changes. **DRIVE** adds up to 24 dB before limiting;
+**RELEASE** sets recovery from 5–2000 ms. It adds no lookahead or host latency.
+The transfer plot, input/output peak values, reduction history and GR bar show
+its activity. This is a sample-peak limiter; it does not measure intersample
+true peaks. Bypass leaves the output unchanged.
+
+![Output limiter activity](images/logisth-limiter.png)
+
 ### Reverb types
 
 TYPE selects Hall, Room, Spring, Vintage, Shimmer or Convolution. The first five use 16-line feedback delay networks
@@ -654,7 +713,9 @@ can raise peak levels; adjust Mix/Main for the patch. Reverb Off clears its tail
 Select TYPE / CONVOLUTION, then **LOAD IR** to choose a mono or stereo WAV, AIFF
 or FLAC impulse response. **RESET IR** restores the included synthetic chamber.
 The name, channel count, sample rate, duration and preparation status appear in
-the rack. Convolution replaces the algorithmic model; irrelevant controls hide.
+the rack. A stereo waveform appears below them. Drag one WAV, AIFF or FLAC file
+onto this waveform or the Convolution rack to import it. Extrema are cached during
+background import rather than rescanning the PCM for every redraw. Convolution replaces the algorithmic model; irrelevant controls hide.
 
 The engine uses JUCE's zero-latency non-uniform partitioned convolution. Mono IRs
 apply the same response independently to L/R; stereo IRs use separate channel
@@ -783,7 +844,7 @@ library; it does not relocate files. Load file can open a preset from elsewhere.
 Save/load run on a worker, with completion/errors in the footer. Wait for the
 completion message before closing the instance or moving a newly saved file.
 
-Presets contain all 1055 audio parameters, routing, compressed audio for all six
+Presets contain all 1070 audio parameters, routing, compressed audio for all six
 slots, the convolution impulse response, WAV regions, chord mappings, twelve named patterns, the preset comment and
 scope selection. Theme and editor size are separate user preferences and are
 retained when sounds change. The original sample files are unnecessary on recall. Saving uses a
@@ -791,7 +852,7 @@ temporary file and atomic replacement. Invalid files leave the current patch
 intact. State/preset files are limited to 1 GiB. These are logisth's own files;
 renaming another format to .logisth does not convert it.
 
-All 1055 parameters are available for host automation. The first 514 parameter
+All 1070 parameters are available for host automation. The first 514 parameter
 IDs and order from 0.4 are retained. Granulizer and global MIDI-only controls
 follow them; the former Graphs parameter block is removed. A/B/C views, rack pages,
 theme and scope source do not change the patch's audio settings. DAW state
@@ -877,6 +938,20 @@ The second group of arp steps is under 09–16.
 High CPU: reduce unison voices, polyphony or active effects. Some abrupt changes
 to routing, waveforms and delay times can click. Selected continuous controls
 are smoothed, but not every transition is crossfaded.
+
+Disabled effects have a direct bypass. Enabled effects sleep after their output
+is inaudible and their possible delayed responses have elapsed. Long IRs and
+long first echoes are retained; compressor recovery and phaser/chorus LFO phases
+advance during sleep. Only selected/fading reverb models are configured.
+Muted oscillator players run only when needed by an audible carrier's active
+FM/AM dependency chain or a possible volume modulation route. MIDI-only mode
+skips audio rendering while keeping MIDI/chord/arp processing. Dynamics waveform
+capture runs only for the visible page; hidden graphs do not collect samples.
+
+Version 0.9.6.2 preserves the complete 1055-parameter contract from 0.9.6.1 and
+appends 15 controls. New stages default off in older files. Missing MODEL restores
+Legacy compression; newly created patches use Modern. These changes retain preset
+values while improving idle CPU behavior.
 
 Build validation includes audio at 44.1/48/96 kHz, filters, modulation, arp timing,
 state restoration, preset output and editor bindings/layout/theme persistence.

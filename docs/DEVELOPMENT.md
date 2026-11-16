@@ -61,3 +61,16 @@ PreparedImpulse owns JUCE convolution; ImpulseRack crossfades and publishes only
 prepared engines. Host sample-rate changes reprepare outside processing. Imported
 IR data is immutable, bounded and embedded; retired engines are destroyed outside
 the audio callback. Thread-local allocation guards cover actual processing.
+
+## v0.9.6.2 dynamics and idle processing
+
+Dynamics.h contains the shared transfer curves, modern compressor, analytic
+clipper/ADAA and final linked sample-peak limiter. Effects owns compressor state;
+Processor applies Clipper before Main and Limiter after Main. DynamicsView capture
+is opt-in through an atomic selected-page value. Only audio resets/writes the
+ring during processing. No heap allocation is introduced in callbacks.
+Old states missing compmode use Legacy; original 1055 fields remain unchanged.
+Effects' quiet gate accounts for delayed first responses/IR duration. It advances
+compressor recovery and free effect LFO phase rather than freezing them. Engine
+resolves carrier/dependency needs once per render, including route bounds and
+smoothed modulation depths. IR peak caches are immutable/off-thread.

@@ -67,6 +67,7 @@ Result LogisthProcessor::loadImpulseRequested(const File &file, uint64_t request
     }
     if (peak == 0)
         return Result::fail("The impulse response is silent.");
+    data->buildPeaks();
     // Prepare and validate before replacing the audible or saved response.
     auto engine = std::make_shared<PreparedImpulse>(*data, impulseRate.load());
     const ScopedLock lock(assetLock);
@@ -263,6 +264,7 @@ std::shared_ptr<const ImpulseData> LogisthProcessor::readImpulse(const ValueTree
             char extra;
             if (peak == 0 || zip.read(&extra, 1) != 0)
                 return {};
+            data->buildPeaks();
             result = data;
         }
     return result;

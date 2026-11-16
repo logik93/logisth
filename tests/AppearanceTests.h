@@ -220,12 +220,44 @@ inline void preview(const File &folder) {
         write("theme-" + String(theme), editor->snapshotTheme(theme));
     for (int type = 0; type < 5; ++type)
         write("reverb-" + String(type), editor->snapshotPage(14 + type));
-    for (int page = 19; page <= 34; ++page) {
+    for (int page = 19; page <= 37; ++page) {
         if (page == 34) {
             editor->snapshotPage(page);
             auto *type = p.state.getParameter("reverbtype");
             type->setValueNotifyingHost(type->convertTo0to1(5));
             p.prepareToPlay(48000, 512);
+        }
+        if (page >= 35) {
+            p.loadPreset(0);
+            auto set = [&](const char *id, float v) {
+                auto *q = p.state.getParameter(id);
+                q->setValueNotifyingHost(q->convertTo0to1(v));
+            };
+            set("o1level", 1);
+            set("o1wave", 1);
+            if (page == 35) {
+                set("compon", 1);
+                set("compknee", 12);
+            }
+            if (page == 36) {
+                set("clipon", 1);
+                set("clipdrive", 12);
+                set("clipknee", .7f);
+            }
+            if (page == 37) {
+                set("limiton", 1);
+                set("limitdrive", 12);
+                set("limitceiling", -6);
+            }
+            editor->snapshotPage(page);
+            p.prepareToPlay(48000, 512);
+            AudioBuffer<float> b(2, 512);
+            MidiBuffer midi;
+            midi.addEvent(MidiMessage::noteOn(1, 69, 1.f), 0);
+            for (int i = 0; i < 24; ++i) {
+                p.processBlock(b, midi);
+                midi.clear();
+            }
         }
         write("feature-" + String(page), editor->snapshotPage(page));
     }

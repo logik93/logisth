@@ -1,9 +1,10 @@
-# logisth 0.9.6.1 — project and algorithm review
+# logisth 0.9.6.2 — project and algorithm review
 
 ## Algorithm provenance and conformance
 
 | Component | Actual implementation | Evidence and limits |
 | --- | --- | --- |
+| Compressor / Clipper / Limiter | Original wavelogik DSP; variable soft knee, analytic ADAA and final linked sample-peak ceiling | Curve, ratio, release, stereo, alias, automation, allocation and actual post-Main output tests. |
 | Convolution reverb | JUCE 8.0.6 dsp::Convolution, non-uniform partitioning, zero added latency; original adapter | Direct stereo FIR comparison at 44.1/48/96 kHz and arbitrary blocks; resampled energy normalization, embedded IR recall, live replacement and allocation tests. |
 | Signalsmith Stretch | Unmodified upstream 1.3.2, commit `88061fd4eda56a2353c5d65c74aa3f4ccf76f9da` | 3 upstream files compared byte for byte. Stereo adapter output agrees with direct upstream processing within 1e-6 at 44.1/48/96 kHz, with different rates, pitch shifts, tonality limits, formants, blocks and overlaps. |
 | Signalsmith Linear | Unmodified upstream 0.6.6, commit `7bb1c8f36794d6980080ce817c91f8da8fe56a66` | 18 vendored files compared byte for byte; this is the dependency version specified by Stretch upstream. Portable FFT backend; optional external FFT backends are not enabled. |
@@ -45,3 +46,5 @@ The review proposes these further changes; it does not silently add new synthesi
 engines or claim unperformed DAW/reference-binary tests.
 
 The [v0.9.6.1 review](REVIEW-v0.9.6.1.md) documents stereo/reverb calibration, convolution, oscillator clipboard, symmetric MORPH menus and the new compatibility baseline.
+
+The [v0.9.6.2 review](REVIEW-v0.9.6.2.md) and [dynamics/CPU measurements](DYNAMICS_CPU.md) cover the new dynamics, IR waveform/drop, ordered rack and idle/dependency improvements.

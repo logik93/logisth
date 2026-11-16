@@ -8,6 +8,7 @@
 #include "Features094Tests.h"
 #include "Features095Tests.h"
 #include "Features0961Tests.h"
+#include "Features0962Tests.h"
 #include "Features096Tests.h"
 #include "GainCalibration.h"
 #include "KickBenchmark.h"
@@ -986,6 +987,10 @@ int main(int argc, char **argv) {
             factorybank_test::search();
             return 0;
         }
+        if (argc > 1 && juce::String(argv[1]) == "--features0962-check") {
+            features0962_test::run();
+            return 0;
+        }
         if (argc > 1 && juce::String(argv[1]) == "--features0961-check") {
             features0961_test::run();
             convolution_test::run();
@@ -1048,6 +1053,7 @@ int main(int argc, char **argv) {
         features0961_test::run();
         convolution_test::run();
         oscillator_clipboard_test::run();
+        features0962_test::run();
         factorybank_test::run();
         factorybank_test::search();
         processor_phase_test::run();

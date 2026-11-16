@@ -12,7 +12,7 @@ import zipfile
 from pathlib import Path
 
 
-def package(preview: Path, calibration: Path, kick_benchmark: Path | None = None, factory_bank: Path | None = None, stereo_reverb: Path | None = None) -> Path:
+def package(preview: Path, calibration: Path, kick_benchmark: Path | None = None, factory_bank: Path | None = None, stereo_reverb: Path | None = None, dynamics_cpu: Path | None = None) -> Path:
     root = Path(__file__).resolve().parents[1]
     version = re.search(r'project\(Logisth VERSION ([\d.]+)',
                         (root / 'CMakeLists.txt').read_text()).group(1)
@@ -92,6 +92,12 @@ def package(preview: Path, calibration: Path, kick_benchmark: Path | None = None
         if any(not p.is_file() for p, _ in files):
             raise ValueError('Stereo/reverb measurements are incomplete')
         bundles.append(('stereo-reverb-calibration', files))
+    if dynamics_cpu is not None:
+        required = ['cpu-before.csv','cpu-after.csv','compressor-curves.csv','clipper-curves.csv']
+        if any(not (dynamics_cpu / n).is_file() for n in required):
+            raise ValueError('Dynamics/CPU measurements are incomplete')
+        bundles.append(('dynamics-cpu-calibration', [(dynamics_cpu/n,n) for n in required] +
+                        [(root/'docs/DYNAMICS_CPU.md','README.md')]))
     folder.mkdir(parents=True)
     for file, name in copies:
         shutil.copyfile(file, folder / name)
@@ -117,10 +123,12 @@ if __name__ == '__main__':
     parser.add_argument('--kick-benchmark', type=Path)
     parser.add_argument('--factory-bank', type=Path)
     parser.add_argument('--stereo-reverb', type=Path)
+    parser.add_argument('--dynamics-cpu', type=Path)
     args = parser.parse_args()
     try:
         package(args.preview.resolve(), args.calibration.resolve(), args.kick_benchmark.resolve() if args.kick_benchmark else None,
                 args.factory_bank.resolve() if args.factory_bank else None,
-                args.stereo_reverb.resolve() if args.stereo_reverb else None)
+                args.stereo_reverb.resolve() if args.stereo_reverb else None,
+                args.dynamics_cpu.resolve() if args.dynamics_cpu else None)
     except (OSError, ValueError, subprocess.CalledProcessError) as error:
         raise SystemExit(str(error)) from error
