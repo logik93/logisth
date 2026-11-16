@@ -57,7 +57,9 @@ The fixture covers ten palettes × three knob styles × normal/screen context ×
 regular/trim size: 120 cases. Enabled needle colors target at least 4.5:1 against
 both gradient endpoints; active and passive arcs target 3:1 against the surface.
 The selected-angle raster probe requires a visible needle-pixel contrast over
-3:1. It checks rendered pixels as well as color calculations. This is a focused
+3:1. Native drawing contexts are closed before pixel readback, including the
+deferred Direct2D frame on Windows. It checks rendered pixels as well as color
+calculations. This is a focused
 component fixture, not an accessibility certification for every interface pixel.
 
 [theme-contrast.csv](rack/theme-contrast.csv) records the per-case measurements.

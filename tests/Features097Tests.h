@@ -201,15 +201,25 @@ inline void run(const juce::File &report = {}) {
                     slider.getProperties().set("dark", screen);
                     slider.getProperties().set("trim", small);
                     Image image(Image::RGB, 60, 60, true);
-                    Graphics graphics(image);
-                    graphics.fillAll(colours.surface);
-                    look.drawRotarySlider(graphics, 0, 0, 60, 60, .5f, -2.4f, 2.4f, slider);
+                    {
+                        // Native Windows images finish their Direct2D frame when
+                        // the Graphics context closes. Read pixels only afterward.
+                        Graphics graphics(image);
+                        graphics.fillAll(colours.surface);
+                        look.drawRotarySlider(graphics, 0, 0, 60, 60, .5f, -2.4f, 2.4f, slider);
+                    }
                     double raster = 0;
                     for (int x = 29; x <= 30; ++x)
                         for (int y = 15; y <= 17; ++y)
                             raster = std::max(raster, colourContrast(image.getPixelAt(x, y),
                                                                      colours.top.interpolatedWith(
                                                                          colours.bottom, .2f)));
+                    if (raster <= 3.0)
+                        std::cerr << "Needle raster: " << definition.name << " style=" << style
+                                  << " screen=" << screen << " small=" << small
+                                  << " contrast=" << raster << " pixels="
+                                  << image.getPixelAt(29, 16).toDisplayString(true) << "/"
+                                  << image.getPixelAt(30, 16).toDisplayString(true) << '\n';
                     check(raster > 3.0,
                           "actual rasterized needle remains visible in bright and screen contexts");
                     if (!small)
