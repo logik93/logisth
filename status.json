@@ -1,26 +1,66 @@
 {
   "tag": "v0.9.7",
-  "automation_commit": "7f5c6451406c983a9c39c6198302043bf6521f9a",
-  "run_id": "43961925038",
-  "run_url": "https://github.com/logik93/logisth/actions/runs/43961925038",
-  "phase": "failed",
-  "pipeline_phase": "failed",
+  "automation_commit": "7975cb668c01b4c13206fdb6e69319b7926b4330",
+  "run_id": "43963656614",
+  "run_url": "https://github.com/logik93/logisth/actions/runs/43963656614",
+  "phase": "passed",
+  "pipeline_phase": "passed",
   "stage": "",
-  "recorded_at": "2026-11-16T21:44:44.850049+00:00",
+  "recorded_at": "2026-11-16T21:53:39.658392+00:00",
   "platform": "windows-x86_64",
-  "failures": [
-    {
-      "log": "native-out\\logs\\tests.log",
-      "errors": [
-        "The following tests FAILED:"
-      ]
-    }
-  ],
-  "test_failures": [
-    {
-      "name": "processor",
-      "message": "Failed",
-      "output": "\n\t\t\n\t\t\n\t\tPASS appearance: persisted size, typed scale, isolated instances, ten JSON defaults, custom editor, folder scanning and stable selection\nPASS advanced themes: chosen save path, rename, font/background/knobs, two-minute scans, per-instance draft and editor recreation\nPASS 0.9.2 integration: zero MOD ENV, source DSP bindings, EQ audio/gestures, new parameter presets and conditional UI\nPASS 0.9.3 integration: MORPH names/ranges, section locks/Undo, zoomed range selection/handles, routing and full layout\nPASS 0.9.4 integration: six per-player controls, preset round-trips, compact UI, live/muted pool changes and last-request preparation\nPASS 0.9.5 integration: 736 frozen host parameters, six players, 200 ct, extended choices, tail mouse editing, all-parameter presets and old sessions\nPASS 0.9.6 integration: frozen 954-parameter contract, six 400ct/blend controls, paired menus, velocity/MIDI, scrollable credits, 16 EQ bands and presets\nPASS v0.9.6.1 baseline: 1055 frozen definitions, 200 grouped macro choices and symmetric A/B/C mappings\nPASS convolution: direct FIR parity, three rates, arbitrary blocks, zero latency, normalization, embedded preset/project PCM, invalid imports, live replacement and audio allocation guards\nPASS oscillator clipboard: all 36 source/destination pairs, complete controls, semantic FM routing, embedded media, cross-instance paste and six panel buttons\nPASS 0.9.6.2 integration: Legacy recall, dynamic presets, post-Main ceiling, live graphs, no audio allocations, ordered tabs, IR waveform/drop, 1070-control layout and MIDI-only CPU\nactual rasterized needle remains visible in bright and screen contexts\n\n\t"
-    }
-  ]
+  "build": {
+    "version": "0.9.7",
+    "platform": "windows-x86_64",
+    "source_commit": "7975cb668c01b4c13206fdb6e69319b7926b4330",
+    "source_fingerprint": {
+      "Source": "42b0415d5bf2af1ac87d9a51c05e35e1043c5508",
+      "CMakeLists.txt": "d122ea322ba94ea6921bbd84959497391eaf91a0",
+      "tests": "9f1dc71849b9da3f1ed4c7528285c00616e5e678",
+      "assets": "d9d361fe6505e4d50e61064f667a29a68c0e035a"
+    },
+    "technical_manual": {
+      "format": 1,
+      "software_version": "0.9.7",
+      "implementation_sha256": "3e9ec8cb62a274a1546e158a74521c8970f05bd3aacdd76bbf5859d0a45933d8",
+      "markdown_sha256": "ac8f2bdcf0986b57cc4276ccee35a64b624930953369ffb0d8978bbf9031a310",
+      "pdf_sha256": "4b697879d17944915b4d102ba5b83a9aad81c51ce43829018374ac6814a9fe83"
+    },
+    "tests": {
+      "passed": 18,
+      "failed": 0,
+      "skipped": 0
+    },
+    "binaries": [
+      {
+        "path": "VST3/logisth.vst3/Contents/x86_64-win/logisth.vst3",
+        "architectures": [
+          "x86_64"
+        ],
+        "sha256": "d16d16a7fbbaeb15e08fd86149961aaf60cb4f34ffb833c648ce14e7af45a630"
+      },
+      {
+        "path": "CLAP/logisth.clap",
+        "architectures": [
+          "x86_64"
+        ],
+        "sha256": "29a78e2ec41084961b2653e99f3a30bb4f8ee8aac63ca4c95ca0419c04be7839"
+      },
+      {
+        "path": "Standalone/logisth.exe",
+        "architectures": [
+          "x86_64"
+        ],
+        "sha256": "683a88e8d55f103ccbf4288c26fa4644e77a3efa585686d71ce1865bb3d379b2"
+      }
+    ],
+    "formats": [
+      "VST3",
+      "CLAP",
+      "Standalone"
+    ],
+    "run_url": "https://github.com/logik93/logisth/actions/runs/43963656614",
+    "signing": "unsigned",
+    "archive": "logisth-0.9.7-windows-x86_64.zip",
+    "archive_sha256": "5804e5c0d877225584dd11df8b386c1a96816736528cf1b58678f6144fe5c74c"
+  }
 }
