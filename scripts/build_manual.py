@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Render the English Markdown manual to PDF (requires reportlab)."""
+"""Render the English user and technical manuals to PDF (requires reportlab)."""
 from pathlib import Path
 import re
 from xml.sax.saxutils import escape
@@ -101,3 +101,6 @@ SimpleDocTemplate(str(root / 'docs/logisth-Manual-English.pdf'), pagesize=A4,
                   title=f'logisth {version} — User Manual', author='wavelogik').build(
                       story, onFirstPage=footer, onLaterPages=footer)
 print('Rendered docs/logisth-Manual-English.pdf')
+
+from build_technical_manual import render
+render(root)

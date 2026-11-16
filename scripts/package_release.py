@@ -19,6 +19,8 @@ def package(preview: Path, calibration: Path, kick_benchmark: Path | None = None
     folder = root / 'releases' / f'logisth-{version}'
     if folder.exists():
         raise ValueError('Refusing to replace an existing release asset folder')
+    from verify_technical_manual import verify as verify_technical_manual
+    verify_technical_manual(root)
     paths = ['.github', '.gitignore', '.gitattributes', 'CMakeLists.txt', 'README.md', 'BUILD_STATUS.md', 'LICENSE',
              'THIRD_PARTY_NOTICES.md', 'Source', 'tests', 'scripts', 'assets', 'docs', 'licenses']
     subprocess.run(['git', 'diff', '--exit-code', 'HEAD', '--', *paths], cwd=root,
@@ -36,6 +38,9 @@ def package(preview: Path, calibration: Path, kick_benchmark: Path | None = None
                     raise ValueError(f'Source archive differs from working copy: {local}')
     copies = [(root / 'docs/MANUAL.md', 'logisth-Manual-English.md'),
               (root / 'docs/logisth-Manual-English.pdf', 'logisth-Manual-English.pdf'),
+              (root / 'docs/TECHNICAL_MANUAL.md', 'logisth-Technical-Manual-English.md'),
+              (root / 'docs/logisth-Technical-Manual-English.pdf', 'logisth-Technical-Manual-English.pdf'),
+              (root / 'docs/technical-manual.json', 'logisth-Technical-Manual-Manifest.json'),
               (root / 'docs/CALIBRATION.md', 'logisth-GainCalibration.md'),
               (root / 'LICENSE', 'logisth-LICENSE-MIT.txt'),
               (root / 'THIRD_PARTY_NOTICES.md', 'logisth-ThirdPartyNotices.md'),

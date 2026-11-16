@@ -4,6 +4,9 @@
 VST3, CLAP and Standalone for Windows, macOS and Linux. Built with JUCE and an
 independent synthesis engine.
 
+[User Manual](docs/MANUAL.md) · [Technical Manual](docs/TECHNICAL_MANUAL.md) ·
+[Technical Manual PDF](docs/logisth-Technical-Manual-English.pdf)
+
 ![logisth dark interface](docs/images/logisth-dark.png)
 
 ## New in 0.9.6.2

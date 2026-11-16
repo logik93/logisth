@@ -68,6 +68,9 @@ jobs:
         run: python scripts/verify_theme_assets.py
       - name: Verify release publisher regressions
         run: python -m unittest discover -s scripts/tests
+      - name: Verify current technical documentation
+        if: hashFiles('scripts/verify_technical_manual.py') != ''
+        run: python scripts/verify_technical_manual.py
       - name: Build, test, verify architecture and package
         run: python scripts/build_native.py --platform ${{ matrix.platform }} --output native-out --parallel ${{ matrix.parallel }} --reuse
       - name: Retain binaries and diagnostic logs

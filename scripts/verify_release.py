@@ -88,6 +88,20 @@ def verify(tag: str) -> None:
         with zipfile.ZipFile(folder/name) as archive:
             for file in ('cpu-before.csv','cpu-after.csv','compressor-curves.csv','clipper-curves.csv','README.md'):
                 if not archive.read(file):raise ValueError('Empty dynamics/CPU measurement')
+    # The engineering reference was introduced after the immutable v0.9.6.2
+    # release. Require it for subsequent versions without rewriting old assets.
+    if tuple(map(int, version.split('.'))) > (0, 9, 6, 2):
+        from verify_technical_manual import verify as verify_technical_manual
+        verify_technical_manual(root)
+        documents = {'docs/TECHNICAL_MANUAL.md': 'logisth-Technical-Manual-English.md',
+                     'docs/logisth-Technical-Manual-English.pdf': 'logisth-Technical-Manual-English.pdf',
+                     'docs/technical-manual.json': 'logisth-Technical-Manual-Manifest.json'}
+        with tarfile.open(folder / f'logisth-{version}-source.tar.gz') as archive:
+            for source, name in documents.items():
+                if name not in names or (folder / name).read_bytes() != (root / source).read_bytes():
+                    raise ValueError(f'Missing or stale technical document: {name}')
+                if archive.extractfile('logisth/' + source).read() != (root / source).read_bytes():
+                    raise ValueError(f'Source archive technical document mismatch: {source}')
     print(f"Verified {len(names)} release assets for {tag}")
 
 

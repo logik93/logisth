@@ -109,6 +109,9 @@ def main():
         raise ValueError('Compiled source or tests differ from the recorded Git revision')
     version = re.search(r'project\(Logisth VERSION ([\d.]+)',
                         (source / 'CMakeLists.txt').read_text()).group(1)
+    from verify_technical_manual import verify as verify_technical_manual
+    verify_technical_manual(source)
+    technical_manual = json.loads((source / 'docs/technical-manual.json').read_text())
     existing = output / f'build-info-{args.platform}.json'
     if args.reuse and existing.is_file():
         record = json.loads(existing.read_text())
@@ -117,6 +120,7 @@ def main():
         expected_tests = 19 if args.platform.startswith('linux') else 17
         valid = (record.get('version') == version and record.get('platform') == args.platform
                  and record.get('source_fingerprint') == fingerprint
+                 and record.get('technical_manual') == technical_manual
                  and record.get('tests', {}).get('passed', 0) >= expected_tests
                  and record.get('tests', {}).get('failed') == 0
                  and record.get('tests', {}).get('skipped') == 0
@@ -195,6 +199,7 @@ def main():
     info = {'version': version, 'platform': args.platform,
             'source_commit': git(source, 'rev-parse', 'HEAD'),
             'source_fingerprint': source_fingerprint(source),
+            'technical_manual': technical_manual,
             'tests': {'passed': count, 'failed': 0, 'skipped': 0}, 'binaries': binaries,
             'formats': ['VST3', 'CLAP', 'Standalone'],
             'run_url': os.environ.get('LOGISTH_RUN_URL', ''),
@@ -208,7 +213,7 @@ def main():
     metadata = json.dumps(info, indent=2) + '\n'
     (stage / 'BUILD_INFO.json').write_text(metadata)
     (output / f'build-info-{args.platform}.json').write_text(metadata)
-    for name in ['README.md', 'BUILD_STATUS.md', 'LICENSE', 'THIRD_PARTY_NOTICES.md', 'docs/IMPLEMENTATION.md', 'docs/STUDIO-0.5.md', 'docs/CALIBRATION.md', 'docs/ANTICLICK.md', 'docs/THEMES.md', 'docs/INTERFACE.md', 'docs/MANUAL.md', 'docs/ALGORITHM_AUDIT.json', 'docs/PROJECT_REVIEW.md', 'docs/STEREO_REVERB_CALIBRATION.md', 'docs/DYNAMICS_CPU.md', f'docs/REVIEW-v{version}.md', 'docs/FACTORY_PRESETS.md', f'docs/factory/after-{version}.csv', 'docs/logisth-Manual-English.pdf',
+    for name in ['README.md', 'BUILD_STATUS.md', 'LICENSE', 'THIRD_PARTY_NOTICES.md', 'docs/IMPLEMENTATION.md', 'docs/STUDIO-0.5.md', 'docs/CALIBRATION.md', 'docs/ANTICLICK.md', 'docs/THEMES.md', 'docs/INTERFACE.md', 'docs/MANUAL.md', 'docs/TECHNICAL_MANUAL.md', 'docs/logisth-Technical-Manual-English.pdf', 'docs/technical-manual.json', 'docs/ALGORITHM_AUDIT.json', 'docs/PROJECT_REVIEW.md', 'docs/STEREO_REVERB_CALIBRATION.md', 'docs/DYNAMICS_CPU.md', f'docs/REVIEW-v{version}.md', 'docs/FACTORY_PRESETS.md', f'docs/factory/after-{version}.csv', 'docs/logisth-Manual-English.pdf',
                  'assets/fonts/LICENSE.txt', 'assets/fonts/NOTICE.txt']:
         if not (source / name).is_file():
             continue

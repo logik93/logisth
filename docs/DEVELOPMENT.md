@@ -14,7 +14,11 @@ A later explicit instruction to wait or avoid publishing overrides this default.
 3. Build locally and verify the change. Export current preview/demo assets with
    `build/processor_tests /absolute/preview-folder` and calibration materials with
    `build/processor_tests --gain-check /absolute/calibration-folder`.
-4. Refresh documentation images and the PDF (`python scripts/build_manual.py`).
+4. Review `docs/TECHNICAL_MANUAL.md` against changed runtime code and set its
+   software baseline to the CMake release version. Refresh documentation images
+   and both PDFs (`python scripts/build_manual.py`, requires ReportLab).
+   Run `python scripts/verify_technical_manual.py`; it checks the version and
+   SHA-256 identities of the implementation, Markdown and generated PDF.
    Commit source/documentation before creating the source archive.
 5. Run `python scripts/package_release.py --preview /absolute/preview-folder
    --calibration /absolute/calibration-folder --kick-benchmark /absolute/kick-folder --factory-bank /absolute/factory-folder`, then `python scripts/verify_release.py
@@ -27,7 +31,7 @@ A later explicit instruction to wait or avoid publishing overrides this default.
    its package and build metadata to the same release. Preserve existing download
    IDs and bytes; only SHA256SUMS and the release description are cumulative.
    Wait for every native build/test/architecture check and publication to finish.
-   Current minimum suites: Linux 17, Windows/macOS 15, with no failures or skips.
+   Current minimum suites: Linux 19, Windows/macOS 17, with no failures or skips.
    A separate Windows AddressSanitizer build must also pass before publication;
    its binaries are diagnostic only. Its receipt is `ci-check-v<version>-windows-asan`.
    Read the status branches `ci-build-v<version>-<platform>` and
@@ -74,3 +78,21 @@ Effects' quiet gate accounts for delayed first responses/IR duration. It advance
 compressor recovery and free effect LFO phase rather than freezing them. Engine
 resolves carrier/dependency needs once per render, including route bounds and
 smoothed modulation depths. IR peak caches are immutable/off-thread.
+
+## Technical documentation in every release
+
+The owner requested a professional English technical reference and its continued
+inclusion on 2026-11-16. Keep `docs/TECHNICAL_MANUAL.md`, its PDF and
+`docs/technical-manual.json` current. The manual identifies original DSP,
+open-source dependencies/versions/licenses, data formats, thread ownership,
+resource limits and validation evidence. Describe actual implementation and
+measurement conditions; do not add comparisons to proprietary products or their
+manufacturers. Retain required upstream license texts separately.
+
+`build_manual.py` renders both manuals. `build_native.py` rejects stale technical
+documentation and includes all three reference files in native packages.
+`package_release.py` also publishes the Markdown, PDF and identity manifest as
+separate assets. Release verification requires them after v0.9.6.2. Update the
+manual's documentation history when its content changes. A documentation-only
+push does not require rebuilding unchanged plug-ins or altering a published tag;
+the next product release must carry the updated reference in all packages.
