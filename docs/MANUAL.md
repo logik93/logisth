@@ -1,4 +1,4 @@
-# logisth 0.9.6.2 — User Manual
+# logisth 0.9.7 — User Manual
 
 wavelogik logisth is a three-part polyphonic subtractive synthesizer for VST3, CLAP and standalone use.
 This manual describes logisth's controls, sound engines and preset workflow.
@@ -10,7 +10,7 @@ This manual describes logisth's controls, sound engines and preset workflow.
 3. Oscillators and amplitude envelopes
 4. Filters and shared Filter Control
 5. Modulation
-6. Arpeggiator
+6. Chords and arpeggiator
 7. Effects rack
 8. Mixer and performance
 9. Presets, automation and project recall
@@ -56,9 +56,10 @@ All sections occupy one console. No page needs vertical scrolling. Select A, B o
 at the top to edit that part's two oscillators, filter and amplitude envelope.
 This selects the editing view; it does not mute the other part. Use SOLO for
 listening to one part. The central rack changes its controls when you select a
-rack name. Its order is CHORDS, ARPEGGIATOR, DISTORTION, PHASER, CHORUS,
-EQUALIZER, REVERB, DELAY, COMPRESSOR, CLIPPER, LIMITER, SAMPLE and MORPH.
-SAMPLE/MORPH are editing tools. Main precedes the final Limiter in the audio path. The small square beside each name independently enables that section.
+rack name. **GENERATORS** contains CHORDS and ARP. **AUDIO FX** contains eight
+movable effects, followed by the fixed final LIMITER. SAMPLE and MORPH are
+separate editing tools at the bottom of the rail. New editors open SAMPLE first.
+The small square beside a processor independently enables that section.
 Selecting a rack page does not enable or disable its processing.
 
 The upper row contains the preset selector, previous/next preset buttons, A/B/C,
@@ -99,6 +100,11 @@ colours are separate from the accent. These choices preview immediately and are
 saved with the theme. Unsaved edits stay with this instrument instance when its
 editor closes/reopens or is minimized; save a theme to retain it across sessions.
 Choosing another saved theme or RESET discards the temporary draft.
+
+Enabled knob needles, arcs and tracks adapt their rendered contrast to their
+actual surface. Light controls inside the dark screen use a dark knob face.
+Arc, Solid and Minimal styles retain visible position indicators across all ten
+standard themes. This rendering adjustment does not rewrite theme JSON colors.
 
 Copy shared .json files into the selected folder to install them. The folder is
 polled every two minutes; RESCAN refreshes it immediately. New files do not
@@ -577,9 +583,24 @@ its shared gate. Legacy controls remain available in the Legacy view.
 
 ## 7. Effects rack
 
-Signal order is fixed: Distortion → Phaser → Chorus → EQ → Reverb → Delay →
+The default order is Distortion → Phaser → Chorus → EQ → Reverb → Delay →
 Compressor → Clipper → Main → Limiter. Click a name to edit it and use the adjacent square to bypass
 or enable it. All nine effects are global after the A/B/C mix.
+
+Drag an effect's right-hand grip up or down within AUDIO FX to change its actual
+audio position. The selected editor page stays open while dragging. Alternatively,
+focus its row and press Alt+Up/Down, or right-click for Move up, Move down and
+Reset effect order. Disabled effects retain their positions. Chords/Arp and the
+Sample/Morph tools are outside this audio ordering. **Main and Limiter remain
+fixed after the movable chain**, preserving the final ceiling.
+
+The order is saved with presets and DAW state; older presets without an order
+use the original sequence. Changing order while playing fades down over about
+5 ms, switches at zero, then fades back over about 5 ms. This keeps one DSP state
+bank and introduces no reported host latency. Effects retain their existing state
+through that transition. Order is patch metadata, rather than an automation knob.
+Later stages and Main can raise the level after Clipper; use the fixed output
+Limiter when a final sample-peak ceiling is required.
 
 | Section | Controls and use |
 | --- | --- |
@@ -755,7 +776,7 @@ envelope times use seconds internally. The panel displays suitable units.
 The mixer provides A, B, C and Main level faders. Its scope has A, B, C and L+R source buttons. A/B/C show each part's stereo
 sum after its filter, amplitude envelope and Mix level, before shared effects
 and Solo, scaled by MAIN. L+R shows the actual final left-plus-right output,
-after effects, MAIN and MIDI ONLY. It is a sum, not an average. The scope uses
+after effects, MAIN and the final Limiter (or silence in MIDI ONLY). It is a sum, not an average. The scope uses
 zero-crossing alignment and automatic visual scaling; the peak label gives the
 unscaled peak. Selecting a source changes only the view and is saved in state.
 
@@ -769,7 +790,7 @@ This is a unity reference, rather than a normal listening preset.
 
 The source bus is calibrated before the shared FX. The previous 0.15 attenuator
 and the duplicate engine Master ramp have been removed. Main is applied once,
-after effects. Reset starts its smoothing at the chosen Main value. Each voice's
+after the movable effects and before the final Limiter. Reset starts its smoothing at the chosen Main value. Each voice's
 amplitude envelope has its own approximately 1 ms anti-click edge; there is no
 extra startup fade on Main. Knob changes remain smoothed. Distortion and
 compressor thresholds therefore respond to the actual
@@ -804,8 +825,9 @@ MIX A and MIX B set the part levels; MAIN controls output after all effects.
 Independent L/R meters show post-effects output. There is no hard output limiter:
 loud patches, resonance and effects may exceed 0 dBFS. Reduce MAIN as needed.
 
-POLY sets up to 16 simultaneous notes. Each note may contain several unison
-voices. SOLO isolates A or B. MONO / LEGATO uses last-note priority and returns
+POLY sets 1–32 simultaneous notes, with 16 as the default. Each note may contain
+several unison voices. All four engines and prepared spectral playback support
+32 notes, subject to the existing spectral workspace budget. SOLO isolates A, B or C. MONO / LEGATO uses last-note priority and returns
 to the previous held note when the newest one is released. POLY is disabled in
 mono mode. GLIDE sets portamento time; Normal mode glides for overlapping notes,
 while Slide also permits glide between separate notes.
@@ -844,7 +866,7 @@ library; it does not relocate files. Load file can open a preset from elsewhere.
 Save/load run on a worker, with completion/errors in the footer. Wait for the
 completion message before closing the instance or moving a newly saved file.
 
-Presets contain all 1070 audio parameters, routing, compressed audio for all six
+Presets contain all 1071 audio parameters, effect order, routing, compressed audio for all six
 slots, the convolution impulse response, WAV regions, chord mappings, twelve named patterns, the preset comment and
 scope selection. Theme and editor size are separate user preferences and are
 retained when sounds change. The original sample files are unnecessary on recall. Saving uses a
@@ -852,7 +874,7 @@ temporary file and atomic replacement. Invalid files leave the current patch
 intact. State/preset files are limited to 1 GiB. These are logisth's own files;
 renaming another format to .logisth does not convert it.
 
-All 1070 parameters are available for host automation. The first 514 parameter
+All 1071 parameters are available for host automation. The first 514 parameter
 IDs and order from 0.4 are retained. Granulizer and global MIDI-only controls
 follow them; the former Graphs parameter block is removed. A/B/C views, rack pages,
 theme and scope source do not change the patch's audio settings. DAW state
@@ -948,8 +970,10 @@ FM/AM dependency chain or a possible volume modulation route. MIDI-only mode
 skips audio rendering while keeping MIDI/chord/arp processing. Dynamics waveform
 capture runs only for the visible page; hidden graphs do not collect samples.
 
-Version 0.9.6.2 preserves the complete 1055-parameter contract from 0.9.6.1 and
-appends 15 controls. New stages default off in older files. Missing MODEL restores
+Version 0.9.7 preserves the complete 1070-parameter contract from 0.9.6.2 and
+appends one polyphony extension. The combined POLY control preserves the previous
+1–16 automation range and adds 0–16 extra voices; old files receive zero extras.
+The added dynamics stages default off in older files. Missing MODEL restores
 Legacy compression; newly created patches use Modern. These changes retain preset
 values while improving idle CPU behavior.
 

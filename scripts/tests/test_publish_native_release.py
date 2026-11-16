@@ -99,6 +99,18 @@ class PublisherTests(unittest.TestCase):
         publisher.validate_record(record, archive, record['platform'], '0.9.3',
                                   'fingerprint', 'abc123')
 
+    def test_097_requires_rack_suite_on_each_platform(self):
+        for platform in publisher.PLATFORMS:
+            with self.subTest(platform=platform):
+                record, archive = self.artifact(platform, '0.9.7')
+                record['tests']['passed'] = 20 if platform.startswith('linux') else 18
+                publisher.validate_record(record, archive, platform, '0.9.7',
+                                          'fingerprint', 'abc123')
+                record['tests']['passed'] -= 1
+                with self.assertRaises(ValueError):
+                    publisher.validate_record(record, archive, platform, '0.9.7',
+                                              'fingerprint', 'abc123')
+
     def test_rejects_unverified_or_wrong_source_native_build(self):
         record, archive = self.artifact('linux-x86_64')
         self.validate(record, archive)

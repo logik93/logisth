@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """Verify the checked-in release assets before GitHub Actions publishes them."""
 import hashlib
+import csv
+import io
 import re
 import sys
 import tarfile
@@ -102,6 +104,22 @@ def verify(tag: str) -> None:
                     raise ValueError(f'Missing or stale technical document: {name}')
                 if archive.extractfile('logisth/' + source).read() != (root / source).read_bytes():
                     raise ValueError(f'Source archive technical document mismatch: {source}')
+    if tuple(map(int, version.split('.'))) >= (0, 9, 7):
+        name = f'logisth-{version}-rack-skin-review.zip'
+        if name not in names:
+            raise ValueError('Missing rack/skin validation bundle')
+        with zipfile.ZipFile(folder / name) as archive:
+            rows = list(csv.DictReader(io.StringIO(archive.read('theme-contrast.csv').decode('utf-8'))))
+            cases = {(r['theme'], r['style'], r['screen'], r['small']) for r in rows}
+            if len(rows) != 120 or len(cases) != 120 or len({r['theme'] for r in rows}) != 10:
+                raise ValueError('Incomplete ten-theme contrast matrix')
+            for row in rows:
+                for key, minimum in [('pointer_top', 4.49), ('pointer_bottom', 4.49),
+                                     ('active', 2.99), ('track', 2.99), ('raster', 3.0)]:
+                    if not float(row[key]) >= minimum:
+                        raise ValueError(f'Contrast fixture below its target: {row["theme"]}/{key}')
+            if archive.read('README.md').replace(b'\r\n', b'\n') != (root / 'docs/RACK_REVIEW.md').read_bytes().replace(b'\r\n', b'\n'):
+                raise ValueError('Stale rack/skin review description')
     print(f"Verified {len(names)} release assets for {tag}")
 
 

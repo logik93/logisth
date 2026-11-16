@@ -31,7 +31,7 @@ A later explicit instruction to wait or avoid publishing overrides this default.
    its package and build metadata to the same release. Preserve existing download
    IDs and bytes; only SHA256SUMS and the release description are cumulative.
    Wait for every native build/test/architecture check and publication to finish.
-   Current minimum suites: Linux 19, Windows/macOS 17, with no failures or skips.
+   Current minimum suites: Linux 20, Windows/macOS 18, with no failures or skips.
    A separate Windows AddressSanitizer build must also pass before publication;
    its binaries are diagnostic only. Its receipt is `ci-check-v<version>-windows-asan`.
    Read the status branches `ci-build-v<version>-<platform>` and
@@ -79,6 +79,29 @@ compressor recovery and free effect LFO phase rather than freezing them. Engine
 resolves carrier/dependency needs once per render, including route bounds and
 smoothed modulation depths. IR peak caches are immutable/off-thread.
 
+## v0.9.7 rack and voice policy
+
+Eight EffectStage IDs form a validated permutation packed into one atomic 24-bit
+value. Store it as optional effectOrder metadata, reject malformed permutations
+before state publication, and use the original order for older patches. Chords,
+Arp and Sample/Morph tools never enter this audio permutation. Clipper is movable;
+Main and the final sample-peak Limiter remain fixed. RackTransition splits work
+at a 5 ms fade-down boundary, switches at zero and fades up for 5 ms without
+allocating or duplicating a DSP bank. Serial first-response horizons are additive.
+
+maxPolyphony=32 and defaultPolyphony=16 are separate from the sixteen MIDI
+channels. The old polyphony parameter range stays frozen; polyphonyextra is
+appended and the editor exposes their sum. Preparation and spectral bounds must
+use the same effective count. Inner audio rendering visits the configured count,
+so default 16 does not generate work for the additional inactive voices.
+
+Do not alter supplied theme JSON to repair contrast. ThemeContrast computes
+context/style colors on palette changes; rotary painting uses the cached values.
+Core Rack tests include a frozen prior FX implementation, all permutations,
+noncommuting audio fixtures, serial IR/Delay gaps and live transition bounds.
+Processor tests cover pointer/keyboard routing, metadata, 32 notes/streams,
+allocation/ceiling guards, all controls and ten-theme raster/contrast fixtures.
+
 ## Technical documentation in every release
 
 The owner requested a professional English technical reference and its continued
@@ -96,3 +119,8 @@ separate assets. Release verification requires them after v0.9.6.2. Update the
 manual's documentation history when its content changes. A documentation-only
 push does not require rebuilding unchanged plug-ins or altering a published tag;
 the next product release must carry the updated reference in all packages.
+
+Version 0.9.7 also packages docs/RACK_REVIEW.md and docs/rack/theme-contrast.csv
+as a rack-skin-review bundle. Keep all 120 palette/style/context/trim cases,
+including enabled needle, arc/track and raster targets. Native packages include
+the report and raw CSV. Refresh snapshots and both manuals after the final UI build.

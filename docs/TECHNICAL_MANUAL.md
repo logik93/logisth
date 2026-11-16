@@ -1,16 +1,14 @@
-# logisth 0.9.6.2 — Technical Manual
+# logisth 0.9.7 — Technical Manual
 
 **wavelogik · Architecture, DSP and Engineering Reference**
 
-Document revision: 1.0 · Software baseline: 0.9.6.2 · State schema: 4
+Document revision: 1.1 · Software baseline: 0.9.7 · State schema: 4
 
-Implementation baseline: release tag `v0.9.6.2`, commit
-`b75f8743285c35770b4628e490eccde269c272b1`.
+Implementation baseline: release tag `v0.9.7`. The technical identity manifest
+records the CMake/runtime source identity; native BUILD_INFO records the tagged
+commit, tree fingerprints, binary hashes and this manual's identities.
 
-This reference was added after that binary release. The documentation-packaging
-extensions in section 17 apply to subsequent releases.
-
-This reference describes the implementation shipped in logisth 0.9.6.2. It is
+This reference describes the implementation shipped in logisth 0.9.7. It is
 intended for sound designers, audio engineers, contributors and integrators.
 The [User Manual](MANUAL.md) describes operating the interface; this document
 explains how its controls affect processing, how data is stored and which
@@ -54,9 +52,9 @@ a player is one source slot; a unison lane is one component inside a player.
 | Audio processing | 32-bit floating-point sample buffers; selected calculations/state use double precision |
 | Parts / players | Three parts A/B/C; two players per part: A1/A2, B1/B2, C1/C2 |
 | Player engines | Classic, Wavetable, Sampler, Granular |
-| Note polyphony | 1–16 voices; mono/legato and portamento available |
+| Note polyphony | 1–32 voices, default 16; mono/legato and portamento available |
 | Unison selection | 0–8 lanes per player; 0 disables the player |
-| Host parameter count | 1070; original 1055 definitions retained, 15 dynamics controls appended |
+| Host parameter count | 1071; all previous 1070 definitions retained, one additive polyphony companion appended |
 | Modulators | Two modulation ADSRs, two LFOs, four miscellaneous source selectors, two destinations per modulator |
 | Performance macros | Four macros, four target assignments each |
 | Pattern memory | Twelve pattern slots; sequences up to 32 steps |
@@ -70,10 +68,19 @@ note, the six players form three source buses. Each part filter can select any
 combination of those buses. Its amp envelope, velocity and part mix scale the
 filtered signal. Solo determines which part contributions reach the common sum.
 
-The fixed stereo audio order is **Distortion → Phaser → Chorus → Equalizer →
-Reverb → Delay → Compressor → Clipper → Main → Limiter → Output**. Chords and
-Arpeggiator appear above the audio effects in the rack. Sample and Morph pages
-are editing/performance tools. Rack order is fixed rather than user-reorderable.
+The default stereo audio order is **Distortion → Phaser → Chorus → Equalizer →
+Reverb → Delay → Compressor → Clipper → Main → Limiter → Output**. The eight
+pre-Main stages are user-reorderable. Chords and Arpeggiator occupy a separate
+GENERATORS row; Sample and Morph remain editing/performance tools. A new editor
+opens Sample. Main and the final Limiter are fixed at the output.
+
+The order is a validated permutation of eight stage IDs, packed into one atomic
+24-bit value. Each source callback uses one prepared effects state bank. A live
+change fades down for 5 ms, switches order at zero and fades up for 5 ms. Chunk
+boundaries also respect this transition. It does not run two parallel effect
+banks, allocate new DSP state or add reported host latency. The current order
+travels with presets and DAW state; absent legacy metadata selects the original
+sequence. Drag, Alt+Up/Down and the context menu share the same ordering API.
 
 Host buffers are processed in chunks of at most 512 frames, further divided at
 MIDI events. The chunk size is an internal work bound, not an extra block of
@@ -91,10 +98,11 @@ Implementation: [PluginProcessor.cpp](../Source/PluginProcessor.cpp),
 
 ## 2. Voice allocation and envelopes
 
-The engine preallocates sixteen voice records. Polyphonic allocation selects an
+The engine preallocates thirty-two voice records and defaults to a sixteen-note limit. Polyphonic allocation selects an
 inactive voice first and otherwise steals the oldest voice within the active
 limit. A voice contains phase, unison, noise, sample, filter and modulation state
-for all six players. MIDI channels retain separate pitch wheel, mod wheel,
+for all six players. The inner rendering loop visits only the configured voice range. The sixteen
+MIDI channels retain separate pitch wheel, mod wheel,
 pressure and sustain state. Mono legato uses the held-key history and portamento
 logic instead of allocating a new independent note for every key.
 
@@ -431,7 +439,7 @@ unity per channel for one centered full-scale mono source at unity output settin
 No note-count-dependent automatic gain controller is applied.
 
 The sum scope displays L+R, not (L+R)/2. Part A/B/C traces are pre-effect part
-contributions with Main scaling; the sum is the final post-limiter stereo sum.
+contributions with Main and live-order transition scaling; the sum is the final post-limiter stereo sum.
 Do not interpret part traces as isolated post-effect stems. The separate player
 scopes are pre-filter traces. Stereo measurements are in the report linked in
 section 18; width does not guarantee a fixed correlation for every source/phase.
@@ -559,7 +567,8 @@ with half-width w=C*Knee: below C−w the positive curve is linear; above C+w it
 is flat at C; between them it is a−(a−(C−w))²/(4w), with sign restored. Drive
 spans 0–24 dB, Ceiling −24–0 dBFS, Knee 0–1, and Mix 0–1. At partial Mix the dry
 component can exceed the clipper ceiling, so the clipper is not a final ceiling
-guarantee for parallel operation.
+guarantee for parallel operation. Later rack stages and Main can also raise
+levels after the Clipper.
 
 Antialiased quality applies first-order antiderivative antialiasing, ADAA:
 
@@ -601,10 +610,10 @@ a prepared heap record instead of constructing nested arrays on a small audio
 thread stack. An integration allocation guard covers actual processor callbacks.
 This is evidence for tested paths, not a guarantee about every host/wrapper call.
 
-CPU control in 0.9.6.2 includes direct bypass of a disabled effects rack and a
+CPU control includes direct bypass of a disabled effects rack and a
 quiet gate for enabled empty/tail-complete processing. The gate accounts for
-the first delayed response, IR duration and pre-delay, avoiding sleep before a
-long first echo. Compressor recovery and effect LFO clocks advance while idle.
+the sum of serial first-response times, including IR duration, pre-delay and
+Delay time, avoiding sleep before a combined late first echo in either order. Compressor recovery and effect LFO clocks advance while idle.
 Idle synth LFO phases and random-wrap ordering also continue.
 
 Active oscillator dependencies are resolved before rendering, including
@@ -637,6 +646,7 @@ archive. Preset writing uses a temporary file and replacement on success.
 | Source asset | `SOURCE` child with slot, regions and compressed stereo float PCM, source rate, frame size and name |
 | Impulse response | `IMPULSE` child, format 1, compressed PCM/rate/channels/name |
 | Chords / patterns | `CHORDMAP`/`CHORD` data and stored `PATTERN` trees |
+| Audio effect order | Optional root `effectOrder`, eight 3-bit stage IDs packed into 24 bits; duplicates/unknown bits rejected |
 | Appearance | Separate `appearance.json`, theme JSON files and per-instance draft state |
 
 Factory source data can be reconstructed instead of embedding an identical
@@ -651,7 +661,15 @@ ValueTree. Use the project's reader/writer for this payload rather than treating
 it as a standalone audio file.
 
 The 1055-entry v0.9.6.1 host contract freezes IDs, ordering, ranges, defaults,
-integer flags and choice lists. Version 0.9.6.2 appends fifteen parameters.
+integer flags and choice lists. The full 1070-entry v0.9.6.2 contract is also
+frozen. Version 0.9.7 appends `polyphonyextra` (0–16, default 0). Effective POLY is
+the preserved 1–16 base plus this extension, bounded to 32. The editor presents
+one 1–32 numeric control and publishes gestures to the two host parameters.
+Composite numeric/menu attachments cache their incoming values instead of
+re-reading an APVTS raw adapter that may still contain the preceding event.
+This also prevents one-update-late detune and extended destination displays.
+Old automation and presets with zero extension retain their previous values.
+Spectral preparation, readiness and voice indexing use the same effective count.
 Restoration clamps values, handles non-finite numbers and rounds discrete
 controls. Missing fields use defined compatibility defaults; `compmode`,
 `arppattern` and granular model selections have explicit legacy fallbacks.
@@ -671,6 +689,17 @@ same instrument instance, but must be saved as a theme to survive destroying
 that instance. Sound presets do not replace theme, scale or window size. Font
 data is embedded in the plug-in for its bundled families; custom family names
 require an installed font or fall back on the destination system.
+
+Knob colors are prepared on palette/style changes for normal and screen contexts.
+Screen knobs use that screen's actual surface, including under Light. Cached
+needle colors target at least 4.5:1 relative-luminance contrast against both face
+gradient endpoints; enabled arcs/tracks target 3:1 against their surrounding
+surface. Extremely contradictory custom gradients can have no color meeting
+both endpoint targets; the fallback chooses the better black/white direction.
+Standard themes pass all tested contexts/styles. Primary screen plot accents
+are also prepared for at least 3:1 contrast on the screen surface. This is a component contrast
+check, not a certification of the entire interface. Rendering does not modify
+the supplied theme files.
 
 Implementation: [PresetLibrary.cpp](../Source/PresetLibrary.cpp),
 [SourceAssets.cpp](../Source/SourceAssets.cpp), [THEMES.md](THEMES.md).
@@ -772,10 +801,15 @@ not notarized. Public packages contain VST3, CLAP and Standalone.
 | Dependency identity | Vendored SHA-256 manifest and upstream source comparison |
 | Release contents | Architecture, source fingerprints, SHA-256, license/font/theme/manual presence |
 
-The 0.9.6.2 release passed 19 Linux suites, 17 Windows suites, 17 macOS suites
-and 17 suites in the separate Windows AddressSanitizer run, with no skipped or
+The 0.9.7 release requires 20 Linux suites, 18 Windows suites, 18 macOS suites
+and 18 suites in the separate Windows AddressSanitizer run, with no skipped or
 failed suites. The smaller non-Linux count reflects Linux-only binary smoke
-tests. It is not a count of assertions or a certification for every DAW.
+tests. It is not a count of assertions or a certification for every DAW. Rack adds all
+40320 order permutations, three-rate comparison against frozen prior FX code,
+noncommuting signal fixtures and combined IR/Delay gaps. Processor integration
+adds real pointer/keyboard ordering, metadata, 32 notes and prepared streams,
+allocation/ceiling checks, Sample startup, layout and 120 theme/context/style/trim
+renders with actual needle-pixel measurements.
 
 Release scripts package committed source and documentation, then build native
 artifacts from the release tag. BUILD_INFO records version, source commit/tree
@@ -784,14 +818,14 @@ first; only afterward does macOS build and append to the same release. Public
 downloads are checked against SHA256SUMS; published tags and existing binary
 assets are preserved. Dependency pins improve traceability but do not by
 themselves guarantee bit-for-bit identical builds across different toolchains.
-From the next product release, BUILD_INFO also records the technical manual's
-identities and checks them during artifact reuse, preventing a reused archive
-from silently retaining an older reference.
+BUILD_INFO also records the technical manual's identities and checks them
+during artifact reuse, preventing a reused archive from silently retaining an
+older reference.
 
 This manual is maintained beside the source. `python scripts/build_manual.py`
 renders the user and technical PDFs using ReportLab. Every subsequent release
 must update the software baseline, review changed sections and regenerate both
-PDFs. Subsequent source/native packages include this Markdown/PDF pair; release packaging
+PDFs. Source/native packages include this Markdown/PDF pair; release packaging
 also publishes them as separate downloads. Documentation-only updates can be
 pushed without changing the already released audio binaries or version tag.
 The technical identity manifest hashes CMake/runtime sources and Markdown with
@@ -815,12 +849,13 @@ The v0.9.6.1 stereo report measured approximately 0.003 L/R correlation and
 width. At zero width the tested mono source is exactly mono. These values are
 fixture-specific, and that report remains identified with its measurement version.
 
-The v0.9.6.2 CPU comparison used Linux x86_64, C++17 -O2, 48 kHz, 512-frame blocks
-and medians of seven rounds of 128 blocks. All six compared fixture checksums
-match. Examples include 3.088 to 0.046 microseconds/block for a bypassed effect
-rack, 56.878 to 3.367 for an idle engine, and 936.672 to 743.390 for an active
-muted FM source fixture. These synthetic cases isolate specific work; they are
-not a universal speedup or a measurement of total DAW CPU.
+The v0.9.7 CPU comparison against v0.9.6.2 used Linux x86_64, C++17 -O2,
+48 kHz, 512-frame blocks and medians of seven rounds of 128 blocks. All six
+compared fixture checksums match. Examples include 280.366 to 228.784
+microseconds/block for the zero-depth muted-source fixture, 553.337 to 486.484
+for an active muted FM source and 261.679 to 224.368 for a note following idle
+with free LFOs. Idle/bypass rows are near the timing floor. These fixed cases
+isolate specific work; they are not a universal speedup or total DAW CPU claim.
 
 The documented ADAA fixture measures one folded harmonic approximately 6.64 dB
 lower than Direct. It does not describe all aliases or every signal. Compressor
@@ -842,6 +877,7 @@ provided by `processor_tests`; see the linked reports for arguments and conditio
 | [ALGORITHM_AUDIT.json](ALGORITHM_AUDIT.json) | Machine-readable dependency/conformance record |
 | [FACTORY_PRESETS.md](FACTORY_PRESETS.md) | Authored bank categories and performance controls |
 | [INTERFACE.md](INTERFACE.md) | UI organization and layout conventions |
+| [RACK_REVIEW.md](RACK_REVIEW.md) | Ordered DSP, 32-note capacity, host refresh and ten-theme contrast evidence |
 | [Source](../Source) | Runtime implementation and vendored headers |
 | [tests](../tests) | Core, processor, allocation and binary checks |
 | [scripts](../scripts) | Audit, documentation, packaging, publishing and verification |
@@ -857,3 +893,4 @@ the release tag matching a binary when investigating a specific implementation.
 | Revision | Software baseline | Change |
 | --- | --- | --- |
 | 1.0 | 0.9.6.2 | First consolidated engineering reference; architecture, algorithms, dependencies, state and release evidence |
+| 1.1 | 0.9.7 | Reorderable FX, saved order and live fade, 32-note capacity/default 16, additive host control, serial idle horizons, contrast-aware skins and expanded validation |

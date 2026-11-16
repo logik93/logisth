@@ -1,5 +1,6 @@
 #pragma once
 #include "PluginProcessor.h"
+#include "ThemeContrast.h"
 #include "ThemeSettings.h"
 
 struct LogisthColours {
@@ -7,6 +8,7 @@ struct LogisthColours {
         muted{0xff667268}, green{0xff406f5d}, mint{0xffbdd8bb}, screen{0xff243430},
         screenLine{0xff41514b}, screenText{0xffe6ece1};
     juce::Colour knobColour{0xff62acff}, knobTrack{0xff283a50};
+    juce::Colour screenAccent{0xffbdd8bb};
     juce::String fontFamily = "Open Sans", skin;
     int backgroundStyle = 0, knobStyle = 0;
     juce::Font font(float size, bool bold = false) const;
@@ -25,6 +27,9 @@ class LogisthLook : public juce::LookAndFeel_V4, public LogisthColours {
     void setDarkTheme(bool);
     void setTheme(int);
     void setPalette(const logisth::ThemeDefinition &);
+    const logisth::KnobPaint &knobColours(bool screenContext) const {
+        return knobPaints[screenContext ? 1 : 0];
+    }
     juce::Typeface::Ptr getTypefaceForFont(const juce::Font &) override;
     void drawRotarySlider(juce::Graphics &, int, int, int, int, float, float, float,
                           juce::Slider &) override;
@@ -45,6 +50,7 @@ class LogisthLook : public juce::LookAndFeel_V4, public LogisthColours {
 
   private:
     juce::Typeface::Ptr regular, semibold;
+    std::array<logisth::KnobPaint, 2> knobPaints;
 };
 
 class LogisthEditor : public juce::AudioProcessorEditor, private juce::Timer {

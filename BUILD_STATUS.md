@@ -1,17 +1,19 @@
 # logisth native release checks
 
-Current candidate: **0.9.6.2**. Receipts: `ci-release-v0.9.6.2`,
-`ci-build-v0.9.6.2-*` and `ci-check-v0.9.6.2-windows-asan`.
-Required: 19 Linux / 17 Windows/macOS suites, no failures/skips, plus Windows ASAN.
+Current candidate: **0.9.7**. Receipts: `ci-release-v0.9.7`,
+`ci-build-v0.9.7-*` and `ci-check-v0.9.7-windows-asan`.
+Required: 20 Linux / 18 Windows/macOS suites, no failures/skips, plus Windows ASAN.
 Windows/Linux publish first; macOS Universal appends afterward.
 
-New tests cover dynamics, knee curves, antialiasing, exact post-Main ceilings,
-stereo linking, allocation guards, presets, graph UI, ordered tabs, IR waveform
-and drag/drop, idle/tail behavior, transitive FM/AM and MIDI-only rendering.
-The complete 1055-parameter contract is retained; 15 fields are appended.
+New checks cover all 40320 effect permutations, actual nonlinear ordering, default
+FX parity, serial IR/Delay first responses, live zero-gain transitions, pointer
+and keyboard interaction, preset/legacy routing, all four 32-voice source engines,
+32-voice spectral preparation, allocation/ceiling guards, ten-theme contrast and
+actual raster needles, Sample startup and full layout. All previous 1070 host
+definitions remain intact; one polyphony companion is appended.
 
-Previous completed release: v0.9.6.1. All three native platforms passed
-18 Linux / 16 Windows/macOS suites plus Windows ASAN. All 54 public assets,
+Previous completed release: v0.9.6.2. All three native platforms passed
+19 Linux / 17 Windows/macOS suites plus Windows ASAN. All 58 public assets,
 checksums, architecture slices, native metadata, source archives, manuals,
 themes, fonts and measurement bundles were downloaded and verified.
 

@@ -39,6 +39,11 @@ def source_fingerprint(root, revision='HEAD'):
     return {name: git(root, 'rev-parse', f'{revision}:{name}') for name in names}
 
 
+def required_test_count(version, platform):
+    linux, other = (20, 18) if tuple(map(int, version.split('.'))) >= (0, 9, 7) else (19, 17)
+    return linux if platform.startswith('linux') else other
+
+
 def dependencies(folder, logs):
     specs = [('JUCE', 'https://github.com/juce-framework/JUCE.git',
               '51a8a6d7aeae7326956d747737ccf1575e61e209', '8.0.6'),
@@ -112,12 +117,12 @@ def main():
     from verify_technical_manual import verify as verify_technical_manual
     verify_technical_manual(source)
     technical_manual = json.loads((source / 'docs/technical-manual.json').read_text())
+    expected_tests = required_test_count(version, args.platform)
     existing = output / f'build-info-{args.platform}.json'
     if args.reuse and existing.is_file():
         record = json.loads(existing.read_text())
         fingerprint = source_fingerprint(source)
         name = record.get('archive', '')
-        expected_tests = 19 if args.platform.startswith('linux') else 17
         valid = (record.get('version') == version and record.get('platform') == args.platform
                  and record.get('source_fingerprint') == fingerprint
                  and record.get('technical_manual') == technical_manual
@@ -151,7 +156,7 @@ def main():
     import xml.etree.ElementTree as ET
     tests = ET.parse(result_file).getroot()
     count = int(tests.attrib.get('tests', '0'))
-    if count < (19 if args.platform == 'linux-x86_64' else 17):
+    if count < expected_tests:
         raise ValueError('Required tests did not execute')
     if any(int(tests.attrib.get(key, '0')) for key in ('failures', 'errors', 'skipped', 'disabled')):
         raise ValueError('Failed, skipped or disabled tests prevent packaging')
@@ -213,14 +218,14 @@ def main():
     metadata = json.dumps(info, indent=2) + '\n'
     (stage / 'BUILD_INFO.json').write_text(metadata)
     (output / f'build-info-{args.platform}.json').write_text(metadata)
-    for name in ['README.md', 'BUILD_STATUS.md', 'LICENSE', 'THIRD_PARTY_NOTICES.md', 'docs/IMPLEMENTATION.md', 'docs/STUDIO-0.5.md', 'docs/CALIBRATION.md', 'docs/ANTICLICK.md', 'docs/THEMES.md', 'docs/INTERFACE.md', 'docs/MANUAL.md', 'docs/TECHNICAL_MANUAL.md', 'docs/logisth-Technical-Manual-English.pdf', 'docs/technical-manual.json', 'docs/ALGORITHM_AUDIT.json', 'docs/PROJECT_REVIEW.md', 'docs/STEREO_REVERB_CALIBRATION.md', 'docs/DYNAMICS_CPU.md', f'docs/REVIEW-v{version}.md', 'docs/FACTORY_PRESETS.md', f'docs/factory/after-{version}.csv', 'docs/logisth-Manual-English.pdf',
+    for name in ['README.md', 'BUILD_STATUS.md', 'LICENSE', 'THIRD_PARTY_NOTICES.md', 'docs/IMPLEMENTATION.md', 'docs/STUDIO-0.5.md', 'docs/CALIBRATION.md', 'docs/ANTICLICK.md', 'docs/THEMES.md', 'docs/INTERFACE.md', 'docs/MANUAL.md', 'docs/TECHNICAL_MANUAL.md', 'docs/logisth-Technical-Manual-English.pdf', 'docs/technical-manual.json', 'docs/ALGORITHM_AUDIT.json', 'docs/PROJECT_REVIEW.md', 'docs/STEREO_REVERB_CALIBRATION.md', 'docs/DYNAMICS_CPU.md', 'docs/RACK_REVIEW.md', f'docs/REVIEW-v{version}.md', 'docs/FACTORY_PRESETS.md', f'docs/factory/after-{version}.csv', 'docs/logisth-Manual-English.pdf',
                  'assets/fonts/LICENSE.txt', 'assets/fonts/NOTICE.txt']:
         if not (source / name).is_file():
             continue
         destination = stage / name
         destination.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(source / name, destination)
-    for directory in ['licenses', 'assets/themes', 'assets/skins', 'assets/fonts/ioskeley', 'docs/stereo-reverb', 'docs/cpu']:
+    for directory in ['licenses', 'assets/themes', 'assets/skins', 'assets/fonts/ioskeley', 'docs/stereo-reverb', 'docs/cpu', 'docs/rack']:
         if (source / directory).is_dir():
             shutil.copytree(source / directory, stage / directory, dirs_exist_ok=True)
     images = source / 'docs' / 'images'

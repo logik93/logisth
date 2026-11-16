@@ -125,6 +125,14 @@ int main() {
         SpectralBank small(48000, 1, {1, 1, 1, 1}, {}, {}, 1);
         check(small.get(0, 0, 0, 0) && !small.get(1, 0, 0, 0) && !small.get(0, 1, 0, 0),
               "voice limits and inactive source pools are respected");
+        std::array<int, playerCount> extendedUnison{1, 0, 0, 0, 0, 0};
+        std::array<SpectralConfig, playerCount> compactConfig{};
+        compactConfig[0] = {20, 4};
+        auto extended = std::make_unique<SpectralBank>(48000, 1, extendedUnison, nullptr,
+                                                       compactConfig, maxPolyphony);
+        check(extended->get(31, 0, 0, 0) && extended->get(31, 0, 0, 1) &&
+                  !extended->get(32, 0, 0, 0),
+              "spectral preparation serves voice 32 in both lanes and retains its bounds");
         std::cout << "PASS Signalsmith 1.3.2 parity: stereo, 3 sample rates, Rate, Semitones, "
                      "Tonality, Formant, Block, Overlap and memory bounds\n";
     } catch (const std::exception &error) {

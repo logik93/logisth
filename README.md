@@ -1,4 +1,4 @@
-# logisth 0.9.6.2
+# logisth 0.9.7
 
 **wavelogik logisth — a three-part polyphonic subtractive synthesizer with a compact single-window console.**
 VST3, CLAP and Standalone for Windows, macOS and Linux. Built with JUCE and an
@@ -8,6 +8,29 @@ independent synthesis engine.
 [Technical Manual PDF](docs/logisth-Technical-Manual-English.pdf)
 
 ![logisth dark interface](docs/images/logisth-dark.png)
+
+## New in 0.9.7
+
+- **Movable audio rack:** drag an effect, use Alt+Up/Down, or right-click for
+  Move/Reset. Eight effects, including Clipper, follow the saved order in actual
+  DSP. A short fade switches live orders without duplicating the state bank.
+  Main and the final Limiter remain fixed at the output.
+- **Separate generators:** Chords and Arp share a dedicated top row; Sample and
+  Morph remain tools. New editors open **Sample** first.
+- **32-note polyphony**, with **16 as the default**. All four source engines and
+  prepared Signalsmith streams support the extended range. The previous 1070
+  host definitions remain intact; one companion control is appended.
+- **Readable skins:** Light screen knobs use the correct dark surface. All ten
+  themes and three knob styles receive cached contrast-aware needles/arcs/tracks;
+  supplied theme JSON and fonts remain unchanged.
+- **Host refresh:** combined POLY/detune values and expanded routing menus use
+  incoming parameter values, fixing a display that could lag one host update.
+- **Tail safety:** idle detection accounts for the combined first-response time
+  of a sparse IR and Delay, in either order. Unused processing still bypasses/sleeps.
+- Updated English user/technical manuals, contrast evidence, regression coverage
+  and native packages for Windows, Linux and macOS Universal.
+
+[Rack and skin review](docs/REVIEW-v0.9.7.md) · [Release notes](docs/RELEASE-v0.9.7.md)
 
 ## New in 0.9.6.2
 

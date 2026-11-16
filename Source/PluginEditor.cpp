@@ -106,6 +106,7 @@ void LogisthColours::applyPalette(const ThemeDefinition &theme) {
     screen = theme.colours[7];
     screenLine = theme.colours[8];
     screenText = theme.colours[9];
+    screenAccent = readableColour(green, screen, screen, 3);
 }
 LogisthLook::LogisthLook() {
     regular = embeddedFace(false);
@@ -121,6 +122,7 @@ void LogisthLook::setTheme(int selected) {
 }
 void LogisthLook::setPalette(const ThemeDefinition &theme) {
     applyPalette(theme);
+    knobPaints = {knobPaint(theme, false), knobPaint(theme, true)};
     regular = font(12, false).getTypefacePtr();
     semibold = font(12, true).getTypefacePtr();
     setColour(TextEditor::highlightedTextColourId, darkTheme ? screen : ink);
@@ -160,6 +162,7 @@ PopupMenu::Options LogisthLook::getOptionsForComboBoxPopupMenu(ComboBox &box, La
 void LogisthLook::drawRotarySlider(Graphics &g, int x, int y, int w, int h, float pos, float start,
                                    float end, Slider &s) {
     const bool small = bool(s.getProperties()["trim"]), isDark = (dark(s) || darkTheme);
+    const auto &paint = knobColours(dark(s));
     float radius = jmin(float(w), float(h)) * .5f - 3.f;
     if (radius <= 0)
         return;
@@ -168,7 +171,7 @@ void LogisthLook::drawRotarySlider(Graphics &g, int x, int y, int w, int h, floa
     const Colour accent = isDark ? mint : green;
     Path track;
     track.addCentredArc(centre.x, centre.y, radius, radius, 0, start, end, true);
-    g.setColour(knobTrack);
+    g.setColour(paint.track);
     g.strokePath(track, PathStrokeType(small ? 1.5f : 2.f));
     const double neutral =
         s.getMinimum() < 0 && s.getMaximum() > 0 ? s.valueToProportionOfLength(0) : 0;
@@ -176,7 +179,7 @@ void LogisthLook::drawRotarySlider(Graphics &g, int x, int y, int w, int h, floa
     Path active;
     active.addCentredArc(centre.x, centre.y, radius, radius, 0, jmin(from, angle),
                          jmax(from, angle), true);
-    g.setColour(s.isEnabled() ? knobColour : knobColour.withAlpha(.25f));
+    g.setColour(s.isEnabled() ? paint.active : paint.active.withAlpha(.25f));
     g.strokePath(active, PathStrokeType(small ? 1.6f : 2.4f));
     if (s.getProperties().contains("live") && float(s.getProperties()["live"]) >= 0 && !small) {
         float live = float(s.getProperties()["live"]), lo = float(s.getProperties()["liveLow"]),
@@ -197,21 +200,18 @@ void LogisthLook::drawRotarySlider(Graphics &g, int x, int y, int w, int h, floa
         g.setColour(Colours::black.withAlpha(isDark ? .12f : .06f));
         g.fillEllipse(knob.translated(0, 2));
     }
-    g.setGradientFill(ColourGradient(isDark ? panel.brighter(.15f) : Colours::white, centre.x,
-                                     knob.getY(), isDark ? body : Colour(0xffdedfd7), centre.x,
+    g.setGradientFill(ColourGradient(paint.top, centre.x, knob.getY(), paint.bottom, centre.x,
                                      knob.getBottom(), false));
     if (knobStyle != 2) {
-        if (knobStyle == 1)
-            g.setColour(knobColour.interpolatedWith(panel, .65f));
         g.fillEllipse(knob);
     }
-    g.setColour(isDark ? screenLine : Colour(0xffc4cbbf));
+    g.setColour(paint.outline);
     g.drawEllipse(knob.reduced(.5f), 1);
     float a = angle - MathConstants<float>::halfPi;
-    g.setColour(s.isEnabled() ? (isDark ? screenText : ink) : muted.withAlpha(.4f));
+    g.setColour(s.isEnabled() ? paint.pointer : muted.withAlpha(.4f));
     g.drawLine(centre.x + std::cos(a) * r * .35f, centre.y + std::sin(a) * r * .35f,
                centre.x + std::cos(a) * r * .78f, centre.y + std::sin(a) * r * .78f,
-               small ? 1.3f : 2.f);
+               small ? 1.8f : 2.2f);
 }
 Slider::SliderLayout LogisthLook::getSliderLayout(Slider &s) {
     Slider::SliderLayout layout;
@@ -455,11 +455,19 @@ class LogisthEditor::Console : public Component,
                 }
             } else {
                 kind = Style::Knob;
-                if (String(spec.id).startsWith("o") && String(spec.id).endsWith("detune")) {
-                    slider.setRange(0, 400, 0);
-                    slider.setSkewFactorFromMidPoint(100);
-                    bindComposite(detuneExtra(String(spec.id).substring(1).getIntValue() - 1),
-                                  true);
+                compositePolyphony = id == Param::polyphony;
+                if (compositePolyphony ||
+                    (String(spec.id).startsWith("o") && String(spec.id).endsWith("detune"))) {
+                    if (compositePolyphony)
+                        slider.setRange(1, maxPolyphony, 1);
+                    else {
+                        slider.setRange(0, 400, 0);
+                        slider.setSkewFactorFromMidPoint(100);
+                    }
+                    bindComposite(compositePolyphony
+                                      ? Param::polyphonyextra
+                                      : detuneExtra(String(spec.id).substring(1).getIntValue() - 1),
+                                  !compositePolyphony);
                     slider.onDragStart = [this] {
                         compositeGesture = true;
                         compositeBase->beginGesture();
@@ -498,7 +506,7 @@ class LogisthEditor::Console : public Component,
                 slider.setDoubleClickReturnValue(
                     true, String(spec.id).contains("amt") ? 0 : spec.initial);
                 slider.onValueChange = [this] {
-                    if (compositeDetune && !compositeUpdate)
+                    if ((compositeDetune || compositePolyphony) && !compositeUpdate)
                         writeComposite(float(slider.getValue()));
                     if (isMouseOverOrDragging(true))
                         describe();
@@ -588,7 +596,7 @@ class LogisthEditor::Console : public Component,
         void describe() {
             owner.readout =
                 String(spec.group) + "  /  " + String(spec.label) + "   " +
-                (compositeDetune ? formatted(slider.getValue())
+                ((compositeDetune || compositePolyphony) ? formatted(slider.getValue())
                  : compositeChoice
                      ? menu.getText()
                      : owner.processor.state.getParameter(spec.id)->getCurrentValueAsText());
@@ -820,20 +828,41 @@ class LogisthEditor::Console : public Component,
         void bindComposite(Param extra, bool detune) {
             compositeId = extra;
             compositeDetune = detune;
-            compositeChoice = !detune;
+            compositeChoice = !detune && !compositePolyphony;
             auto *base = owner.processor.state.getParameter(spec.id);
             auto *extension = owner.processor.state.getParameter(parameterSpecs[size_t(extra)].id);
+            // Attachments can run before the APVTS raw-value adapter. Keep the
+            // supplied values so combined controls do not display the prior event.
+            compositeValues[0] = base->convertFrom0to1(base->getValue());
+            compositeValues[1] = extension->convertFrom0to1(extension->getValue());
             compositeBase = std::make_unique<ParameterAttachment>(
-                *base, [this](float) { syncComposite(); }, nullptr);
+                *base,
+                [this](float value) {
+                    compositeValues[0] = value;
+                    syncComposite();
+                },
+                nullptr);
             compositeExtra = std::make_unique<ParameterAttachment>(
-                *extension, [this](float) { syncComposite(); }, nullptr);
+                *extension,
+                [this](float value) {
+                    compositeValues[1] = value;
+                    syncComposite();
+                },
+                nullptr);
             compositeWideId = detune ? detuneWide(String(spec.id).substring(1).getIntValue() - 1)
-                                     : pairedChoiceExtension(id);
+                              : compositePolyphony ? Param::Count
+                                                   : pairedChoiceExtension(id);
             if (compositeWideId != Param::Count) {
                 auto *wide =
                     owner.processor.state.getParameter(parameterSpecs[size_t(compositeWideId)].id);
+                compositeValues[2] = wide->convertFrom0to1(wide->getValue());
                 compositeWide = std::make_unique<ParameterAttachment>(
-                    *wide, [this](float) { syncComposite(); }, nullptr);
+                    *wide,
+                    [this](float value) {
+                        compositeValues[2] = value;
+                        syncComposite();
+                    },
+                    nullptr);
             }
             compositeBase->sendInitialUpdate();
             compositeExtra->sendInitialUpdate();
@@ -844,22 +873,36 @@ class LogisthEditor::Console : public Component,
             if (compositeUpdate)
                 return;
             const ScopedValueSetter<bool> guard(compositeUpdate, true);
-            if (compositeDetune)
-                slider.setValue(
-                    owner.value(id) + owner.value(compositeId) +
-                        (compositeWideId == Param::Count ? 0 : owner.value(compositeWideId)),
-                    dontSendNotification);
+            if (compositeDetune || compositePolyphony)
+                slider.setValue(compositeValues[0] + compositeValues[1] + compositeValues[2],
+                                dontSendNotification);
             else
-                menu.setSelectedId(int(owner.value(id)) + 1, dontSendNotification);
+                menu.setSelectedId(int(expandedChoiceValue(
+                                       id,
+                                       [this](size_t parameter) {
+                                           if (parameter == size_t(id))
+                                               return compositeValues[0];
+                                           if (parameter == size_t(compositeId))
+                                               return compositeValues[1];
+                                           if (parameter == size_t(compositeWideId))
+                                               return compositeValues[2];
+                                           return owner.processor.state
+                                               .getRawParameterValue(parameterSpecs[parameter].id)
+                                               ->load();
+                                       })) +
+                                       1,
+                                   dontSendNotification);
         }
         void writeComposite(float value) {
             const ScopedValueSetter<bool> guard(compositeUpdate, true);
             const float firstMaximum = parameterSpecs[size_t(compositeId)].high;
             const float combinedMaximum = spec.high + firstMaximum;
-            const float base = compositeDetune      ? std::min(100.f, value)
+            const float base = compositePolyphony   ? std::min(spec.high, value)
+                               : compositeDetune    ? std::min(100.f, value)
                                : value <= spec.high ? value
                                                     : 0;
-            const float extra = compositeDetune ? std::clamp(value - 100, 0.f, 100.f)
+            const float extra = compositePolyphony ? std::max(0.f, value - spec.high)
+                                : compositeDetune  ? std::clamp(value - 100, 0.f, 100.f)
                                 : value > spec.high && value <= combinedMaximum ? value - spec.high
                                                                                 : 0;
             const float wide = compositeDetune           ? std::max(0.f, value - 200)
@@ -878,8 +921,9 @@ class LogisthEditor::Console : public Component,
             write(compositeWide, wide);
         }
         Param compositeId = Param::Count, compositeWideId = Param::Count;
-        bool compositeChoice = false, compositeDetune = false, compositeUpdate = false,
-             compositeGesture = false;
+        std::array<float, 3> compositeValues{};
+        bool compositeChoice = false, compositeDetune = false, compositePolyphony = false,
+             compositeUpdate = false, compositeGesture = false;
         std::unique_ptr<ParameterAttachment> compositeBase, compositeExtra, compositeWide;
         Console &owner;
         const ParameterSpec &spec;
@@ -898,7 +942,64 @@ class LogisthEditor::Console : public Component,
       public:
         RackButton(Console &c, int i, String n)
             : Button(n), ThemeText(c), owner(c), index(i), name(n) {
-            onClick = [this] { owner.setRack(index); };
+            onClick = [this] {
+                if (!dragged)
+                    owner.setRack(index);
+            };
+            setWantsKeyboardFocus(true);
+            setTooltip(owner.effectPosition(index) >= 0
+                           ? "Drag to reorder audio effects. Alt+Up/Down or right-click to move."
+                       : index == 12 ? "Final output limiter: fixed after Main"
+                                     : name);
+        }
+        void mouseDown(const MouseEvent &e) override {
+            dragged = false;
+            const int position = owner.effectPosition(index);
+            if (e.mods.isPopupMenu() && position >= 0) {
+                PopupMenu menu;
+                menu.addItem(1, "Move up", position > 0);
+                menu.addItem(2, "Move down", position < effectStageCount - 1);
+                menu.addSeparator();
+                menu.addItem(3, "Reset effect order");
+                Component::SafePointer<RackButton> safe(this);
+                menu.showMenuAsync(
+                    PopupMenu::Options().withTargetComponent(this), [safe](int action) {
+                        if (!safe || action == 0)
+                            return;
+                        if (action == 3)
+                            safe->owner.processor.setEffectOrder(EffectOrder{});
+                        else {
+                            const int at = safe->owner.effectPosition(safe->index);
+                            safe->owner.processor.moveEffect(at, at + (action == 1 ? -1 : 1));
+                        }
+                        safe->owner.layout();
+                        safe->owner.repaint();
+                    });
+                return;
+            }
+            Button::mouseDown(e);
+        }
+        void mouseDrag(const MouseEvent &e) override {
+            if (owner.effectPosition(index) >= 0 && e.getDistanceFromDragStart() > 5) {
+                dragged = true;
+                owner.dragRack(index, e.getEventRelativeTo(&owner).getPosition());
+            }
+            Button::mouseDrag(e);
+        }
+        void mouseUp(const MouseEvent &e) override {
+            Button::mouseUp(e);
+            dragged = false;
+        }
+        bool keyPressed(const KeyPress &key) override {
+            const int at = owner.effectPosition(index);
+            if (at >= 0 && key.getModifiers().isAltDown() &&
+                (key.isKeyCode(KeyPress::upKey) || key.isKeyCode(KeyPress::downKey))) {
+                owner.processor.moveEffect(at, at + (key.isKeyCode(KeyPress::upKey) ? -1 : 1));
+                owner.layout();
+                owner.repaint();
+                return true;
+            }
+            return Button::keyPressed(key);
         }
         void paintButton(Graphics &g, bool hover, bool) override {
             bool selected = owner.rack == index && !owner.settingsOpen;
@@ -906,9 +1007,20 @@ class LogisthEditor::Console : public Component,
                         : hover  ? owner.screenLine
                                  : Colours::transparentBlack);
             g.fillRoundedRectangle(getLocalBounds().toFloat(), 4);
-            drawCaption(g, name, getLocalBounds().withTrimmedLeft(21), 10,
-                        selected ? owner.screenText : owner.mint.withAlpha(.66f),
-                        Justification::centredLeft, selected);
+            const bool compact = index == 8 || index == 0 || index == 9 || index == 10;
+            const bool tool = index == 9 || index == 10;
+            auto area = tool ? getLocalBounds() : getLocalBounds().withTrimmedLeft(21);
+            if (!compact)
+                area = area.withTrimmedRight(11);
+            drawCaption(g, index == 0 ? "ARP" : name, area, compact ? (tool ? 9.5f : 10.f) : 10.f,
+                        owner.screenText.withAlpha(selected ? 1.f : .78f),
+                        tool ? Justification::centred : Justification::centredLeft, selected);
+            if (owner.effectPosition(index) >= 0) {
+                g.setColour(owner.screenText.withAlpha(hover || dragged ? .8f : .35f));
+                for (int y : {7, 10, 13})
+                    for (int x : {getWidth() - 8, getWidth() - 5})
+                        g.fillEllipse(float(x), float(y), 1.4f, 1.4f);
+            }
             if (selected) {
                 g.setColour(owner.mint);
                 g.fillRoundedRectangle(0, 5, 2, float(getHeight() - 10), 1);
@@ -919,6 +1031,7 @@ class LogisthEditor::Console : public Component,
         Console &owner;
         int index;
         String name;
+        bool dragged = false;
     };
     class PatternCanvas : public Component, private ThemeText {
       public:
@@ -1871,6 +1984,8 @@ class LogisthEditor::Console : public Component,
             for (size_t i = 0; i < controls.size(); ++i)
                 if (controls[i]->isVisible()) {
                     visited.insert(i);
+                    if (i == size_t(Param::polyphony))
+                        visited.insert(size_t(Param::polyphonyextra));
                     if (pairedChoiceExtension(Param(i)) != Param::Count)
                         visited.insert(size_t(pairedChoiceExtension(Param(i))));
                     if (choiceExtension(Param(i)) != Param::Count)
@@ -2951,6 +3066,27 @@ class LogisthEditor::Console : public Component,
             }
         }
     }
+    static int effectRackPage(EffectStage stage) {
+        constexpr std::array<int, effectStageCount> pages{1, 2, 3, 4, 5, 6, 7, 11};
+        return pages[size_t(stage)];
+    }
+    int effectPosition(int page) const {
+        const auto order = processor.effectOrder();
+        for (int i = 0; i < effectStageCount; ++i)
+            if (effectRackPage(order.stages[size_t(i)]) == page)
+                return i;
+        return -1;
+    }
+    void dragRack(int page, Point<int> position) {
+        if (!Rectangle<int>(289, 332, 112, 160).contains(position))
+            return;
+        const int target = jlimit(0, effectStageCount - 1, (position.y - 332) / 20);
+        if (processor.moveEffect(effectPosition(page), target)) {
+            readout = "Effect order saved with the patch / Main -> Limiter -> Output";
+            layout();
+            repaint();
+        }
+    }
     void rackLayout() {
         Rectangle<int> content{414, 320, 520, 203};
         for (auto &name : macroNames)
@@ -2961,17 +3097,24 @@ class LogisthEditor::Console : public Component,
             button.setVisible(false);
         mutateButton.setVisible(false);
         undoButton.setVisible(false);
-        const std::array<int, 13> rackOrder{8, 0, 1, 2, 3, 4, 5, 6, 7, 11, 12, 9, 10};
-        for (int row = 0; row < 13; ++row) {
-            const int i = rackOrder[size_t(row)], y = 296 + row * 18;
-            rackButtons[size_t(i)]->setBounds(291, y, 108, 18);
+        const auto order = processor.effectOrder();
+        auto place = [&](int i, Rectangle<int> bounds) {
+            rackButtons[size_t(i)]->setBounds(bounds);
             if (i < 9 || i == 11 || i == 12) {
                 const Param enabled =
                     i < 9 ? enables[size_t(i)] : (i == 11 ? Param::clipon : Param::limiton);
-                put(enabled, {294, y, 20, 18}, Style::Toggle, {}, true);
+                put(enabled, {bounds.getX() + 3, bounds.getY(), 20, bounds.getHeight()},
+                    Style::Toggle, {}, true);
                 controls[size_t(enabled)]->toFront(false);
             }
-        }
+        };
+        place(8, {291, 294, 62, 22});
+        place(0, {353, 294, 46, 22});
+        for (int row = 0; row < effectStageCount; ++row)
+            place(effectRackPage(order.stages[size_t(row)]), {291, 332 + row * 20, 108, 20});
+        place(12, {291, 492, 108, 20});
+        place(9, {291, 514, 54, 20});
+        place(10, {346, 514, 53, 20});
         settingsPanel.setVisible(settingsOpen);
         if (settingsOpen) {
             settingsPanel.setBounds(414, 289, 520, 234);
@@ -3357,8 +3500,8 @@ class LogisthEditor::Console : public Component,
             b->repaint();
         layoutStamp = currentLayoutState();
     }
-    std::array<int, 10 + 4 * playerCount> currentLayoutState() const {
-        std::array<int, 10 + 4 * playerCount> state{
+    std::array<int, 11 + 4 * playerCount> currentLayoutState() const {
+        std::array<int, 11 + 4 * playerCount> state{
             int(value(Param::sync)), int(value(Param::lfo1free)), int(value(Param::lfo2free)),
             int(value(Param::arpmode) >= 8), int(value(Param::arppattern))};
         for (int o = 0; o < playerCount; ++o) {
@@ -3379,6 +3522,7 @@ class LogisthEditor::Console : public Component,
         state[7 + 4 * playerCount] = mask + 65536 * int(value(eqBandTypes[size_t(selectedEqBand)]));
         state[8 + 4 * playerCount] = int(value(Param::compmode));
         state[9 + 4 * playerCount] = int(value(Param::clipmode));
+        state[10 + 4 * playerCount] = int(processor.effectOrder().packed());
         return state;
     }
     void refreshImpulseLabel() {
@@ -3612,7 +3756,10 @@ class LogisthEditor::Console : public Component,
         g.setColour(screenLine);
         g.drawRoundedRectangle(Rectangle<float>(280.5f, 278.5f, 667, 257), 8, 1);
         g.drawVerticalLine(404, 292, 523);
-        drawCaption(g, "SIGNAL RACK", {292, 281, 108, 13}, 8, mint.withAlpha(.5f));
+        drawCaption(g, "GENERATORS", {292, 281, 108, 13}, 8, screenText.withAlpha(.65f));
+        drawCaption(g, "AUDIO FX / DRAG", {292, 317, 108, 13}, 8, screenText.withAlpha(.65f));
+        g.setColour(screenLine);
+        g.drawHorizontalLine(513, 292, 399);
         StringArray titles{"ARPEGGIATOR", "DISTORTION", "PHASER",     "CHORUS", "EQUALIZER",
                            "REVERB",      "DELAY",      "COMPRESSOR", "CHORDS", "SAMPLE",
                            "MORPH",       "CLIPPER",    "LIMITER"};
@@ -3772,8 +3919,8 @@ class LogisthEditor::Console : public Component,
     TooltipWindow tooltips;
     String readout, lastStatus;
     std::array<uint64_t, playerCount> displayedRevisions{};
-    std::array<int, 10 + 4 * playerCount> layoutStamp{};
-    int selectedPart = 0, rack = 0, stepPage = 0, previewSync = -1;
+    std::array<int, 11 + 4 * playerCount> layoutStamp{};
+    int selectedPart = 0, rack = 9, stepPage = 0, previewSync = -1;
 };
 LogisthEditor::LogisthEditor(LogisthProcessor &p) : AudioProcessorEditor(p) {
     setLookAndFeel(&look);

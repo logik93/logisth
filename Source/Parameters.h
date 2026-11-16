@@ -1076,6 +1076,7 @@ enum class Param : size_t {
     limitceiling,
     limitrelease,
     limitdrive,
+    polyphonyextra,
     Count
 };
 constexpr size_t parameterCount = size_t(Param::Count);
@@ -2786,6 +2787,7 @@ inline const std::array<ParameterSpec, parameterCount> parameterSpecs{{
     {"limitceiling", "Ceiling / dB", 3, "LIMITER", -24.0f, 0.0f, -1.0f, 1.0f, "", false},
     {"limitrelease", "Release / ms", 3, "LIMITER", 5.0f, 2000.0f, 100.0f, 0.4f, "", false},
     {"limitdrive", "Drive / dB", 3, "LIMITER", 0.0f, 24.0f, 0.0f, 1.0f, "", false},
+    {"polyphonyextra", "Extra polyphony", 0, "PERFORMANCE", 0, 16, 0, 1, "", true},
 }};
 
 inline constexpr size_t legacyParameterCount = 736;

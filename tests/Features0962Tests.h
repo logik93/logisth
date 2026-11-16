@@ -64,7 +64,7 @@ inline void run() {
     int y = -1;
     for (int rack : {8, 0, 1, 2, 3, 4, 5, 6, 7, 11, 12, 9, 10}) {
         auto *button = dynamic_cast<Button *>(console->findChildWithID("rack." + String(rack)));
-        check(button && button->getY() > y, "tabs follow Chords/Arp/audio chain/tools order");
+        check(button && button->getY() >= y, "sections follow Generators/audio chain/tools order");
         y = button->getY();
         button->onClick();
         if (rack == 7 || rack == 11 || rack == 12)

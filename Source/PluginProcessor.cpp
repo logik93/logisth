@@ -175,12 +175,24 @@ Params LogisthProcessor::snapshot() const {
     p.portamento = get(Param::portamento);
     p.portaMode = int(get(Param::portamode));
     p.bendRange = get(Param::bendrange);
-    p.polyphony = int(get(Param::polyphony));
+    p.polyphony = effectivePolyphony();
     p.monoLegato = get(Param::monolegato) > 0;
     p.sync = get(Param::sync) > 0;
     p.solo = int(get(Param::solo));
     p.bpm = bpm;
     return p;
+}
+bool LogisthProcessor::setEffectOrder(EffectOrder order, bool notifyHost) {
+    if (!order.valid())
+        return false;
+    if (effectOrderBits.exchange(order.packed()) != order.packed() && notifyHost)
+        updateHostDisplay(
+            AudioProcessorListener::ChangeDetails{}.withNonParameterStateChanged(true));
+    return true;
+}
+bool LogisthProcessor::moveEffect(int from, int to) {
+    auto order = effectOrder();
+    return order.move(from, to) && setEffectOrder(order);
 }
 EffectsParams LogisthProcessor::effectsSnapshot() const {
     EffectsParams p;
@@ -328,6 +340,7 @@ void LogisthProcessor::reset() {
     chordMapper.reset();
     chordsWereEnabled = false;
     effects.reset();
+    rackTransition.reset(getSampleRate(), effectOrder());
     clipper.reset();
     limiter.reset();
     dynamicsScope.clear();
@@ -386,12 +399,14 @@ void LogisthProcessor::processBlock(AudioBuffer<float> &audio, MidiBuffer &midi)
     if (midiOnly != wasMidiOnly) {
         engine.silenceVoices();
         effects.reset();
+        rackTransition.reset(getSampleRate(), effectOrder());
         clipper.reset();
         limiter.reset();
         wasMidiOnly = midiOnly;
     }
     const auto p = snapshot();
     const auto fx = effectsSnapshot();
+    rackTransition.request(effectOrder());
     const ClipperSettings cp{get(Param::clipon) > 0,    get(Param::clipquality) > 0,
                              int(get(Param::clipmode)), get(Param::clipdrive),
                              get(Param::clipceiling),   get(Param::clipknee),
@@ -412,7 +427,7 @@ void LogisthProcessor::processBlock(AudioBuffer<float> &audio, MidiBuffer &midi)
     std::array<float, 2> maxima{};
     auto renderTo = [&](int end) {
         while (rendered < end) {
-            int count = jmin(512, end - rendered);
+            int count = rackTransition.blockLimit(jmin(512, end - rendered));
             auto *l = audio.getWritePointer(0) + rendered;
             auto *r = audio.getWritePointer(1) + rendered;
             if (midiOnly) {
@@ -427,17 +442,20 @@ void LogisthProcessor::processBlock(AudioBuffer<float> &audio, MidiBuffer &midi)
                           {playerTraces[0].data(), playerTraces[1].data(), playerTraces[2].data(),
                            playerTraces[3].data(), playerTraces[4].data(), playerTraces[5].data()},
                           partScopeC.data());
-            effects.process(l, r, count, driveMod.data(), phaserMod.data(), fx, &dynamicsMeters[0],
-                            display == 0 ? &dynamicsScope : nullptr);
+            auto orderedFx = fx;
+            orderedFx.order = rackTransition.order();
+            const ClipperStage clip{clipper, cp, dynamicsMeters[1],
+                                    display == 1 ? &dynamicsScope : nullptr};
+            effects.process(l, r, count, driveMod.data(), phaserMod.data(), orderedFx,
+                            &dynamicsMeters[0], display == 0 ? &dynamicsScope : nullptr, &clip);
             fxWork += effects.processedSamples;
-            clipper.process(l, r, count, cp, dynamicsMeters[1],
-                            display == 1 ? &dynamicsScope : nullptr);
             std::array<float, 512> gains{};
             for (int i = 0; i < count; ++i) {
                 masterSmooth += smoothing * (masterTarget - masterSmooth);
-                gains[size_t(i)] = masterSmooth;
-                l[i] *= masterSmooth;
-                r[i] *= masterSmooth;
+                const float outputGain = masterSmooth * rackTransition.tick();
+                gains[size_t(i)] = outputGain;
+                l[i] *= outputGain;
+                r[i] *= outputGain;
             }
             limiter.process(l, r, count, lp, getSampleRate(), dynamicsMeters[2],
                             display == 2 ? &dynamicsScope : nullptr);
@@ -711,6 +729,7 @@ bool LogisthProcessor::applyState(const void *data, int size) try {
     return false;
 }
 void LogisthProcessor::loadPreset(int index) {
+    setEffectOrder(EffectOrder{}, false);
     if (index >= 10 && index < factoryPresetCount) {
         loadPreset(0);
         auto set = [&](const char *id, float value) {

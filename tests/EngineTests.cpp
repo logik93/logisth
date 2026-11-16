@@ -71,6 +71,41 @@ int main() {
             engine.controller(1, 120, 0, p);
             engine.render(l.data(), r.data(), 512, p);
             require(energy(l) == 0, "all sound off");
+            engine.reset();
+            p = Params{};
+            p.polyphony = maxPolyphony;
+            for (int n = 0; n < maxPolyphony; ++n)
+                engine.noteOn(40 + n, .1f, 1, p);
+            require(engine.activeVoices() == 32, "all 32 note voices are independently allocated");
+            engine.noteOn(90, .1f, 1, p);
+            engine.render(l.data(), r.data(), 512, p);
+            require(engine.activeVoices() == 32 && std::isfinite(energy(l)),
+                    "voice stealing and rendering respect the extended 32-voice limit");
+            p.polyphony = 16;
+            engine.render(l.data(), r.data(), 512, p);
+            require(engine.activeVoices() == 16, "reducing polyphony retires excess voices");
+            for (int mode = 0; mode < 4; ++mode) {
+                engine.reset();
+                p = Params{};
+                p.polyphony = maxPolyphony;
+                for (auto &osc : p.osc) {
+                    osc.level = 0;
+                    osc.unison = 0;
+                }
+                auto &source = p.osc[0];
+                source.level = .1f;
+                source.unison = 1;
+                source.engine = mode;
+                source.data = SourceData::factory().get();
+                source.gran.enabled = true;
+                p.part[0].filterType = 3;
+                p.part[0].amp = {0, 0, 1, .001f};
+                for (int note = 0; note < maxPolyphony; ++note)
+                    engine.noteOn(40 + note, .1f, 1, p);
+                engine.render(l.data(), r.data(), 512, p);
+                require(engine.activeVoices() == 32 && energy(l) > 0 && std::isfinite(energy(l)),
+                        "all four source engines render all 32 note voices");
+            }
             // A sine at MIDI 69 must cross zero approximately 440 times/second.
             engine.reset();
             p = Params{};

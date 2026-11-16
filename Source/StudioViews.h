@@ -353,7 +353,7 @@ class WaveView : public Component, public FileDragAndDropTarget {
         for (auto handle : {std::pair<float, const char *>{start, "START"}, {end, "END"}}) {
             float x = xAt(handle.first);
             if (x >= 0 && x <= getWidth()) {
-                g.setColour(colours.green);
+                g.setColour(colours.screenAccent);
                 g.drawVerticalLine(int(x), 25, 176);
                 g.fillRoundedRectangle(x - 3, 25, 6, 12, 2);
                 g.setFont(font(8));

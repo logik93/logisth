@@ -293,6 +293,7 @@ void LogisthProcessor::randomisePattern() {
     }
 }
 void LogisthProcessor::saveAssets(ValueTree &tree) {
+    tree.setProperty("effectOrder", int(effectOrder().packed()), nullptr);
     saveImpulse(tree);
     std::array<std::shared_ptr<const SourceData>, playerCount> owners;
     std::shared_ptr<const ChordMap> chordsSnapshot;
@@ -353,6 +354,19 @@ void LogisthProcessor::saveAssets(ValueTree &tree) {
             tree.addChild(pattern.createCopy(), -1, nullptr);
 }
 bool LogisthProcessor::restoreAssets(const ValueTree &tree) {
+    EffectOrder restoredOrder;
+    if (tree.hasProperty("effectOrder")) {
+        const auto value = tree.getProperty("effectOrder");
+        // ValueTree XML round-trips scalar attributes as strings. Accept only
+        // bounded decimal text (or an in-memory integer), never coercible junk.
+        const auto text = value.toString();
+        if ((!value.isInt() && !value.isInt64() && !value.isString()) || text.isEmpty() ||
+            text.length() > 8 || !text.containsOnly("0123456789"))
+            return false;
+        const auto bits = text.getLargeIntValue();
+        if (bits < 0 || bits > 0xffffff || !EffectOrder::unpack(uint32_t(bits), restoredOrder))
+            return false;
+    }
     auto restoredImpulse = readImpulse(tree);
     if (!restoredImpulse)
         return false;
@@ -477,6 +491,7 @@ bool LogisthProcessor::restoreAssets(const ValueTree &tree) {
             retiredSources.clear();
         patterns = std::move(restoredPatterns);
         currentPattern = jlimit(0, 11, int(tree.getProperty("currentPattern", 0)));
+        setEffectOrder(restoredOrder, false);
     }
     return true;
 }
@@ -486,7 +501,7 @@ void LogisthProcessor::ensureSpectral(bool synchronous) {
     std::array<int, playerCount> unisons{};
     std::array<SpectralConfig, playerCount> configs{};
     double rate = 0;
-    int voiceCount = 16;
+    int voiceCount = defaultPolyphony;
     uint64_t generation = 0;
     std::shared_ptr<SpectralBank> previous;
     {
@@ -505,9 +520,7 @@ void LogisthProcessor::ensureSpectral(bool synchronous) {
             controls.overlap = overlap == 0 ? 0 : overlap + 1;
             configs[size_t(i)] = SpectralConfig::from(controls);
         }
-        voiceCount = raw[size_t(Param::monolegato)]->load() > 0
-                         ? 1
-                         : jlimit(1, 16, int(raw[size_t(Param::polyphony)]->load()));
+        voiceCount = raw[size_t(Param::monolegato)]->load() > 0 ? 1 : effectivePolyphony();
         rate = spectralRate.load();
         if (wanted != spectralDesiredMask || voiceCount != spectralDesiredVoices ||
             rate != spectralDesiredRate || configs != spectralDesiredConfigs ||
@@ -593,9 +606,7 @@ bool LogisthProcessor::spectralReady(int slot) const {
     controls.blockMs = raw[at + 4]->load();
     int overlap = int(raw[at + 5]->load());
     controls.overlap = overlap == 0 ? 0 : overlap + 1;
-    int voices = raw[size_t(Param::monolegato)]->load() > 0
-                     ? 1
-                     : jlimit(1, 16, int(raw[size_t(Param::polyphony)]->load()));
+    int voices = raw[size_t(Param::monolegato)]->load() > 0 ? 1 : effectivePolyphony();
     int unison = jlimit(1, 8, int(raw[playerParamIndex(Param::o1voices, slot, 12)]->load()));
     if (unison > 1 && unison % 2 == 0)
         ++unison;

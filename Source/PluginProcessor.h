@@ -14,6 +14,18 @@ struct ThemeDraft;
 class LogisthProcessor : public juce::AudioProcessor {
   public:
     LogisthProcessor();
+    int effectivePolyphony() const {
+        return juce::jlimit(
+            1, logisth::maxPolyphony,
+            int(get(logisth::Param::polyphony) + get(logisth::Param::polyphonyextra)));
+    }
+    logisth::EffectOrder effectOrder() const noexcept {
+        logisth::EffectOrder order;
+        logisth::EffectOrder::unpack(effectOrderBits.load(), order);
+        return order;
+    }
+    bool setEffectOrder(logisth::EffectOrder, bool notifyHost = true);
+    bool moveEffect(int from, int to);
     // GUI-only draft, deliberately excluded from sound presets and DAW audio state.
     std::shared_ptr<logisth::ThemeDraft> appearanceDraft;
     ~LogisthProcessor() override;
@@ -222,6 +234,8 @@ class LogisthProcessor : public juce::AudioProcessor {
     juce::MidiBuffer generatedMidi;
     logisth::Engine engine;
     logisth::Effects effects;
+    std::atomic<uint32_t> effectOrderBits{logisth::EffectOrder{}.packed()};
+    logisth::RackTransition rackTransition;
     logisth::Arpeggiator arp;
     std::array<std::array<float, 512>, logisth::playerCount> playerTraces{};
     std::array<float, 512> driveMod{}, phaserMod{}, partScopeA{}, partScopeB{}, partScopeC{};

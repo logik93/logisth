@@ -9,7 +9,7 @@ import shutil
 import subprocess
 import tempfile
 from pathlib import Path
-from build_native import source_fingerprint
+from build_native import source_fingerprint, required_test_count
 from verify_release import verify, validate_tag
 
 PLATFORMS = ('linux-x86_64', 'windows-x86_64', 'macos-universal')
@@ -28,7 +28,7 @@ def validate_record(record, archive, platform, version, fingerprint, commit):
             or record['platform'] != platform or record['source_commit'] != commit
             or record['source_fingerprint'] != fingerprint
             or record['formats'] != ['VST3', 'CLAP', 'Standalone']
-            or record['tests']['passed'] < (19 if platform.startswith('linux') else 17)
+            or record['tests']['passed'] < required_test_count(version, platform)
             or record['tests']['failed'] != 0 or record['tests']['skipped'] != 0):
         raise ValueError(f'Native build does not match validated release source: {platform}')
     name = record['archive']

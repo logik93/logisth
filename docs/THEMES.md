@@ -94,3 +94,8 @@ restored in new/reopened editors. Existing windows retain their own size.
 [Tokyo Night](images/logisth-bokkenmmb-tokyo-night.png) ·
 [Solarized Osaka](images/logisth-bokkenmmb-solarized-osaka.png) ·
 [Gruvbox](images/logisth-bokkenmmb-gruvbox.png)
+
+Version 0.9.7 derives enabled knob/plot colors for their actual rendering surface.
+Light screen knobs use a dark face, with stronger needles and contrast-aware
+tracks/arcs. These cached drawing colors preserve the saved palette values.
+The [rack/skin review](RACK_REVIEW.md) covers all ten themes and three knob styles.

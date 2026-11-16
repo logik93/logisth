@@ -26,7 +26,7 @@
 			<path d="M 397,231 L 397,208 Z" style="stroke: rgb(3%,49%,63%); stroke-linecap: butt; stroke-width: 1;"/>
 			<polygon points="397 208, 394 213, 400 213" style="stroke: rgb(3%,49%,63%); stroke-linecap: butt; stroke-width: 1; fill: rgb(3%,49%,63%); fill-rule: evenodd;"/>
 			<rect x="0" y="157" width="468" height="43" rx="5" ry="0" style="stroke: rgb(70%,78%,84%); stroke-linecap: butt; stroke-width: 0.7; fill: rgb(93%,96%,98%); fill-rule: evenodd;"/>
-			<text x="147.3564453125" y="183" style="font-family: OpenSans-Bold; font-size: 8.5px;fill: rgb(9%,21%,32%); stroke:none;" transform="translate(0,366) scale(1,-1)">PER-NOTE SYNTHESIS: A1/A2, B1/B2, C1/C2</text>
+			<text x="120.02197265624999" y="183" style="font-family: OpenSans-Bold; font-size: 8.5px;fill: rgb(9%,21%,32%); stroke:none;" transform="translate(0,366) scale(1,-1)">PER-NOTE SYNTHESIS: A1/A2, B1/B2, C1/C2 (1-32 NOTES)</text>
 			<text x="117.2353515625" y="168" style="font-family: OpenSans; font-size: 7px;fill: rgb(9%,21%,32%); stroke:none;" transform="translate(0,336) scale(1,-1)">Classic / Wavetable / Sampler / Granular; envelopes, LFOs, FM/AM/PWM</text>
 			<path d="M 397,208 L 397,200 Z" style="stroke: rgb(3%,49%,63%); stroke-linecap: butt; stroke-width: 1;"/>
 			<path d="M 234,157 L 234,141 Z" style="stroke: rgb(3%,49%,63%); stroke-linecap: butt; stroke-width: 1;"/>
@@ -37,11 +37,11 @@
 			<path d="M 234,96 L 234,80 Z" style="stroke: rgb(3%,49%,63%); stroke-linecap: butt; stroke-width: 1;"/>
 			<polygon points="234 80, 231 85, 237 85" style="stroke: rgb(3%,49%,63%); stroke-linecap: butt; stroke-width: 1; fill: rgb(3%,49%,63%); fill-rule: evenodd;"/>
 			<rect x="0" y="35" width="468" height="43" rx="5" ry="0" style="stroke: rgb(70%,78%,84%); stroke-linecap: butt; stroke-width: 0.7; fill: rgb(93%,96%,98%); fill-rule: evenodd;"/>
-			<text x="110.45532226562499" y="61" style="font-family: OpenSans-Bold; font-size: 8.5px;fill: rgb(9%,21%,32%); stroke:none;" transform="translate(0,122) scale(1,-1)">DISTORTION -&gt; PHASER -&gt; CHORUS -&gt; EQ -&gt; REVERB -&gt; DELAY</text>
-			<text x="133.899658203125" y="46" style="font-family: OpenSans; font-size: 7px;fill: rgb(9%,21%,32%); stroke:none;" transform="translate(0,92) scale(1,-1)">shared stereo effects; independent bypass and prepared tails</text>
+			<text x="104.2255859375" y="61" style="font-family: OpenSans-Bold; font-size: 8.5px;fill: rgb(9%,21%,32%); stroke:none;" transform="translate(0,122) scale(1,-1)">REORDERABLE AUDIO FX (DEFAULT SEQUENCE SHOWN IN TEXT)</text>
+			<text x="116.1689453125" y="46" style="font-family: OpenSans; font-size: 7px;fill: rgb(9%,21%,32%); stroke:none;" transform="translate(0,92) scale(1,-1)">Distortion / Phaser / Chorus / EQ / Reverb / Delay / Compressor / Clipper</text>
 			<path d="M 234,35 L 234,20 Z" style="stroke: rgb(3%,49%,63%); stroke-linecap: butt; stroke-width: 1;"/>
 			<polygon points="234 20, 231 25, 237 25" style="stroke: rgb(3%,49%,63%); stroke-linecap: butt; stroke-width: 1; fill: rgb(3%,49%,63%); fill-rule: evenodd;"/>
-			<text x="111.25390625" y="5" style="font-family: OpenSans-Bold; font-size: 8px;fill: rgb(9%,21%,32%); stroke:none;" transform="translate(0,10) scale(1,-1)">COMPRESSOR -&gt; CLIPPER -&gt; MAIN -&gt; LIMITER -&gt; STEREO OUTPUT</text>
+			<text x="133.220703125" y="5" style="font-family: OpenSans-Bold; font-size: 8px;fill: rgb(9%,21%,32%); stroke:none;" transform="translate(0,10) scale(1,-1)">MAIN -&gt; LIMITER (FIXED OUTPUT) -&gt; STEREO OUTPUT</text>
 		</g>
 	</g>
 </svg>

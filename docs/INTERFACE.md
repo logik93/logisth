@@ -13,7 +13,7 @@ Vector drawing and embedded Open Sans keep the design consistent across systems.
 - Top: factory/user presets and PATCH file menu, part A/B/C, Solo, Poly, Sync and Settings; below, two oscillators
   and the selected part's amplitude envelope.
 - Left: the selected part's filter and shared Filter Control A+B+C.
-- Centre: the arp and seven effects, selected by name, each with a separate enable square.
+- Centre: separate Chords/Arp generators, eight movable audio effects, fixed output Limiter and Sample/Morph tools.
 - Right: A/B/C/L+R oscilloscope, Mix A/B/C, Main and stereo meters.
 - Bottom: two Mod Env, two LFO, four Misc sources, wheels, keyboard and glide.
 
@@ -22,19 +22,19 @@ functional submenus with symmetric A/B/C and paired scopes. Hover for tooltips a
 Numeric values support units such as kHz, ms and percent. Sync displays musical
 divisions instead of free time/rate controls. Arp steps use 01–08 and 09–16 views.
 
-The current engine exposes 1070 audio parameters. Tests check access, bounds, click
+The current engine exposes 1071 audio parameters. Tests check access, bounds, click
 targets, view changes, bindings, scaling and independent theme persistence.
 See [the English user manual](MANUAL.md) for full operation.
 
 The oscillator header selects engine and only its relevant pages: VOICE/ENV for
 Classic, WAVETABLE for the table engine, SOURCE/PLAYBACK/STRETCH/LOOP TAIL for Sampler, and GRAINS for
 Granular. MOTION/TIME are available only in the Granulizer model. File drops and
-IMPORT load audio into that slot. CHORDS is the ninth rack page. Pattern arp
+IMPORT load audio into that slot. CHORDS is in the separate GENERATORS row. Pattern arp
 uses a seven-row drawing canvas with independent lane lengths, exact cell entry,
 playheads and two 16-step views; Legacy retains the original arp page. MIDI OUT
 is in the top header. All ten themes use the same layout.
 
-SAMPLE is the tenth rack page. For Sampler and Granular it shows the actual PCM
+SAMPLE opens first in new editors and remains in the tools row. For Sampler and Granular it shows the actual PCM
 waveform, live cursor and grain markers. For Wavetable it shows a perspective
 stack, highlights the selected cycle and displays its frame number. WT POS,
 dragging the view or wheeling selects a frame. The header's AUTO/length menu
@@ -121,3 +121,13 @@ model-specific algorithmic controls hide. The existing single rack window is use
 Compressor, Clipper and Limiter have shared-size graph panels and compact control
 rows. IR gains a cached stereo waveform and drag/drop inside Convolution.
 The limiter is after Main; Sample and Morph remain editing tools.
+
+0.9.7 separates Chords/Arp into GENERATORS, followed by AUDIO FX with eight
+20-pixel draggable effect rows, a fixed final Limiter and a Sample/Morph tools
+row. Drag the grip/label, use Alt+Up/Down or the right-click menu; the DSP order
+and visible order agree and are saved with presets. The active page stays open
+through a drag. Sample is the initial page in each new editor.
+POLY combines the preserved 1–16 host parameter with an appended 0–16 companion
+and exposes one 1–32 control, default 16. Light screen knobs now use dark faces;
+cached contrast repair keeps enabled needles/arcs/tracks visible in all ten
+themes and three styles without rewriting supplied palette files.

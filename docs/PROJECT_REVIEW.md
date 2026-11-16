@@ -1,4 +1,4 @@
-# logisth 0.9.6.2 — project and algorithm review
+# logisth 0.9.7 — project and algorithm review
 
 ## Algorithm provenance and conformance
 
@@ -21,7 +21,26 @@ that comparison. `StretchControls` CTest performs the processing comparison.
 These checks establish the identity of the open-source algorithms actually used;
 they do not establish equivalence to proprietary plug-ins.
 
-## Changes made during this review
+## v0.9.7 integration review
+
+- Eight independently ordered audio stages share one prepared state bank; the
+  UI drag, keyboard and context menu operate the same saved permutation.
+- The default effect math is compared against frozen v0.9.6.2 source at three
+  rates. New noncommuting EQ/distortion/clip tests establish actual routing.
+- A 5 ms down/up transition changes live order only at zero; callback allocation
+  guards cover reordered processing with 32 notes and the fixed output limiter.
+- Idle timing now sums serial IR/Delay response delays, preserving late first
+  echoes in either order. Unused stages and source dependencies remain gated.
+- Note storage and spectral pools extend to 32; default rendering remains 16.
+  All 1070 prior host definitions are frozen, with one additive companion.
+- Light's forced-screen knobs had light faces with light needles. Context-correct
+  surfaces and cached color contrast resolve it; 120 theme/style/context/trim
+  renders check metadata and actual needle pixels. Layout and pointer-drag tests
+  cover the reorganized rail and initial Sample page.
+
+See [REVIEW-v0.9.7.md](REVIEW-v0.9.7.md) for validation and the remaining practical limits.
+
+## Earlier review changes
 
 - Preset search and 48 authored patches with descriptions, four macros and level measurements.
 - Six independent controls per player, exposed in a compact STRETCH page. Unsupported controls are hidden for algorithms that do not implement them.

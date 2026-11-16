@@ -45,7 +45,7 @@ struct Params {
     std::array<Misc, 4> misc{};
     float filterCutoff = 0, filterResonance = 0, keytrack = 0, portamento = 0, bendRange = 2;
     double bpm = 120;
-    int polyphony = 16, solo = 0, portaMode = 0;
+    int polyphony = defaultPolyphony, solo = 0, portaMode = 0;
     bool fixedVelocity = false;
     bool warmDrive = false, sync = true, monoLegato = false;
     Params() {
@@ -117,7 +117,7 @@ class Engine {
     };
     static_assert(std::is_trivially_copyable_v<Voice>,
                   "Voice resets must remain allocation-free copies of prepared storage");
-    std::vector<Voice> voices = std::vector<Voice>(16);
+    std::vector<Voice> voices = std::vector<Voice>(maxPolyphony);
     const std::unique_ptr<const Voice> initialVoice = std::make_unique<Voice>();
     void clearVoice(Voice &voice) const noexcept {
         // MSVC can materialize nested aggregate initializers on the audio stack,
@@ -339,7 +339,7 @@ class Engine {
         if (key != keys.end())
             *key = {note, channel, velocity, ++counter};
         Voice *selected = nullptr;
-        const int limit = p.monoLegato ? 1 : std::clamp(p.polyphony, 1, 16);
+        const int limit = p.monoLegato ? 1 : std::clamp(p.polyphony, 1, maxPolyphony);
         if (p.monoLegato) {
             selected = &voices[0];
             for (size_t i = 1; i < voices.size(); ++i)
@@ -502,7 +502,7 @@ class Engine {
                 const std::array<float *, playerCount> &oscScopes = {}, float *partC = nullptr) {
         oscillatorSamples = 0;
         pictures = {};
-        const int maxVoices = p.monoLegato ? 1 : std::clamp(p.polyphony, 1, 16);
+        const int maxVoices = p.monoLegato ? 1 : std::clamp(p.polyphony, 1, maxPolyphony);
         for (size_t i = size_t(maxVoices); i < voices.size(); ++i)
             if (voices[i].active())
                 clearVoice(voices[i]);
@@ -590,7 +590,8 @@ class Engine {
             uint64_t fxAge = 0;
             for (int i = 0; i < 2; ++i)
                 tickLfo(freeLfo[i], p.lfo[i], p, 0, 0);
-            for (auto &v : voices) {
+            for (int voiceIndex = 0; voiceIndex < maxVoices; ++voiceIndex) {
+                auto &v = voices[size_t(voiceIndex)];
                 if (cWanted && v.note >= 0 && (v.held || v.sustained))
                     v.cEnabled = true;
                 if (!v.active())

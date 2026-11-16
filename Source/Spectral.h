@@ -123,7 +123,8 @@ struct SpectralBank {
     int voiceCapacity;
     std::array<int, playerCount> capacity{};
     std::array<SpectralConfig, playerCount> configs{};
-    std::array<std::shared_ptr<SpectralStream>, 16 * playerCount * unisonCapacity * 2> cells{};
+    std::array<std::shared_ptr<SpectralStream>, maxPolyphony * playerCount * unisonCapacity * 2>
+        cells{};
     static size_t index(int voice, int osc, int unison, int lane) {
         return size_t((((voice * playerCount) + osc) * unisonCapacity + unison) * 2 + lane);
     }
@@ -140,8 +141,9 @@ struct SpectralBank {
     }
     SpectralBank(double sampleRate, unsigned wanted, std::array<int, playerCount> unisons,
                  const std::shared_ptr<SpectralBank> &old,
-                 std::array<SpectralConfig, playerCount> settings = {}, int voices = 16)
-        : rate(sampleRate), mask(wanted), voiceCapacity(std::clamp(voices, 1, 16)),
+                 std::array<SpectralConfig, playerCount> settings = {},
+                 int voices = defaultPolyphony)
+        : rate(sampleRate), mask(wanted), voiceCapacity(std::clamp(voices, 1, maxPolyphony)),
           capacity(unisons), configs(settings) {
         if (estimatedBytes(rate, mask, capacity, configs, voiceCapacity) > memoryBudget)
             throw std::length_error("Spectral memory budget exceeded");
@@ -169,7 +171,7 @@ struct SpectralBank {
     template <size_t N, std::enable_if_t<N != size_t(playerCount), int> = 0>
     SpectralBank(double sampleRate, unsigned wanted, std::array<int, N> unisons,
                  const std::shared_ptr<SpectralBank> &old,
-                 std::array<SpectralConfig, N> settings = {}, int voices = 16)
+                 std::array<SpectralConfig, N> settings = {}, int voices = defaultPolyphony)
         : SpectralBank(sampleRate, wanted, expanded(unisons), old, expanded(settings), voices) {}
     SpectralStream *get(int voice, int osc, int unison, int lane) const {
         if (voice < 0 || voice >= voiceCapacity || osc < 0 || osc >= playerCount || unison < 0 ||

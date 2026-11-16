@@ -1,4 +1,4 @@
-# logisth 0.9.6.2 factory collection
+# logisth 0.9.7 factory collection
 
 48 authored patches, six per category; 58 built-in entries including Init and the nine previous sounds. Each new patch has an editable description and four performance macros: Brightness, Harmonics, Warp, and Space/Drive. Zero preserves the authored sound.
 
@@ -8,7 +8,7 @@ Open the magnifying-glass button beside the preset selector and search a name, c
 
 The bank includes a twelve-second, 48 kHz stereo demo: the first sound from each category, 1.5 seconds each. The CSV records all 48 patches twice: default macros and all four macros at maximum. The fixture uses full velocity, a three-second render with note-off halfway, MIDI 36 for bass and MIDI 48/55/60/64 for the other categories. Peak readings include release samples and are measured before WAV conversion. Main trims target at least 3 dB of fixture headroom; quieter textures retain their dynamics. This fixture does not cover every note, longer sustained pads, arbitrary macro combinations or user edits. There is no hidden limiter. Version 0.9.6.1 remeasures and trims Main after the stereo/reverb correction; both default and maximum-macro profiles must retain at least 3 dB in this fixture.
 
-Every patch is saved and restored in a separate processor during testing, checking all 1070 controls, its name, description and macro names. Factory material is embedded; no external sample path is required. Init / saw still opens at Main 65%.
+Every patch is saved and restored in a separate processor during testing, checking all 1071 controls, its name, description and macro names. Factory material is embedded; no external sample path is required. Init / saw still opens at Main 65%.
 
 | Sound | Description |
 | --- | --- |
@@ -61,6 +61,6 @@ Every patch is saved and restored in a separate processor during testing, checki
 | Sample / Reverse Bloom | Reversed glass grows into a soft, stretched tail. |
 | Sample / Cloud Loom | A moving glass cloud over a soft triangle foundation and spacious release. |
 
-Version 0.9.6.2 reauditions all 96 profiles with the current engine. Native files
-include the appended dynamics controls; the new clipper and limiter remain off
+Version 0.9.7 reauditions all 96 profiles with the current engine. Native files
+include saved default effect order and the appended polyphony companion; the new clipper and limiter remain off
 in this bank. Older files retain Legacy compressor behavior when recalled.

@@ -49,17 +49,17 @@ def signal_flow():
     arrow(142, 252, 163, 252)
     arrow(305, 252, 326, 252)
     arrow(397, 231, 397, 208)
-    box(0, 157, 468, 'PER-NOTE SYNTHESIS: A1/A2, B1/B2, C1/C2',
+    box(0, 157, 468, 'PER-NOTE SYNTHESIS: A1/A2, B1/B2, C1/C2 (1-32 NOTES)',
         'Classic / Wavetable / Sampler / Granular; envelopes, LFOs, FM/AM/PWM')
     drawing.add(Line(397, 208, 397, 200, strokeColor=accent))
     arrow(234, 157, 234, 141)
     box(0, 96, 468, 'ROUTING -> FILTER A/B/C -> AMP / VELOCITY / MIX -> SUM',
         'select source-bus combinations; per-note stereo filters and part envelopes')
     arrow(234, 96, 234, 80)
-    box(0, 35, 468, 'DISTORTION -> PHASER -> CHORUS -> EQ -> REVERB -> DELAY',
-        'shared stereo effects; independent bypass and prepared tails')
+    box(0, 35, 468, 'REORDERABLE AUDIO FX (DEFAULT SEQUENCE SHOWN IN TEXT)',
+        'Distortion / Phaser / Chorus / EQ / Reverb / Delay / Compressor / Clipper')
     arrow(234, 35, 234, 20)
-    drawing.add(String(234, 5, 'COMPRESSOR -> CLIPPER -> MAIN -> LIMITER -> STEREO OUTPUT',
+    drawing.add(String(234, 5, 'MAIN -> LIMITER (FIXED OUTPUT) -> STEREO OUTPUT',
                        fontName='OpenSans-Bold', fontSize=8, textAnchor='middle', fillColor=ink))
     scale = (A4[0] - 84) / 468
     drawing.scale(scale, scale)

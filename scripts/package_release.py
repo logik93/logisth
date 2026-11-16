@@ -103,6 +103,12 @@ def package(preview: Path, calibration: Path, kick_benchmark: Path | None = None
             raise ValueError('Dynamics/CPU measurements are incomplete')
         bundles.append(('dynamics-cpu-calibration', [(dynamics_cpu/n,n) for n in required] +
                         [(root/'docs/DYNAMICS_CPU.md','README.md')]))
+    if tuple(map(int, version.split('.'))) >= (0, 9, 7):
+        files = [(root / 'docs/rack/theme-contrast.csv', 'theme-contrast.csv'),
+                 (root / 'docs/RACK_REVIEW.md', 'README.md')]
+        if any(not file.is_file() for file, _ in files):
+            raise ValueError('Missing rack/skin validation evidence')
+        bundles.append(('rack-skin-review', files))
     folder.mkdir(parents=True)
     for file, name in copies:
         shutil.copyfile(file, folder / name)

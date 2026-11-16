@@ -101,7 +101,7 @@ class EqView : public juce::Component, public juce::SettableTooltipClient {
                 else
                     curve.lineTo(xx, yy);
             }
-            g.setColour(theme.green);
+            g.setColour(theme.screenAccent);
             g.strokePath(curve, juce::PathStrokeType(1.8f));
             if (p.eqMode == 1)
                 for (int i = 0; i < logisth::eqMaxBands; ++i)
@@ -110,7 +110,7 @@ class EqView : public juce::Component, public juce::SettableTooltipClient {
                         float yy = juce::jlimit(
                             area.getY() + 4, area.getBottom() - 4,
                             y((p.eqTypes[n] < 3 ? p.eqBands[n] : 0) + p.eqOutput - compensation));
-                        g.setColour(i == selected ? theme.mint : theme.green.withAlpha(.7f));
+                        g.setColour(i == selected ? theme.mint : theme.screenAccent.withAlpha(.7f));
                         g.fillEllipse(x(p.eqFrequencies[n]) - 3, yy - 3, 6, 6);
                         if (i == selected) {
                             g.drawEllipse(x(p.eqFrequencies[n]) - 6, yy - 6, 12, 12, 1.1f);

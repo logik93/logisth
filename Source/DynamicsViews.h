@@ -52,13 +52,13 @@ class ImpulseView : public Component, public FileDragAndDropTarget {
             g.drawText(ch == 0 ? "L" : "R", 2, int(mid) - 6, 15, 12, Justification::centred);
         }
         if (over) {
-            g.setColour(c.green.withAlpha(.35f));
+            g.setColour(c.screenAccent.withAlpha(.35f));
             g.fillRoundedRectangle(getLocalBounds().toFloat(), 4);
             g.setColour(c.screenText);
             g.setFont(font(12));
             g.drawText("DROP IMPULSE RESPONSE", getLocalBounds(), Justification::centred);
         }
-        g.setColour(over ? c.green : c.screenLine);
+        g.setColour(over ? c.screenAccent : c.screenLine);
         g.drawRoundedRectangle(getLocalBounds().toFloat().reduced(.5f), 4, 1);
     }
 };
@@ -106,7 +106,7 @@ class DynamicsView : public Component {
                        std::clamp((threshold - knee * .5f + 60) / 60, 0.f, 1.f) * graph.getWidth();
             float x2 = graph.getX() +
                        std::clamp((threshold + knee * .5f + 60) / 60, 0.f, 1.f) * graph.getWidth();
-            g.setColour(c.green.withAlpha(.2f));
+            g.setColour(c.screenAccent.withAlpha(.2f));
             g.fillRect(
                 Rectangle<float>(x1, graph.getY(), std::max(1.f, x2 - x1), graph.getHeight()));
             for (int i = 0; i <= 200; ++i) {
@@ -157,7 +157,7 @@ class DynamicsView : public Component {
         }
         g.saveState();
         g.reduceClipRegion(graph.toNearestInt());
-        g.setColour(c.green);
+        g.setColour(c.screenAccent);
         g.strokePath(curve, PathStrokeType(1.8f));
         g.restoreState();
         auto &meter = p.dynamicsMeters[size_t(mode)];
@@ -190,13 +190,13 @@ class DynamicsView : public Component {
                 else
                     path.lineTo(x, y);
             }
-            g.setColour(channel == 0 ? c.mint.withAlpha(.35f) : c.green);
+            g.setColour(channel == 0 ? c.mint.withAlpha(.35f) : c.screenAccent);
             g.strokePath(path, PathStrokeType(channel == 0 ? 1.f : 1.5f));
         }
         const int barY = getHeight() - 17;
         g.setColour(c.screenLine);
         g.fillRoundedRectangle(float(half + 8), float(barY), float(half - 108), 8, 2);
-        g.setColour(c.green);
+        g.setColour(c.screenAccent);
         g.fillRoundedRectangle(float(half + 8), float(barY),
                                float(half - 108) * std::clamp(reduction / 24, 0.f, 1.f), 8, 2);
         text(g, "GR " + String(reduction, 1) + " dB", {getWidth() - 92, barY - 3, 90, 14}, 10);
