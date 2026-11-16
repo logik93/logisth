@@ -99,7 +99,7 @@ class TechnicalDocument(BaseDocTemplate):
 def render(root):
     root = Path(root)
     markdown = root / 'docs/TECHNICAL_MANUAL.md'
-    source = markdown.read_text()
+    source = markdown.read_text(encoding='utf-8')
     version = re.match(r'# logisth ([\d.]+) — Technical Manual', source).group(1)
     revision = re.search(r'Document revision: ([\d.]+)', source).group(1)
     pdf = root / 'docs/logisth-Technical-Manual-English.pdf'
@@ -221,7 +221,7 @@ def render(root):
               'implementation_sha256': implementation_hash(root),
               'markdown_sha256': text_hash(markdown),
               'pdf_sha256': hashlib.sha256(pdf.read_bytes()).hexdigest()}
-    (root / 'docs/technical-manual.json').write_text(json.dumps(record, indent=2) + '\n')
+    (root / 'docs/technical-manual.json').write_text(json.dumps(record, indent=2) + '\n', encoding='utf-8')
     verify(root)
     print('Rendered docs/logisth-Technical-Manual-English.pdf and signal-flow diagram')
 

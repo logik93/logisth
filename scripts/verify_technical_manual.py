@@ -27,11 +27,11 @@ def implementation_hash(root: Path) -> str:
 
 def verify(root: Path) -> None:
     version = re.search(r'project\(Logisth VERSION ([\d.]+)',
-                        (root / 'CMakeLists.txt').read_text()).group(1)
+                        (root / 'CMakeLists.txt').read_text(encoding='utf-8')).group(1)
     markdown = root / 'docs/TECHNICAL_MANUAL.md'
     pdf = root / 'docs/logisth-Technical-Manual-English.pdf'
-    record = json.loads((root / 'docs/technical-manual.json').read_text())
-    if not markdown.read_text().startswith(f'# logisth {version} — Technical Manual\n'):
+    record = json.loads((root / 'docs/technical-manual.json').read_text(encoding='utf-8'))
+    if not markdown.read_text(encoding='utf-8').startswith(f'# logisth {version} — Technical Manual\n'):
         raise ValueError('Update the technical manual software baseline before releasing')
     expected = {'format': 1, 'software_version': version,
                 'implementation_sha256': implementation_hash(root),
