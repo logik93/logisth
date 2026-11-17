@@ -87,6 +87,8 @@ inline void typography(const File &report) {
                     if (report != File{} && dpi == 1 && quality == 2 && aa) {
                         FileOutputStream out(
                             report.getChildFile("glyph-scale-" + String(scale, 3) + ".png"));
+                        out.setPosition(0);
+                        out.truncate();
                         PNGImageFormat png;
                         check(png.writeImageToStream(image, out), "glyph report PNG");
                     }
@@ -147,6 +149,8 @@ inline void run(const File &report = {}) {
         if (report == File{})
             return;
         FileOutputStream out(report.getChildFile(name + ".png"));
+        out.setPosition(0);
+        out.truncate();
         PNGImageFormat png;
         check(png.writeImageToStream(ui->createComponentSnapshot(ui->getLocalBounds()), out),
               "appearance UI report");
@@ -236,11 +240,15 @@ inline void run(const File &report = {}) {
          jpegFile = root.getChildFile("background.jpg");
     {
         FileOutputStream out(pngFile);
+        out.setPosition(0);
+        out.truncate();
         PNGImageFormat png;
         check(png.writeImageToStream(source, out), "PNG fixture");
     }
     {
         FileOutputStream out(jpegFile);
+        out.setPosition(0);
+        out.truncate();
         JPEGImageFormat jpeg;
         check(jpeg.writeImageToStream(source, out), "JPEG fixture");
     }
@@ -309,6 +317,8 @@ inline void run(const File &report = {}) {
         auto file = report.getChildFile("example-background.png");
         {
             FileOutputStream out(file);
+            out.setPosition(0);
+            out.truncate();
             PNGImageFormat png;
             check(png.writeImageToStream(artwork, out), "example background");
         }
@@ -355,6 +365,8 @@ inline void run(const File &report = {}) {
     const auto large = root.getChildFile("large.png");
     {
         FileOutputStream out(large);
+        out.setPosition(0);
+        out.truncate();
         PNGImageFormat png;
         check(png.writeImageToStream(noise, out), "large PNG fixture");
     }

@@ -46,3 +46,6 @@ parameter reachability/layout regression coverage remains active.
 `processor_tests --appearance0981-report /absolute/folder` exports the matrix and
 illustrative PNG captures. No audio algorithms, 1084 sound parameters, standard
 palette assets, AP artwork or the supplied standard SVG were changed.
+
+Report writers replace existing PNGs. Repeating the export is checked; release
+validation rejects trailing/concatenated PNG data after IEND.

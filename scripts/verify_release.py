@@ -4,6 +4,7 @@ import hashlib
 import csv
 import io
 import re
+import struct
 import sys
 import tarfile
 import zipfile
@@ -44,6 +45,23 @@ def verify(tag: str) -> None:
     required |= {"logisth-Manual-English.pdf", "logisth-Manual-English.md",
                  "logisth-LICENSE-MIT.txt", "logisth-ThirdPartyNotices.md",
                  f"logisth-{version}-themes.zip", f"logisth-{version}-calibration.zip"}
+    for name in names:
+        if not name.endswith('.png'):
+            continue
+        data = (folder / name).read_bytes()
+        if not data.startswith(b'\x89PNG\r\n\x1a\n'):
+            raise ValueError(f'Invalid PNG signature: {name}')
+        at = 8
+        while at + 12 <= len(data):
+            length = struct.unpack_from('>I', data, at)[0]
+            kind = data[at + 4:at + 8]
+            at += length + 12
+            if kind == b'IEND':
+                break
+        else:
+            raise ValueError(f'Missing PNG end: {name}')
+        if at != len(data):
+            raise ValueError(f'Trailing or concatenated PNG data: {name}')
     if names != actual or not required.issubset(names):
         raise ValueError("Release manifest does not cover all expected assets")
     if not (root / "docs" / f"RELEASE-{tag}.md").is_file():
