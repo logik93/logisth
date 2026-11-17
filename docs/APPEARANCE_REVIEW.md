@@ -51,10 +51,15 @@ Report writers replace existing PNGs. Repeating the export is checked; release
 validation rejects trailing/concatenated PNG data after IEND.
 
 Physical glyph masks are coloured in software and drawn as small RGBA images.
-Native alpha-clip bitmap brushes can re-filter masks and affect later primitive
-rendering; the glyph path avoids those native clip layers. Vector operations
+Native alpha-clip bitmap brushes can re-filter masks; the glyph path avoids
+those native clip layers. Vector operations
 continue directly through the original graphics context.
 
 The vector proxy forwards optional primitive fast paths as well as pure virtual
 methods. Native Windows ellipses/strokes must not be replaced by the default
 Bezier fallback. The matrix retains exact same-backend pixel comparison.
+
+The focused native Windows run [44178278193](https://github.com/logik93/logisth/actions/runs/44178278193)
+passed all 96 cases, actual backgrounds/folders and ten popup palettes. Its source
+baseline is recorded in appearance/windows-probe.json; full native release gates
+run separately. Local full CTest also passed 20/20 without failures/skips.

@@ -1,0 +1,6 @@
+{
+  "source_commit": "47b14040987031f7cb5b9223f7faaa19612bb49d",
+  "run_id": "44178278193",
+  "phase": "passed",
+  "test.log": "PASS 0.9.8.1 appearance: 96 text scale/DPI/quality cases, coverage, exact vectors, five folders, portable PNG/JPEG/grid backgrounds and ten-theme popups\n"
+}

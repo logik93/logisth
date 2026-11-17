@@ -122,7 +122,8 @@ def package(preview: Path, calibration: Path, kick_benchmark: Path | None = None
     if tuple(map(int, version.split('.'))) >= (0, 9, 8, 1):
         appearance = root / 'dist' / f'appearance-{version}'
         files = [(root / 'docs/APPEARANCE_REVIEW.md', 'README.md'), (root / 'LICENSE', 'LICENSE'),
-                 (root / 'docs/appearance/text-rendering.csv', 'text-rendering.csv')]
+                 (root / 'docs/appearance/text-rendering.csv', 'text-rendering.csv'),
+                 (root / 'docs/appearance/windows-probe.json', 'windows-probe.json')]
         files += [(p, 'images/' + p.name) for p in sorted(appearance.glob('*.png'))]
         if len(files) < 12 or any(not p.is_file() for p, _ in files):
             raise ValueError('Missing complete appearance regression evidence')

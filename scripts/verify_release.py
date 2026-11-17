@@ -3,6 +3,7 @@
 import hashlib
 import csv
 import io
+import json
 import re
 import struct
 import sys
@@ -161,6 +162,9 @@ def verify(tag: str) -> None:
         if name not in names:
             raise ValueError('Missing appearance regression evidence')
         with zipfile.ZipFile(folder / name) as archive:
+            probe = json.loads(archive.read('windows-probe.json'))
+            if probe.get('phase') != 'passed' or 'PASS 0.9.8.1 appearance' not in probe.get('test.log', ''):
+                raise ValueError('Missing native Windows glyph validation')
             rows = list(csv.DictReader(io.StringIO(archive.read('text-rendering.csv').decode())))
             cases = {(r['ui_scale'], r['dpi'], r['quality'], r['antialias']) for r in rows}
             if len(rows) != 96 or len(cases) != 96:
