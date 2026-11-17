@@ -1,12 +1,12 @@
 {
   "tag": "v0.9.8.1",
-  "automation_commit": "c08ff75a934a7f364bb07001b21c1098109b858a",
-  "run_id": "44171617882",
-  "run_url": "https://github.com/logik93/logisth/actions/runs/44171617882",
+  "automation_commit": "1635de7c8e32187080bcc6607d13ade0c5119298",
+  "run_id": "44173810313",
+  "run_url": "https://github.com/logik93/logisth/actions/runs/44173810313",
   "phase": "failed",
   "pipeline_phase": "failed",
   "stage": "",
-  "recorded_at": "2026-11-17T20:45:12.565916+00:00",
+  "recorded_at": "2026-11-17T21:09:03.041219+00:00",
   "check": "windows-asan",
   "platform": "windows-x86_64"
 }
