@@ -7,7 +7,12 @@ namespace logisth_ui {
 class TextGraphics : public juce::LowLevelGraphicsContext {
     juce::LowLevelGraphicsContext &target;
     juce::AffineTransform transform;
-    std::vector<juce::AffineTransform> saved;
+    struct State {
+        juce::AffineTransform transform;
+        juce::FillType fill;
+    };
+    juce::FillType fill;
+    std::vector<State> saved;
     logisth::UserSettings::Text settings;
     std::array<uint8_t, 256> coverage{};
 
@@ -72,12 +77,13 @@ class TextGraphics : public juce::LowLevelGraphicsContext {
         return target.isClipEmpty();
     }
     void saveState() override {
-        saved.push_back(transform);
+        saved.push_back({transform, fill});
         target.saveState();
     }
     void restoreState() override {
         if (!saved.empty()) {
-            transform = saved.back();
+            transform = saved.back().transform;
+            fill = saved.back().fill;
             saved.pop_back();
         }
         target.restoreState();
@@ -89,9 +95,11 @@ class TextGraphics : public juce::LowLevelGraphicsContext {
         target.endTransparencyLayer();
     }
     void setFill(const juce::FillType &fill) override {
+        this->fill = fill;
         target.setFill(fill);
     }
     void setOpacity(float opacity) override {
+        fill.setOpacity(opacity);
         target.setOpacity(opacity);
     }
     void setInterpolationQuality(juce::Graphics::ResamplingQuality quality) override {
@@ -191,14 +199,27 @@ class TextGraphics : public juce::LowLevelGraphicsContext {
                     *output.getPixelPointer(x, y) = coverage[average];
                 }
         }
+        // Colour the physical-pixel mask in software, then draw the small glyph
+        // image directly. Native alpha-clip layers can filter the mask again and
+        // alter subsequent primitive rendering (notably Direct2D bitmap brushes).
+        juce::Image ink(juce::Image::ARGB, bounds.getWidth(), bounds.getHeight(), true,
+                        juce::SoftwareImageType{});
+        {
+            juce::Graphics graphics(ink);
+            graphics.setImageResamplingQuality(juce::Graphics::lowResamplingQuality);
+            graphics.reduceClipRegion(mask, {});
+            auto paint = fill;
+            paint.transform = paint.transform.followedBy(transform).translated(
+                -float(bounds.getX()), -float(bounds.getY()));
+            graphics.setFillType(paint);
+            graphics.fillRect(ink.getBounds());
+        }
         target.saveState();
-        // The mask already has physical-pixel coverage. Inverse-transform rounding
-        // must not filter it a second time (in particular, AA Off must stay binary).
+        target.setOpacity(1); // opacity is already in the coloured glyph pixels
         target.setInterpolationQuality(juce::Graphics::lowResamplingQuality);
-        target.clipToImageAlpha(
-            mask, juce::AffineTransform::translation(float(bounds.getX()), float(bounds.getY()))
-                      .followedBy(transform.inverted()));
-        target.fillRect(target.getClipBounds(), false);
+        target.drawImage(
+            ink, juce::AffineTransform::translation(float(bounds.getX()), float(bounds.getY()))
+                     .followedBy(transform.inverted()));
         target.restoreState();
     }
 };

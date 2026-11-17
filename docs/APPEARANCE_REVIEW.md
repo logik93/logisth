@@ -49,3 +49,8 @@ palette assets, AP artwork or the supplied standard SVG were changed.
 
 Report writers replace existing PNGs. Repeating the export is checked; release
 validation rejects trailing/concatenated PNG data after IEND.
+
+Physical glyph masks are coloured in software and drawn as small RGBA images.
+Native alpha-clip bitmap brushes can re-filter masks and affect later primitive
+rendering; the glyph path avoids those native clip layers. Vector operations
+continue directly through the original graphics context.

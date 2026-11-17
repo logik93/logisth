@@ -66,6 +66,24 @@ inline void typography(const File &report) {
                     prefs.antialias = aa;
                     glyphs.setCachedComponentImage(new logisth_ui::TextImage(glyphs, prefs));
                     auto image = frame.createComponentSnapshot(frame.getLocalBounds(), true, dpi);
+                    if (!equalPixels(normal, image, vectors)) {
+                        Image::BitmapData a(normal, Image::BitmapData::readOnly),
+                            b(image, Image::BitmapData::readOnly);
+                        int count = 0, maximum = 0;
+                        for (int y = vectors.getY(); y < vectors.getBottom(); ++y)
+                            for (int x = vectors.getX(); x < vectors.getRight(); ++x) {
+                                const auto one = a.getPixelColour(x, y),
+                                           two = b.getPixelColour(x, y);
+                                if (one != two) {
+                                    ++count;
+                                    maximum = jmax(maximum,
+                                                   std::abs(int(one.getRed()) - int(two.getRed())));
+                                }
+                            }
+                        std::cerr << "Vector matrix scale=" << scale << " dpi=" << dpi
+                                  << " quality=" << quality << " aa=" << aa << " pixels=" << count
+                                  << " max=" << maximum << '\n';
+                    }
                     check(
                         equalPixels(normal, image, vectors),
                         "text rendering preserves exact vector pixels at fractional UI/DPI scales");

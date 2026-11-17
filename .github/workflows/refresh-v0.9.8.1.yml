@@ -1,0 +1,79 @@
+name: Refresh unpublished v0.9.8.1 build
+on:
+  push:
+    branches: [master]
+    paths: ['.github/workflows/refresh-v0.9.8.1.yml']
+permissions:
+  contents: read
+  actions: write
+jobs:
+  stop_unpublished_build:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Stop only the superseded, unpublished build
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python3 - <<'PY'
+          import json, os
+          from urllib.request import Request, urlopen
+          from urllib.error import HTTPError
+          base='https://api.github.com/repos/'+os.environ['GITHUB_REPOSITORY']
+          headers={'Authorization':'Bearer '+os.environ['GH_TOKEN'],'Accept':'application/vnd.github+json'}
+          try:
+              with urlopen(Request(base+'/releases/tags/v0.9.8.1',headers=headers)) as response:
+                  raise SystemExit('Refusing to refresh an already published release')
+          except HTTPError as error:
+              if error.code != 404: raise
+          url=base+'/actions/runs/44173810313'
+          with urlopen(Request(url,headers=headers)) as response: run=json.load(response)
+          assert run['head_sha']=='1635de7c8e32187080bcc6607d13ade0c5119298'
+          assert run['head_branch']=='v0.9.8.1' and run['event']=='push'
+          if run['status']!='completed':
+              with urlopen(Request(url+'/cancel',headers=headers,method='POST')) as response:
+                  assert response.status==202
+          print('Superseded unpublished build cancellation requested')
+          PY
+  windows_glyph_probe:
+    runs-on: windows-2022
+    timeout-minutes: 30
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compile and inspect native Windows glyph rendering
+        shell: python
+        run: |
+          import json,os,subprocess,sys
+          from pathlib import Path
+          sys.path.insert(0,'scripts')
+          import build_native as native
+          logs=Path('probe-logs');logs.mkdir(exist_ok=True)
+          result={'source_commit':os.environ['GITHUB_SHA'],'run_id':os.environ['GITHUB_RUN_ID']}
+          try:
+              deps=Path('probe-deps').resolve()
+              native.dependencies(deps,logs)
+              native.run(['cmake','-S','.','-B','probe-build','-A','x64','-DBUILD_TESTING=ON','-DLOGISTH_VST2=OFF','-DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded$<$<CONFIG:Debug>:Debug>',
+                  '-DFETCHCONTENT_SOURCE_DIR_JUCE='+str(deps/'JUCE'),
+                  '-DFETCHCONTENT_SOURCE_DIR_CLAP_JUCE_EXTENSIONS='+str(deps/'clap-juce-extensions')],logs/'configure.log')
+              native.run(['cmake','--build','probe-build','--target','processor_tests','--config','Release','--parallel','2'],logs/'build.log')
+              native.run(['probe-build/Release/processor_tests.exe','--appearance0981-report',str(Path('probe-images').resolve())],logs/'test.log')
+              result['phase']='passed'
+          except Exception as error:
+              result['phase']='failed';result['error']=str(error)
+          for file in logs.glob('*.log'):
+              if file.name in ['build.log','test.log','configure.log']:
+                  result[file.name]=file.read_text(errors='replace')[-16000:]
+          print(json.dumps(result,indent=2))
+          Path('status.json').write_text(json.dumps(result,indent=2)+'\n')
+          subprocess.run(['git','config','user.name','github-actions[bot]'],check=True)
+          subprocess.run(['git','config','user.email','41898282+github-actions[bot]@users.noreply.github.com'],check=True)
+          ref='refs/heads/ci-font-v0.9.8.1'
+          remote=subprocess.check_output(['git','ls-remote','origin',ref],text=True).split()
+          previous=remote[0] if remote else ''
+          subprocess.run(['git','checkout','--orphan','font-report'],check=True)
+          subprocess.run(['git','rm','-rf','.'],check=True,stdout=subprocess.DEVNULL)
+          subprocess.run(['git','add','status.json'],check=True)
+          subprocess.run(['git','commit','-m','Native Windows glyph rendering result'],check=True)
+          subprocess.run(['git','push','--force-with-lease='+ref+':'+previous,'origin','HEAD:'+ref],check=True)
+          if result['phase']!='passed':raise SystemExit(1)

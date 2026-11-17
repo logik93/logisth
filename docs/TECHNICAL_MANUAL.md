@@ -975,3 +975,8 @@ the release tag matching a binary when investigating a specific implementation.
 | 1.1 | 0.9.7 | Reorderable FX, saved order and live fade, 32-note capacity/default 16, additive host control, serial idle horizons, contrast-aware skins and expanded validation |
 | 1.3 | 0.9.8.1 | Direct glyph rendering, selectable AA/supersampling and edge weight, uniform scaling, portable PNG/JPEG/grid backgrounds, folder controls and themed context menus |
 | 1.2 | 0.9.8 | Four-stage distortion, pre/post stereo-power FFT, categorized settings, glyph AA/size/style, persistent dialogs, exact SVG branding and real-WAV stereo checks |
+
+Physical glyph masks are coloured in software and drawn as small RGBA images.
+Native alpha-clip bitmap brushes can re-filter masks and affect later primitive
+rendering; the glyph path avoids those native clip layers. Vector operations
+continue directly through the original graphics context.
