@@ -1,0 +1,10 @@
+{
+  "tag": "v0.9.8",
+  "automation_commit": "452596fac14ce0457dcd3dccdedca84991900094",
+  "run_id": "44140883316",
+  "run_url": "https://github.com/logik93/logisth/actions/runs/44140883316",
+  "phase": "building",
+  "pipeline_phase": "building",
+  "stage": "",
+  "recorded_at": "2026-11-17T17:48:00.910830+00:00"
+}
