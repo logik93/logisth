@@ -3,8 +3,34 @@
   "automation_commit": "1635de7c8e32187080bcc6607d13ade0c5119298",
   "run_id": "44173810313",
   "run_url": "https://github.com/logik93/logisth/actions/runs/44173810313",
-  "phase": "building",
-  "pipeline_phase": "building",
-  "stage": "",
-  "recorded_at": "2026-11-17T20:52:26.640894+00:00"
+  "phase": "failed",
+  "pipeline_phase": "failed",
+  "stage": "windows-linux",
+  "recorded_at": "2026-11-17T21:09:37.142283+00:00",
+  "jobs": {
+    "started": {
+      "result": "success",
+      "outputs": {}
+    },
+    "plugins": {
+      "result": "failure",
+      "outputs": {}
+    },
+    "windows_asan": {
+      "result": "cancelled",
+      "outputs": {}
+    },
+    "publish": {
+      "result": "cancelled",
+      "outputs": {}
+    }
+  },
+  "failures": [
+    {
+      "log": "ci-artifacts/native-windows-x86_64/logs/tests.log",
+      "errors": [
+        "The following tests FAILED:"
+      ]
+    }
+  ]
 }
