@@ -759,6 +759,12 @@ remain readable. FILES directory selection is an application preference; library
 changes refresh the preset browser. Context popups bind the owning look-and-feel
 explicitly instead of using the application default.
 
+Physical glyph masks are coloured in software and drawn as small RGBA images.
+This avoids native alpha-clip bitmap brushes that can re-filter masks. Every
+vector primitive, including optional native fast paths for ellipses, rounded
+rectangles, strokes and thick lines, is forwarded explicitly to the original
+context. Default fallback implementations must not replace native geometry.
+
 The exact owner-provided SVG is embedded through BinaryData and tinted on palette
 changes. Standard headers use the smaller mark with no adjacent wordmark; the
 footer identifies manufacturer/product/instrument. AP bitmap bytes and logo
