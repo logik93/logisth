@@ -759,6 +759,12 @@ remain readable. FILES directory selection is an application preference; library
 changes refresh the preset browser. Context popups bind the owning look-and-feel
 explicitly instead of using the application default.
 
+Physical glyph masks are coloured in software and drawn as small RGBA images.
+This avoids native alpha-clip bitmap brushes that can re-filter masks. Every
+vector primitive, including optional native fast paths for ellipses, rounded
+rectangles, strokes and thick lines, is forwarded explicitly to the original
+context. Default fallback implementations must not replace native geometry.
+
 The exact owner-provided SVG is embedded through BinaryData and tinted on palette
 changes. Standard headers use the smaller mark with no adjacent wordmark; the
 footer identifies manufacturer/product/instrument. AP bitmap bytes and logo
@@ -975,8 +981,3 @@ the release tag matching a binary when investigating a specific implementation.
 | 1.1 | 0.9.7 | Reorderable FX, saved order and live fade, 32-note capacity/default 16, additive host control, serial idle horizons, contrast-aware skins and expanded validation |
 | 1.3 | 0.9.8.1 | Direct glyph rendering, selectable AA/supersampling and edge weight, uniform scaling, portable PNG/JPEG/grid backgrounds, folder controls and themed context menus |
 | 1.2 | 0.9.8 | Four-stage distortion, pre/post stereo-power FFT, categorized settings, glyph AA/size/style, persistent dialogs, exact SVG branding and real-WAV stereo checks |
-
-Physical glyph masks are coloured in software and drawn as small RGBA images.
-Native alpha-clip bitmap brushes can re-filter masks and affect later primitive
-rendering; the glyph path avoids those native clip layers. Vector operations
-continue directly through the original graphics context.

@@ -1,4 +1,4 @@
-name: Refresh unpublished v0.9.8.1 build
+name: Verify native primitive forwarding for v0.9.8.1
 on:
   push:
     branches: [master]

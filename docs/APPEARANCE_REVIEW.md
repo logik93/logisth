@@ -21,8 +21,8 @@ coverage and compares neighboring vector pixels exactly with the unwrapped
 renderer. Off must have two glyph gray levels; smoothing must have intermediate
 coverage. Additional cases check monotonic edge weight and transparent text
 replacement without stale letters. Real editor snapshots exercise fractional
-window sizes and uniform transforms. These are software-rendering regressions,
-not a claim of identical native font hinting on every operating system.
+window sizes and uniform transforms. These are off-screen regressions through the platform image backend, not a
+claim of identical font hinting between operating systems or full driver coverage.
 
 Five FILES rows expose CHOOSE/OPEN: Library, Preset Load, Preset Save, Samples and
 Impulses. Tests select real directories through the same handler used by chooser
@@ -54,3 +54,7 @@ Physical glyph masks are coloured in software and drawn as small RGBA images.
 Native alpha-clip bitmap brushes can re-filter masks and affect later primitive
 rendering; the glyph path avoids those native clip layers. Vector operations
 continue directly through the original graphics context.
+
+The vector proxy forwards optional primitive fast paths as well as pure virtual
+methods. Native Windows ellipses/strokes must not be replaced by the default
+Bezier fallback. The matrix retains exact same-backend pixel comparison.

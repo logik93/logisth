@@ -105,6 +105,32 @@ class TextGraphics : public juce::LowLevelGraphicsContext {
     void setInterpolationQuality(juce::Graphics::ResamplingQuality quality) override {
         target.setInterpolationQuality(quality);
     }
+    void fillAll() override {
+        target.fillAll();
+    }
+    void drawRect(const juce::Rectangle<float> &r, float thickness) override {
+        target.drawRect(r, thickness);
+    }
+    void strokePath(const juce::Path &p, const juce::PathStrokeType &stroke,
+                    const juce::AffineTransform &t) override {
+        target.strokePath(p, stroke, t);
+    }
+    void drawLineWithThickness(const juce::Line<float> &line, float thickness) override {
+        target.drawLineWithThickness(line, thickness);
+    }
+    void drawRoundedRectangle(const juce::Rectangle<float> &r, float corner,
+                              float thickness) override {
+        target.drawRoundedRectangle(r, corner, thickness);
+    }
+    void fillRoundedRectangle(const juce::Rectangle<float> &r, float corner) override {
+        target.fillRoundedRectangle(r, corner);
+    }
+    void drawEllipse(const juce::Rectangle<float> &r, float thickness) override {
+        target.drawEllipse(r, thickness);
+    }
+    void fillEllipse(const juce::Rectangle<float> &r) override {
+        target.fillEllipse(r);
+    }
     void fillRect(const juce::Rectangle<int> &r, bool replace) override {
         target.fillRect(r, replace);
     }
