@@ -14,6 +14,8 @@ class UserSettings {
         double size = 100;
         int style = 0; // Theme, Regular, Bold, Italic, Bold italic.
         bool antialias = true;
+        int quality = 2; // Native, grayscale, 2x or 4x glyph supersampling.
+        double edgeWeight = 1;
     };
     struct Analyzer {
         int mode = 3, tilt = 2; // Off, Pre, Post, Both; 0/1.5/3/4.5/6 dB/oct.
@@ -32,7 +34,8 @@ class UserSettings {
     }
     static bool setText(Text value) {
         if (!std::isfinite(value.size) || value.size < 80 || value.size > 125 || value.style < 0 ||
-            value.style > 4)
+            value.style > 4 || value.quality < 0 || value.quality > 3 ||
+            !std::isfinite(value.edgeWeight) || value.edgeWeight < .5 || value.edgeWeight > 2)
             return false;
         auto &s = store();
         const juce::ScopedLock lock(s.lock);
@@ -52,6 +55,8 @@ class UserSettings {
         return s.write();
     }
     static juce::File folder(Folder kind, const juce::File &fallback = {}) {
+        if (size_t(kind) >= size_t(Folder::Count))
+            return fallback;
         auto &s = store();
         const juce::ScopedLock lock(s.lock);
         s.read();
@@ -65,7 +70,8 @@ class UserSettings {
         return path.isDirectory() ? path : fallback;
     }
     static bool remember(Folder kind, const juce::File &directory) {
-        if (directory == juce::File{} || !directory.isDirectory())
+        if (size_t(kind) >= size_t(Folder::Count) || directory == juce::File{} ||
+            !directory.isDirectory())
             return false;
         auto &s = store();
         const juce::ScopedLock lock(s.lock);
@@ -132,6 +138,13 @@ class UserSettings {
                 typography.style = int(style);
             if (aa.isBool())
                 typography.antialias = bool(aa);
+            const auto quality = o->getProperty("textQuality"),
+                       weight = o->getProperty("textEdgeWeight");
+            if (quality.isInt() && int(quality) >= 0 && int(quality) <= 3)
+                typography.quality = int(quality);
+            if ((weight.isInt() || weight.isDouble()) && std::isfinite(double(weight)) &&
+                double(weight) >= .5 && double(weight) <= 2)
+                typography.edgeWeight = double(weight);
             auto mode = o->getProperty("analyzerMode"), tilt = o->getProperty("analyzerTilt");
             if (mode.isInt() && int(mode) >= 0 && int(mode) <= 3)
                 spectrum.mode = int(mode);
@@ -147,10 +160,12 @@ class UserSettings {
         bool write() const {
             auto *o = new juce::DynamicObject;
             const juce::var json(o);
-            o->setProperty("version", 1);
+            o->setProperty("version", 2);
             o->setProperty("textSize", typography.size);
             o->setProperty("textStyle", typography.style);
             o->setProperty("textAntialias", typography.antialias);
+            o->setProperty("textQuality", typography.quality);
+            o->setProperty("textEdgeWeight", typography.edgeWeight);
             o->setProperty("analyzerMode", spectrum.mode);
             o->setProperty("analyzerTilt", spectrum.tilt);
             for (size_t i = 0; i < keys.size(); ++i)

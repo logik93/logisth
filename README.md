@@ -1,4 +1,4 @@
-# logisth 0.9.8
+# logisth 0.9.8.1
 
 **wavelogik logisth — a three-part polyphonic subtractive synthesizer with a compact single-window console.**
 VST3, CLAP and Standalone for Windows, macOS and Linux. Built with JUCE and an
@@ -8,6 +8,18 @@ independent synthesis engine.
 [Technical Manual PDF](docs/logisth-Technical-Manual-English.pdf)
 
 ![logisth dark interface](docs/images/logisth-dark.png)
+
+## New in 0.9.8.1
+
+Text now renders directly at the current display scale, without resizing a
+full-interface bitmap. TEXT offers Native, Grayscale, 2x/4x supersampling,
+AA Off and edge weight 50–200%. Fractional resizing keeps a uniform aspect ratio.
+FILES adds CHOOSE/OPEN for the library, preset load/save, samples and IRs.
+SKIN imports portable PNG/JPEG backgrounds, adds image/grid combinations and
+image/panel opacity controls. Distortion has a reserved title row; redundant
+headings behind inline controls are removed. Patch and effect context menus
+follow the selected theme. Audio parameters and DSP remain unchanged.
+See the [appearance review](docs/APPEARANCE_REVIEW.md) for validation and limits.
 
 ## New in 0.9.8
 

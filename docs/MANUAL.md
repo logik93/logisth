@@ -1,9 +1,9 @@
-# logisth 0.9.8 — User Manual
+# logisth 0.9.8.1 — User Manual
 
 wavelogik logisth is a three-part polyphonic subtractive synthesizer for VST3, CLAP and standalone use.
 This manual describes logisth's controls, sound engines and preset workflow.
 
-This edition describes **v0.9.8**. Earlier downloads retain their corresponding
+This edition describes **v0.9.8.1**. Earlier downloads retain their corresponding
 interface and manuals.
 
 ## Contents
@@ -119,18 +119,41 @@ files remain protected. RESET restores the selected saved theme.
 TEXT selects a theme font family (Open Sans and Ioskeley Mono are embedded).
 FONT SIZE accepts 80–125%, including typed values, independently of UI SCALE.
 The reference height and last accepted percentage are displayed. FONT STYLE
-selects Theme default, Regular, Bold, Italic or Bold italic. FONT ANTIALIASING
-smooths glyph edges by default; disabling it gives crisp one-bit glyph edges
-while curves and knobs keep normal antialiasing. Size, style and antialiasing
-are saved globally and recalled by new instances. The theme still owns its font
+selects Theme default, Regular, Bold, Italic or Bold italic. ANTIALIASING enables
+smoothing; the adjacent menu selects Native (platform hinting), Grayscale,
+Supersampled 2x (default) or Supersampled 4x. Off uses one-bit glyph coverage.
+EDGE WEIGHT accepts 50–200%; 100% is neutral, higher values strengthen edges.
+Double-click resets it. Adjusted Native edge weight uses grayscale masks.
+Only glyphs change: curves/knobs retain their vector antialiasing. Text renders
+at the current display scale; the interface is not resized from a text bitmap.
+Size, style, quality, edge weight and AA persist globally across instances. The theme still owns its font
 family. These application preferences and remembered folders are stored in
 `logisth/preferences.json` under the user application-data directory.
 
-SKIN selects Flat/Gradient/Grid background and Arc/Solid/Minimal knobs. Knob and Knob Track
-colours are separate from the accent. These choices preview immediately and are
+FILES provides five independent rows: Library, Preset Load, Preset Save, Samples
+and Impulses. CHOOSE... sets a directory; OPEN reveals it in the system file
+browser. The selected path is displayed. Library changes the searchable preset
+root; the other rows seed the corresponding file dialogs. A successful import,
+load or save updates its last-used directory. Cancelled/failed operations retain
+it; a deleted folder falls back to an existing ancestor.
+
+SKIN selects Flat, Gradient, Grid, Image or Image + grid backgrounds, and
+Arc/Solid/Minimal knobs. LOAD IMAGE... accepts PNG or JPEG. PNG is recommended
+for sharp grids, illustrations and transparency; JPEG suits photographs.
+Use 1240 x 860, or 2480 x 1720 for a higher-resolution image. Maximum input is
+4096 x 4096 pixels and 16 MiB. The image is centred and cropped to fill the canvas.
+IMAGE MIX sets 0–100%; PANELS sets 40–100% opacity for non-flat skins, so the
+background remains visible within panels. CLEAR removes the image. The original
+compressed image is embedded in the theme JSON; save with COLOURS / SAVE NEW or
+SAVE AS... to make it portable. No external image file is needed on another
+machine. Knob and Knob Track colours are separate from the accent. These choices preview immediately and are
 saved with the theme. Unsaved edits stay with this instrument instance when its
 editor closes/reopens or is minimized; save a theme to retain it across sessions.
 Choosing another saved theme or RESET discards the temporary draft.
+
+![Custom PNG background with adjustable panel opacity](images/logisth-skin-image.png)
+
+![Grid background inside instrument panels](images/logisth-skin-grid.png)
 
 Enabled knob needles, arcs and tracks adapt their rendered contrast to their
 actual surface. Light controls inside the dark screen use a dark knob face.
@@ -140,9 +163,9 @@ standard themes. This rendering adjustment does not rewrite theme JSON colors.
 Copy shared .json files into the selected folder to install them. The folder is
 polled every two minutes; RESCAN refreshes it immediately. New files do not
 change the current selection. Invalid files are ignored; removing the selected
-file falls back to Midnight Blue. Version-2 themes contain the name, dark flag,
-twelve RGB colours, font and background/knob styles. Version-1 themes remain
-readable. Use assets/themes as templates; docs/THEMES.md documents the format.
+file falls back to Midnight Blue. Version-3 themes add the embedded background
+image and image/panel opacity to the name, dark flag, twelve RGB colours, font
+and drawing styles. Version-1/2 themes remain readable. Use assets/themes as templates; docs/THEMES.md documents the format.
 
 The editable comment box below SOUND LIBRARY belongs to the sound. Type a note
 there, then save the user preset or DAW project. Comments support Unicode and up

@@ -316,9 +316,8 @@ inline void run(const File &report = {}) {
     size->setText("100%", sendNotificationSync);
     click(*aa);
     check(std::abs(notes->getFont().getHeight() - originalHeight) < .001 &&
-              !console->getCachedComponentImage(),
-          "resetting text preferences restores original size without cumulative scaling or stale "
-          "cache");
+              console->getCachedComponentImage() && UserSettings::text().quality == 2,
+          "resetting text preferences restores original size and default 2x glyph renderer");
     size->setText("999%", sendNotificationSync);
     check(UserSettings::text().size == 100, "out-of-range font size is rejected");
     const auto profileFile = profile.file.getFile();

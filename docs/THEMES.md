@@ -7,8 +7,9 @@ there on first use; source/native packages include them in `assets/themes`.
 Missing standard files are recreated; existing files are retained.
 
 The plug-in polls .json files every **two minutes**. RESCAN reads them immediately.
-Files larger than 64 KiB, malformed JSON, unsupported formats/versions and invalid
-colours are ignored. Subfolders are not scanned. File names identify selections;
+Malformed JSON, unsupported formats/versions and invalid colours are ignored.
+The JSON size bound is the maximum 16 MiB image encoded as base64 plus 64 KiB
+for metadata. Subfolders are not scanned. File names identify selections;
 adding a theme does not switch the current selection. Removing the selected file
 falls back to Midnight Blue.
 
@@ -16,16 +17,20 @@ The sixth standard skin, AP always flexin'!, uses the optional `"skin": "ap-flex
 property to show its embedded white AP mark (without a handwritten signature).
 The skin travels with the plugin and package; it needs no external font file.
 
-Version 2 adds font, background, knob styles and two dedicated knob colours:
+Version 3 adds portable image backgrounds and opacity controls; versions 1/2
+remain readable. A minimal version-3 theme is:
 
 ```json
 {
   "format": "logisth-theme",
-  "version": 2,
+  "version": 3,
   "name": "Ocean",
   "dark": true,
   "font": "Open Sans",
   "backgroundStyle": 1,
+  "backgroundImage": "",
+  "backgroundMix": 0.5,
+  "panelOpacity": 0.85,
   "knobStyle": 0,
   "colours": {
     "body": "#0D1118",
@@ -46,7 +51,7 @@ Version 2 adds font, background, knob styles and two dedicated knob colours:
 
 RGB values are six hexadecimal digits, optionally prefixed by #. Name is 1–64
 characters; dark is a boolean controlling light/dark controls. Background styles
-are 0 Flat, 1 Gradient, 2 Grid; knob styles are 0 Arc, 1 Solid, 2 Minimal. The
+are 0 Flat, 1 Gradient, 2 Grid, 3 Image, 4 Image + grid; knob styles are 0 Arc, 1 Solid, 2 Minimal. The
 font is a family name (up to 128 characters). Open Sans and IoskeleyMonoTerm Nerd
 Font Mono are embedded in logisth. Other fonts must be installed on the destination
 machine and use system fallback if unavailable. JSON theme files do not contain font data.
@@ -64,11 +69,17 @@ fields. Editing selections and preset metadata are preserved.
 
 Version-1 files remain readable; missing extra knob colours default to accent
 and border, font to Open Sans, and styles to Flat/Arc. All twelve palette roles
-are emitted when saving version 2. Choose enough text/background contrast for
+are emitted when saving version 3. Choose enough text/background contrast for
 your display.
 
 COLOURS previews a draft: choose a role, use the colour picker or type a
 hex value and press Enter. TEXT chooses the theme font family; SKIN chooses background and knob drawing.
+LOAD IMAGE... accepts PNG/JPEG up to 4096 x 4096 and 16 MiB. PNG is best for grids
+and transparency; 1240 x 860 or 2480 x 1720 matches the canvas. Image data is embedded
+as base64 in backgroundImage, preserving the original compressed file. No external
+path is required. IMAGE MIX is 0–100%; PANELS is 40–100% for non-flat styles. These
+map to backgroundMix [0,1] and panelOpacity [0.4,1]. Images crop centrally to fill
+the canvas. CLEAR removes the image; saving makes the image and controls portable.
 SAVE NEW writes a unique custom file in the current directory; duplicate names
 receive a suffix. SAVE AS... chooses an exact folder/file name, and makes that
 folder active. RENAME changes the selected custom theme's name/file and saves
@@ -114,3 +125,7 @@ The standard header uses the exact project-owner SVG in assets/branding/logisth.
 tinted to the theme text color and reduced in size. The text description is in
 the lower-right footer. AP header/About artwork uses the existing AP bitmap;
 its source bytes are unchanged.
+
+Text quality is independent of the theme: Native, Grayscale, 2x (default), 4x,
+AA Off and edge weight 50–200% are saved in preferences.json. Only glyph masks
+are supersampled; vector drawing is direct. 4x performs more GUI work than 2x.

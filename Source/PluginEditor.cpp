@@ -51,7 +51,9 @@ void paintShell(Graphics &g, Rectangle<int> b, const String &title, const String
                 const LogisthColours &colours) {
     g.setColour(Colours::black.withAlpha(colours.darkTheme ? .16f : .035f));
     g.fillRoundedRectangle(b.translated(0, 2).toFloat(), 8);
-    g.setColour(colours.panel);
+    g.setColour(colours.backgroundStyle == 0
+                    ? colours.panel
+                    : colours.panel.withAlpha(float(colours.panelOpacity)));
     g.fillRoundedRectangle(b.toFloat(), 8);
     g.setColour(colours.line);
     g.drawRoundedRectangle(b.toFloat().reduced(.5f), 8, 1);
@@ -116,6 +118,8 @@ void LogisthColours::applyPalette(const ThemeDefinition &theme) {
     fontFamily = theme.fontFamily;
     skin = theme.skin;
     backgroundStyle = theme.backgroundStyle;
+    backgroundMix = theme.backgroundMix;
+    panelOpacity = theme.panelOpacity;
     knobStyle = theme.knobStyle;
     knobColour = theme.colours[10];
     knobTrack = theme.colours[11];
@@ -172,6 +176,11 @@ Typeface::Ptr LogisthLook::getTypefaceForFont(const Font &f) {
 Font LogisthLook::getTextButtonFont(TextButton &button, int) {
     return font(float(button.getProperties().getWithDefault("fontSize", 12)));
 }
+PopupMenu LogisthLook::contextMenu() {
+    PopupMenu result;
+    result.setLookAndFeel(this);
+    return result;
+}
 Font LogisthLook::getPopupMenuFont() {
     return font(12);
 }
@@ -180,7 +189,7 @@ void LogisthLook::drawPopupMenuItem(Graphics &g, const Rectangle<int> &area, boo
                                     const String &text, const String &shortcut,
                                     const Drawable *icon, const Colour *colour) {
     logisth_ui::TextGraphics context(
-        g.getInternalContext(), !typography.antialias,
+        g.getInternalContext(), typography,
         AffineTransform::scale(g.getInternalContext().getPhysicalPixelScaleFactor()));
     Graphics graphics(context);
     LookAndFeel_V4::drawPopupMenuItem(graphics, area, separator, active, highlighted, ticked,
@@ -208,7 +217,7 @@ void LogisthLook::drawTooltip(Graphics &g, const String &text, int width, int he
     g.setColour(screenLine);
     g.drawRect(0, 0, width, height);
     logisth_ui::TextGraphics context(
-        g.getInternalContext(), !typography.antialias,
+        g.getInternalContext(), typography,
         AffineTransform::scale(g.getInternalContext().getPhysicalPixelScaleFactor()));
     Graphics graphics(context);
     tooltipText(*this, text).draw(graphics, {9, 7, float(width - 18), float(height - 14)});
@@ -282,6 +291,8 @@ Slider::SliderLayout LogisthLook::getSliderLayout(Slider &s) {
         layout.textBoxBounds = b;
     } else if (bool(s.getProperties()["trim"]))
         layout.sliderBounds = b;
+    else if (s.isHorizontal())
+        return LookAndFeel_V4::getSliderLayout(s);
     else {
         layout.textBoxBounds = b.removeFromBottom(15);
         layout.sliderBounds = b;
@@ -311,6 +322,19 @@ void LogisthLook::drawLinearSlider(Graphics &g, int x, int y, int w, int h, floa
         g.setColour((isDark ? mint : green).withAlpha(.4f));
         g.fillRoundedRectangle(b.getX() + 5, b.getBottom() - 2, jmax(0.f, (b.getWidth() - 10) * p),
                                1, 0.5f);
+        return;
+    }
+    if (s.isHorizontal()) {
+        const auto left = b.getX() + 5, right = b.getRight() - 5, cy = b.getCentreY();
+        const auto px = jlimit(left, right, pos);
+        g.setColour(isDark ? screenLine : line);
+        g.fillRoundedRectangle(left, cy - 2, right - left, 4, 2);
+        g.setColour((isDark ? mint : green).withAlpha(s.isEnabled() ? .65f : .2f));
+        g.fillRoundedRectangle(left, cy - 2, jmax(0.f, px - left), 4, 2);
+        g.setColour(isDark ? screenText : Colours::white);
+        g.fillRoundedRectangle(px - 4, cy - 8, 8, 16, 2);
+        g.setColour(isDark ? screenLine : muted);
+        g.drawRoundedRectangle(px - 4, cy - 8, 8, 16, 2, 1);
         return;
     }
     const float cx = b.getCentreX(), top = b.getY() + 4, bottom = b.getBottom() - 4;
@@ -1023,7 +1047,7 @@ class LogisthEditor::Console : public Component,
             dragged = false;
             const int position = owner.effectPosition(index);
             if (e.mods.isPopupMenu() && position >= 0) {
-                PopupMenu menu;
+                auto menu = owner.look.contextMenu();
                 menu.addItem(1, "Move up", position > 0);
                 menu.addItem(2, "Move down", position < effectStageCount - 1);
                 menu.addSeparator();
@@ -1123,7 +1147,7 @@ class LogisthEditor::Console : public Component,
             dragged = false;
             if (e.mods.isPopupMenu()) {
                 const auto position = owner.distortionPosition(slot);
-                PopupMenu menu;
+                auto menu = owner.look.contextMenu();
                 menu.addItem(1, "Move left", position > 0);
                 menu.addItem(2, "Move right", position < 3);
                 SafePointer<DistortionButton> safe(this);
@@ -1907,6 +1931,10 @@ class LogisthEditor::Console : public Component,
         applyPalette(theme);
         look.themeId = themeId;
         look.setPalette(theme);
+        if (skinImageData != theme.backgroundImage) {
+            skinImageData = theme.backgroundImage;
+            skinImage = SkinBackground::decode(skinImageData);
+        }
         headerLogo = brandLogo(ink);
         brandAboutLogo.image = brandLogo(screenText);
         brandAboutLogo.repaint();
@@ -1932,16 +1960,17 @@ class LogisthEditor::Console : public Component,
                 updateFonts(*child);
         };
         updateFonts(*this);
-        const bool customText =
-            !typography.antialias || typography.style == 3 || typography.style == 4;
+        const bool customText = !typography.antialias || typography.quality != 0 ||
+                                typography.edgeWeight != 1 || typography.style == 3 ||
+                                typography.style == 4;
         if (customText)
-            setCachedComponentImage(new logisth_ui::TextImage(*this, !typography.antialias));
+            setCachedComponentImage(new logisth_ui::TextImage(*this, typography));
         else if (getCachedComponentImage())
             setCachedComponentImage(nullptr);
         userPreferenceRevision = UserSettings::revision();
         keyboard.applyTheme();
-        for (ComboBox *box :
-             {&themeChoice, &scaleChoice, &colourRole, &themeFont, &themeBackground, &themeKnobs})
+        for (ComboBox *box : {&themeChoice, &scaleChoice, &colourRole, &themeFont, &themeBackground,
+                              &themeKnobs, &textSize, &textWeight, &textQuality})
             box->setColour(ComboBox::textColourId, screenText);
         for (auto &name : macroNames) {
             name.setColour(TextEditor::backgroundColourId, screen);
@@ -1967,6 +1996,13 @@ class LogisthEditor::Console : public Component,
         for (Label *label : {&themeLabel, &themeHelp, &aboutLabel, &scaleLabel, &nameLabel,
                              &roleLabel, &hexLabel, &fontLabel, &backgroundLabel, &knobLabel})
             label->setColour(Label::textColourId, screenText);
+        for (auto *c : settingsPanel.getChildren())
+            if (auto *label = dynamic_cast<Label *>(c))
+                label->setColour(Label::textColourId, screenText);
+        for (auto &label : folderLabels)
+            label.setColour(Label::textColourId, screenText);
+        for (auto &label : folderValues)
+            label.setColour(Label::textColourId, screenText);
         searchQuery.setColour(TextEditor::backgroundColourId, screen);
         searchQuery.applyColourToAllText(screenText, true);
         searchQuery.setTextToShowWhenEmpty("Search factory and user presets...", muted);
@@ -1980,6 +2016,60 @@ class LogisthEditor::Console : public Component,
         sendLookAndFeelChange();
         layout();
         repaint();
+    }
+    File browserFolder(UserSettings::Folder kind) const {
+        if (kind == UserSettings::Folder::Library)
+            return processor.presetDirectory();
+        const auto fallback = kind == UserSettings::Folder::PresetOpen ||
+                                      kind == UserSettings::Folder::PresetSave ||
+                                      kind == UserSettings::Folder::Library
+                                  ? processor.presetDirectory()
+                                  : File::getSpecialLocation(File::userDocumentsDirectory);
+        return UserSettings::folder(kind, fallback);
+    }
+    bool setBrowserFolder(UserSettings::Folder kind, const File &directory) {
+        if (!directory.isDirectory() || !UserSettings::remember(kind, directory))
+            return false;
+        if (kind == UserSettings::Folder::Library) {
+            processor.setPresetDirectory(directory);
+            refreshPresets();
+        }
+        readout = "Browser folder: " + directory.getFullPathName();
+        if (settingsOpen && settingsTab == 6)
+            layoutSettings();
+        repaint();
+        return true;
+    }
+    void chooseBrowserFolder(UserSettings::Folder kind) {
+        folderChooser =
+            std::make_unique<FileChooser>("Choose browser folder", browserFolder(kind), "");
+        SafePointer<Console> safe(this);
+        folderChooser->launchAsync(FileBrowserComponent::openMode |
+                                       FileBrowserComponent::canSelectDirectories,
+                                   [safe, kind](const FileChooser &chooser) {
+                                       if (safe && chooser.getResult() != File{} &&
+                                           !safe->setBrowserFolder(kind, chooser.getResult())) {
+                                           safe->readout = "The browser folder could not be saved.";
+                                           safe->repaint();
+                                       }
+                                   });
+    }
+    Result importBackground(const File &file) {
+        String encoded;
+        Image image;
+        auto result = SkinBackground::import(file, encoded, image);
+        if (result.failed())
+            return result;
+        skinImage = image;
+        skinImageData = encoded;
+        draftTheme.backgroundImage = encoded;
+        draftTheme.backgroundStyle =
+            draftTheme.backgroundStyle == 2 || draftTheme.backgroundStyle == 4 ? 4 : 3;
+        refreshStyleFields();
+        applyThemePalette(draftTheme);
+        readout = "Background loaded: " + file.getFileName() + ". Save the theme to keep it.";
+        repaint();
+        return Result::ok();
     }
     std::function<void(double)> onScaleRequested;
     void displayScale(double percent) {
@@ -2174,6 +2264,11 @@ class LogisthEditor::Console : public Component,
         layout();
         repaint();
     }
+    bool rackHeadingVisible() const {
+        return !settingsOpen && rack != 9 && rack != 10 && rack != 4 && rack != 7 && rack != 11 &&
+               rack != 12 && !(rack == 5 && int(value(Param::reverbtype)) == 5) &&
+               !(rack == 0 && value(Param::arppattern) > 0);
+    }
     String validate() {
         const bool oldSettings = settingsOpen;
         settingsOpen = false;
@@ -2214,6 +2309,11 @@ class LogisthEditor::Console : public Component,
                             error = "Overlap: " + String(parameterSpecs[i].id) + " / " +
                                     parameterSpecs[j].id;
                 }
+            if (rackHeadingVisible())
+                for (auto *component : getChildren())
+                    if (component->isVisible() &&
+                        component->getBounds().intersects(Rectangle<int>(414, 289, 350, 20)))
+                        error = "Overlapped rack heading: " + component->getComponentID();
             for (auto *component : getChildren())
                 if (component->isVisible() && component != &keyboard &&
                     dynamic_cast<Control *>(component) == nullptr) {
@@ -2432,10 +2532,39 @@ class LogisthEditor::Console : public Component,
         textWeight.setComponentID("settings.text.style");
         textWeight.addItemList({"Theme default", "Regular", "Bold", "Italic", "Bold italic"}, 1);
         textAA.setComponentID("settings.text.antialias");
-        textAA.setButtonText("FONT ANTIALIASING");
-        textAA.setTooltip("Smooth glyph edges. Off uses a one-bit glyph mask at the current "
-                          "physical display resolution.");
-        for (ComboBox *box : {&textSize, &textWeight})
+        textAA.setButtonText("ANTIALIASING");
+        textAA.setTooltip(
+            "Enable glyph smoothing. Off uses a one-bit mask; vector graphics stay smooth.");
+        textQuality.setComponentID("settings.text.quality");
+        textQuality.addItemList({"Native", "Grayscale", "Supersampled 2x", "Supersampled 4x"}, 1);
+        textQuality.getProperties().set("dark", true);
+        textQuality.setTooltip("2x is the default. Grayscale/supersampling rasterise glyphs at the "
+                               "current display scale. Native retains platform hinting.");
+        textEdge.setComponentID("settings.text.edge");
+        textEdge.getProperties().set("dark", true);
+        textEdge.setSliderStyle(Slider::LinearHorizontal);
+        textEdge.setRange(50, 200, 1);
+        textEdge.setTextBoxStyle(Slider::TextBoxRight, false, 60, 24);
+        textEdge.setTextValueSuffix("%");
+        textEdge.setDoubleClickReturnValue(true, 100);
+        textEdge.setTooltip(
+            "Glyph edge weight: 50-200%, neutral 100%. Higher values strengthen coverage without "
+            "changing font size. Native uses grayscale when adjusted.");
+        textEdgeLabel.setText("EDGE WEIGHT", dontSendNotification);
+        textEdgeLabel.setFont(font(10));
+        textQuality.onChange = [this] {
+            if (textQuality.getSelectedId() > 0) {
+                auto prefs = UserSettings::text();
+                prefs.quality = textQuality.getSelectedId() - 1;
+                changeTypography(prefs);
+            }
+        };
+        textEdge.onValueChange = [this] {
+            auto prefs = UserSettings::text();
+            prefs.edgeWeight = textEdge.getValue() / 100;
+            changeTypography(prefs);
+        };
+        for (ComboBox *box : {&textSize, &textWeight, &textQuality})
             box->getProperties().set("dark", true);
         textSizeLabel.setText("FONT SIZE / %", dontSendNotification);
         textWeightLabel.setText("FONT STYLE", dontSendNotification);
@@ -2469,19 +2598,33 @@ class LogisthEditor::Console : public Component,
             prefs.antialias = textAA.getToggleState();
             changeTypography(prefs);
         };
-        for (Component *c :
-             std::array<Component *, 7>{&textSize, &textWeight, &textAA, &textSizeLabel,
-                                        &textWeightLabel, &textReference, &settingsHelp})
+        for (Component *c : std::array<Component *, 10>{
+                 &textSize, &textWeight, &textAA, &textSizeLabel, &textWeightLabel, &textReference,
+                 &settingsHelp, &textQuality, &textEdge, &textEdgeLabel})
             settingsPanel.addChildComponent(*c);
-        for (int i = 0; i < 4; ++i) {
+        for (int i = 0; i < 5; ++i) {
             auto &label = folderLabels[size_t(i)], &path = folderValues[size_t(i)];
-            label.setText(StringArray{"PRESET LOAD", "PRESET SAVE", "SAMPLES", "IMPULSES"}[i],
-                          dontSendNotification);
+            label.setText(
+                StringArray{"PRESET LOAD", "PRESET SAVE", "SAMPLES", "IMPULSES", "LIBRARY"}[i],
+                dontSendNotification);
             label.setFont(font(9));
             path.setFont(font(9));
             path.setComponentID("settings.folder." + String(i));
             settingsPanel.addChildComponent(label);
             settingsPanel.addChildComponent(path);
+            auto &choose = folderChoose[size_t(i)], &open = folderOpen[size_t(i)];
+            choose.setComponentID("settings.folder.choose." + String(i));
+            open.setComponentID("settings.folder.open." + String(i));
+            choose.setButtonText("CHOOSE...");
+            open.setButtonText("OPEN");
+            choose.setTooltip("Choose the " + label.getText().toLowerCase() + " folder.");
+            open.setTooltip("Open this folder in the system file browser.");
+            choose.getProperties().set("fontSize", 9);
+            open.getProperties().set("fontSize", 9);
+            settingsPanel.addChildComponent(choose);
+            settingsPanel.addChildComponent(open);
+            choose.onClick = [this, i] { chooseBrowserFolder(UserSettings::Folder(i)); };
+            open.onClick = [this, i] { browserFolder(UserSettings::Folder(i)).startAsProcess(); };
         }
         refreshTypography();
         fixedVelocity.setComponentID("settings.fixedvelocity");
@@ -2662,7 +2805,63 @@ class LogisthEditor::Console : public Component,
         families.insert(0, "Open Sans");
         themeFont.addItemList(families, 1);
         themeBackground.setComponentID("settings.theme.background");
-        themeBackground.addItemList({"Flat", "Gradient", "Grid"}, 1);
+        themeBackground.addItemList({"Flat", "Gradient", "Grid", "Image", "Image + grid"}, 1);
+        backgroundLoad.setButtonText("LOAD IMAGE...");
+        backgroundClear.setButtonText("CLEAR");
+        backgroundLoad.setComponentID("settings.background.load");
+        backgroundClear.setComponentID("settings.background.clear");
+        backgroundName.setComponentID("settings.background.name");
+        backgroundLoad.getProperties().set("fontSize", 9);
+        backgroundClear.getProperties().set("fontSize", 9);
+        backgroundName.setFont(font(9));
+        backgroundLoad.onClick = [this] {
+            backgroundChooser = std::make_unique<FileChooser>("Choose a PNG/JPEG background",
+                                                              File{}, "*.png;*.jpg;*.jpeg");
+            SafePointer<Console> safe(this);
+            backgroundChooser->launchAsync(
+                FileBrowserComponent::openMode | FileBrowserComponent::canSelectFiles,
+                [safe](const FileChooser &chooser) {
+                    if (safe && chooser.getResult() != File{}) {
+                        auto result = safe->importBackground(chooser.getResult());
+                        if (result.failed()) {
+                            safe->readout = result.getErrorMessage();
+                            safe->repaint();
+                        }
+                    }
+                });
+        };
+        backgroundClear.onClick = [this] {
+            draftTheme.backgroundImage.clear();
+            if (draftTheme.backgroundStyle >= 3)
+                draftTheme.backgroundStyle = draftTheme.backgroundStyle == 4 ? 2 : 0;
+            refreshStyleFields();
+            applyThemePalette(draftTheme);
+        };
+        backgroundMixLabel.setText("IMAGE MIX", dontSendNotification);
+        panelOpacityLabel.setText("PANELS", dontSendNotification);
+        for (auto *label : {&backgroundMixLabel, &panelOpacityLabel})
+            label->setFont(font(9));
+        for (auto *slider : {&backgroundMixControl, &panelOpacityControl}) {
+            slider->getProperties().set("dark", true);
+            slider->setSliderStyle(Slider::LinearHorizontal);
+            slider->setRange(slider == &panelOpacityControl ? 40 : 0, 100, 1);
+            slider->setTextBoxStyle(Slider::TextBoxRight, false, 48, 24);
+            slider->setTextValueSuffix("%");
+        }
+        backgroundMixControl.setComponentID("settings.background.mix");
+        panelOpacityControl.setComponentID("settings.background.panels");
+        backgroundMixControl.onValueChange = [this] {
+            draftTheme.backgroundMix = backgroundMixControl.getValue() / 100;
+            applyThemePalette(draftTheme);
+        };
+        panelOpacityControl.onValueChange = [this] {
+            draftTheme.panelOpacity = panelOpacityControl.getValue() / 100;
+            applyThemePalette(draftTheme);
+        };
+        for (auto *c : std::array<Component *, 7>{
+                 &backgroundLoad, &backgroundClear, &backgroundName, &backgroundMixControl,
+                 &panelOpacityControl, &backgroundMixLabel, &panelOpacityLabel})
+            settingsPanel.addChildComponent(*c);
         themeKnobs.setComponentID("settings.theme.knobs");
         themeKnobs.addItemList({"Arc", "Solid", "Minimal"}, 1);
         themeFont.onChange = [this] {
@@ -2730,10 +2929,23 @@ class LogisthEditor::Console : public Component,
                           dontSendNotification);
         themeHelp.setTooltip(ThemeSettings::folder().getFullPathName());
     }
+    void refreshBackgroundFields() {
+        backgroundName.setText(skinImage.isValid()
+                                   ? "Embedded image / " + String(skinImage.getWidth()) + " x " +
+                                         String(skinImage.getHeight())
+                                   : "No image loaded",
+                               dontSendNotification);
+        backgroundClear.setEnabled(draftTheme.backgroundImage.isNotEmpty());
+        backgroundMixControl.setValue(draftTheme.backgroundMix * 100, dontSendNotification);
+        panelOpacityControl.setValue(draftTheme.panelOpacity * 100, dontSendNotification);
+        backgroundMixControl.setEnabled(draftTheme.backgroundStyle >= 3 && skinImage.isValid());
+        panelOpacityControl.setEnabled(draftTheme.backgroundStyle != 0);
+    }
     void refreshStyleFields() {
         themeFont.setText(draftTheme.fontFamily, dontSendNotification);
         themeBackground.setSelectedId(draftTheme.backgroundStyle + 1, dontSendNotification);
         themeKnobs.setSelectedId(draftTheme.knobStyle + 1, dontSendNotification);
+        refreshBackgroundFields();
     }
     void updateColourEditor() {
         auto c = draftTheme.colours[size_t(
@@ -2756,6 +2968,9 @@ class LogisthEditor::Console : public Component,
                          dontSendNotification);
         textWeight.setSelectedId(prefs.style + 1, dontSendNotification);
         textAA.setToggleState(prefs.antialias, dontSendNotification);
+        textQuality.setSelectedId(prefs.quality + 1, dontSendNotification);
+        textQuality.setEnabled(prefs.antialias);
+        textEdge.setValue(prefs.edgeWeight * 100, dontSendNotification);
         textReference.setText("Reference " + String(font(12).getHeight(), 1) + " px",
                               dontSendNotification);
     }
@@ -2805,28 +3020,39 @@ class LogisthEditor::Console : public Component,
             show(themeReset, {346, 199, 168, 27});
             show(colourPicker, {224, 33, 290, 158});
         } else if (settingsTab == 2) {
-            show(backgroundLabel, {0, 48, 145, 26});
-            show(themeBackground, {150, 48, 360, 28});
-            show(knobLabel, {0, 98, 145, 26});
-            show(themeKnobs, {150, 98, 360, 28});
-            settingsHelp.setText("Background and knob styles belong to the theme. Use COLOURS > "
-                                 "SAVE AS to save a new theme.",
+            show(backgroundLabel, {0, 34, 112, 26});
+            show(themeBackground, {116, 34, 394, 26});
+            show(backgroundName, {0, 68, 274, 26});
+            show(backgroundLoad, {282, 68, 112, 26});
+            show(backgroundClear, {402, 68, 108, 26});
+            show(backgroundMixLabel, {0, 102, 85, 26});
+            show(backgroundMixControl, {88, 102, 178, 26});
+            show(panelOpacityLabel, {280, 102, 65, 26});
+            show(panelOpacityControl, {348, 102, 162, 26});
+            show(knobLabel, {0, 138, 112, 26});
+            show(themeKnobs, {116, 138, 394, 26});
+            refreshBackgroundFields();
+            settingsHelp.setText("PNG/JPEG, up to 4096 x 4096 / 16 MiB. Image and visibility are "
+                                 "saved in the theme. Use COLOURS > SAVE AS.",
                                  dontSendNotification);
-            show(settingsHelp, {0, 161, 510, 61});
+            show(settingsHelp, {0, 178, 510, 48});
         } else if (settingsTab == 4) {
             refreshTypography();
-            show(fontLabel, {0, 36, 150, 26});
-            show(themeFont, {157, 36, 353, 28});
-            show(textSizeLabel, {0, 76, 150, 26});
-            show(textSize, {157, 76, 124, 28});
-            show(textReference, {295, 76, 215, 28});
-            show(textWeightLabel, {0, 116, 150, 26});
-            show(textWeight, {157, 116, 353, 28});
-            show(textAA, {0, 159, 510, 26});
-            settingsHelp.setText("Size, style and antialiasing are saved globally. The font family "
-                                 "belongs to the current theme.",
+            show(fontLabel, {0, 32, 150, 26});
+            show(themeFont, {157, 32, 353, 28});
+            show(textSizeLabel, {0, 64, 150, 26});
+            show(textSize, {157, 64, 124, 28});
+            show(textReference, {295, 64, 215, 28});
+            show(textWeightLabel, {0, 96, 150, 26});
+            show(textWeight, {157, 96, 353, 28});
+            show(textAA, {0, 130, 148, 26});
+            show(textQuality, {157, 130, 353, 26});
+            show(textEdgeLabel, {0, 166, 148, 26});
+            show(textEdge, {157, 166, 353, 26});
+            settingsHelp.setText("Text renders at the display scale. Edge weight 100% is neutral; "
+                                 "double-click resets it. Font family belongs to the theme.",
                                  dontSendNotification);
-            show(settingsHelp, {0, 194, 510, 34});
+            show(settingsHelp, {0, 201, 510, 28});
         } else if (settingsTab == 5) {
             show(fixedVelocity, {0, 48, 510, 28});
             settingsHelp.setText("Off preserves MIDI note dynamics. On uses the maximum velocity "
@@ -2834,18 +3060,21 @@ class LogisthEditor::Console : public Component,
                                  dontSendNotification);
             show(settingsHelp, {0, 98, 510, 70});
         } else if (settingsTab == 6) {
-            settingsHelp.setText("LAST USED FOLDERS / remembered across instances",
+            settingsHelp.setText("BROWSER FOLDERS / choose a location or open it",
                                  dontSendNotification);
-            show(settingsHelp, {0, 34, 510, 22});
-            for (int i = 0; i < 4; ++i) {
-                const auto path = UserSettings::folder(
-                    UserSettings::Folder(i), i < 2 ? processor.presetDirectory() : File{});
-                folderValues[size_t(i)].setText(path == File{} ? "System default"
-                                                               : path.getFullPathName(),
-                                                dontSendNotification);
-                folderValues[size_t(i)].setTooltip(path.getFullPathName());
-                show(folderLabels[size_t(i)], {0, 63 + i * 40, 130, 32});
-                show(folderValues[size_t(i)], {140, 63 + i * 40, 370, 32});
+            show(settingsHelp, {0, 30, 510, 20});
+            static constexpr std::array<int, 5> order{4, 0, 1, 2, 3};
+            for (int row = 0; row < 5; ++row) {
+                const auto i = size_t(order[size_t(row)]);
+                const auto path = browserFolder(UserSettings::Folder(i));
+                folderValues[i].setText(path.getFullPathName(), dontSendNotification);
+                folderValues[i].setTooltip(path.getFullPathName());
+                const int y = 54 + row * 34;
+                show(folderLabels[i], {0, y, 110, 28});
+                show(folderValues[i], {116, y, 236, 28});
+                show(folderChoose[i], {360, y, 90, 28});
+                show(folderOpen[i], {456, y, 54, 28});
+                folderOpen[i].setEnabled(path.isDirectory());
             }
         } else {
             show(aboutLabel, {0, 40, 510, 25});
@@ -3043,7 +3272,7 @@ class LogisthEditor::Console : public Component,
             processor.setPresetComment(presetNotes.getText());
         else
             syncPresetNotes();
-        PopupMenu menu;
+        auto menu = look.contextMenu();
         menu.addItem(1, "Save as...");
         auto current = processor.currentPresetFile();
         menu.addItem(2, "Overwrite current user preset", current != File{});
@@ -3473,18 +3702,18 @@ class LogisthEditor::Console : public Component,
             for (int position = 0; position < 4; ++position) {
                 const auto slot = int(order.slots[size_t(position)]);
                 auto &button = *distortionButtons[size_t(slot)];
-                button.setBounds(414 + position * 130, 289, 122, 26);
+                button.setBounds(414 + position * 130, 315, 122, 25);
                 button.setVisible(true);
-                put(distortionParameter(slot, 0), {414 + position * 130, 321, 122, 24},
+                put(distortionParameter(slot, 0), {414 + position * 130, 346, 122, 24},
                     Style::Toggle, "ON / OFF", true);
             }
-            put(distortionParameter(selectedDistortion, 1), {414, 365, 180, 43}, Style::Menu,
+            put(distortionParameter(selectedDistortion, 1), {414, 383, 180, 43}, Style::Menu,
                 "MODEL", true);
-            put(distortionParameter(selectedDistortion, 2), {612, 365, 152, 147}, Style::Knob,
+            put(distortionParameter(selectedDistortion, 2), {612, 383, 152, 129}, Style::Knob,
                 "DRIVE", true);
-            put(distortionParameter(selectedDistortion, 3), {782, 365, 152, 147}, Style::Knob,
+            put(distortionParameter(selectedDistortion, 3), {782, 383, 152, 129}, Style::Knob,
                 "MIX", true);
-            distortionHelp.setBounds(414, 425, 180, 90);
+            distortionHelp.setBounds(414, 434, 180, 81);
             distortionHelp.setColour(Label::textColourId, screenText);
             distortionHelp.setVisible(true);
             return;
@@ -4000,7 +4229,8 @@ class LogisthEditor::Console : public Component,
         if (userPreferenceRevision != UserSettings::revision()) {
             const auto next = UserSettings::text();
             if (next.size != typography.size || next.style != typography.style ||
-                next.antialias != typography.antialias) {
+                next.antialias != typography.antialias || next.quality != typography.quality ||
+                next.edgeWeight != typography.edgeWeight) {
                 applyThemePalette(draftTheme);
                 layout();
                 repaint();
@@ -4060,13 +4290,19 @@ class LogisthEditor::Console : public Component,
             g.setGradientFill(
                 ColourGradient(body, 0, 0, panel, float(getWidth()), float(getHeight()), false));
             g.fillAll();
-            if (backgroundStyle == 2) {
-                g.setColour(line.withAlpha(.3f));
-                for (int x = 0; x < getWidth(); x += 24)
-                    g.drawVerticalLine(x, 0, float(getHeight()));
-                for (int y = 0; y < getHeight(); y += 24)
-                    g.drawHorizontalLine(y, 0, float(getWidth()));
-            }
+        }
+        if (backgroundStyle >= 3 && skinImage.isValid()) {
+            g.setOpacity(float(backgroundMix));
+            g.drawImageWithin(skinImage, 0, 0, getWidth(), getHeight(),
+                              RectanglePlacement::fillDestination);
+            g.setOpacity(1);
+        }
+        if (backgroundStyle == 2 || backgroundStyle == 4) {
+            g.setColour(readableColour(line, body, panel, 4.5).withAlpha(.75f));
+            for (int x = 0; x < getWidth(); x += 24)
+                g.drawVerticalLine(x, 0, float(getHeight()));
+            for (int y = 0; y < getHeight(); y += 24)
+                g.drawHorizontalLine(y, 0, float(getWidth()));
         }
         if (skin == "ap-flexin") {
             for (int i = 0; i < 48; ++i) {
@@ -4170,7 +4406,7 @@ class LogisthEditor::Console : public Component,
                     {1140, 517, 76, 16}, 9, outputLevel > 1 ? Colour(0xffd35f55) : muted,
                     Justification::centred);
 
-        g.setColour(screen);
+        g.setColour(backgroundStyle == 0 ? screen : screen.withAlpha(float(panelOpacity)));
         g.fillRoundedRectangle(Rectangle<float>(280, 278, 668, 258), 8);
         g.setColour(screenLine);
         g.drawRoundedRectangle(Rectangle<float>(280.5f, 278.5f, 667, 257), 8, 1);
@@ -4182,11 +4418,8 @@ class LogisthEditor::Console : public Component,
         StringArray titles{"ARPEGGIATOR", "DISTORTION", "PHASER",     "CHORUS", "EQUALIZER",
                            "REVERB",      "DELAY",      "COMPRESSOR", "CHORDS", "SAMPLE",
                            "MORPH",       "CLIPPER",    "LIMITER"};
-        drawCaption(g,
-                    settingsOpen                ? "SETTINGS"
-                    : (rack == 9 || rack == 10) ? String{}
-                                                : titles[rack],
-                    {414, 289, 350, 20}, 12, screenText, Justification::centredLeft, true);
+        drawCaption(g, rackHeadingVisible() ? titles[rack] : String{}, {414, 289, 350, 20}, 12,
+                    screenText, Justification::centredLeft, true);
 
         if (settingsOpen) {
             // The settings labels and selector draw inside the central rack.
@@ -4300,10 +4533,17 @@ class LogisthEditor::Console : public Component,
     ToggleButton themeDark;
     TextButton themeEdit, themeScan, themeFolder, themeSave, themeReset;
     std::array<TextButton, 7> settingsTabs;
-    ComboBox textSize, textWeight;
+    ComboBox textSize, textWeight, textQuality;
+    Slider textEdge, backgroundMixControl, panelOpacityControl;
+    Label textEdgeLabel, backgroundName, backgroundMixLabel, panelOpacityLabel;
+    TextButton backgroundLoad, backgroundClear;
+    Image skinImage;
+    String skinImageData;
+    std::unique_ptr<FileChooser> backgroundChooser, folderChooser;
     ToggleButton textAA;
     Label textSizeLabel, textWeightLabel, textReference, settingsHelp;
-    std::array<Label, 4> folderLabels, folderValues;
+    std::array<Label, 5> folderLabels, folderValues;
+    std::array<TextButton, 5> folderChoose, folderOpen;
     ColourSelector colourPicker{ColourSelector::showColourspace | ColourSelector::showColourAtTop};
     ThemeDefinition draftTheme, savedTheme;
     int settingsTab = 0;
@@ -4391,8 +4631,8 @@ void LogisthEditor::resized() {
     if (console) {
         console->displayScale(scalePercent);
         console->setBounds(0, 0, canvasWidth, canvasHeight);
-        console->setTransform(AffineTransform::scale(float(getWidth()) / canvasWidth,
-                                                     float(getHeight()) / canvasHeight));
+        const auto scale = jmin(float(getWidth()) / canvasWidth, float(getHeight()) / canvasHeight);
+        console->setTransform(AffineTransform::scale(scale));
     }
     if (rememberSize) {
         sizeDirty = true;
@@ -4455,4 +4695,11 @@ int LogisthEditor::selectedTheme() const {
 }
 bool LogisthEditor::isDarkTheme() const {
     return console->isDarkTheme();
+}
+
+Result LogisthEditor::importBackground(const File &file) {
+    return console->importBackground(file);
+}
+bool LogisthEditor::setBrowserFolder(UserSettings::Folder kind, const File &folder) {
+    return console->setBrowserFolder(kind, folder);
 }

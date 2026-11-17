@@ -148,3 +148,10 @@ Version 0.9.8 also includes a gui-dsp-review ZIP with the stereo CSV, the review
 and 21 original WAV fixtures/examples. Native archives include GUI_DSP_REVIEW.md,
 docs/gui-review and the supplied branding SVG. Validate the 48 distinct cases,
 error thresholds and exact SVG bytes before publishing.
+
+Appearance 0.9.8.1 regressions use processor_tests --appearance0981-check or
+--appearance0981-report /absolute/folder. Preserve exact vector pixels across
+UI/DPI scales when changing glyph rendering. TextRenderer must not reintroduce a
+resampled full-interface image. Keep image decoding/file access off the audio
+thread, retain theme v1/v2 import, bound decoded image dimensions, and use the
+owning LogisthLook::contextMenu() for manual popups.

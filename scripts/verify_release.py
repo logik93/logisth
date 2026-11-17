@@ -138,6 +138,21 @@ def verify(tag: str) -> None:
         with zipfile.ZipFile(folder / f'logisth-{version}-themes.zip') as archive:
             if archive.read('logisth.svg') != (root / 'assets/branding/logisth.svg').read_bytes():
                 raise ValueError('Supplied SVG logo differs from the theme archive')
+    if tuple(map(int, version.split('.'))) >= (0, 9, 8, 1):
+        name = f'logisth-{version}-appearance-review.zip'
+        if name not in names:
+            raise ValueError('Missing appearance regression evidence')
+        with zipfile.ZipFile(folder / name) as archive:
+            rows = list(csv.DictReader(io.StringIO(archive.read('text-rendering.csv').decode())))
+            cases = {(r['ui_scale'], r['dpi'], r['quality'], r['antialias']) for r in rows}
+            if len(rows) != 96 or len(cases) != 96:
+                raise ValueError('Incomplete text scale/DPI/quality matrix')
+            for row in rows:
+                if row['vector_identical'] != '1' or (int(row['gray_levels']) <= 5 if row['antialias'] == '1' else int(row['gray_levels']) != 2):
+                    raise ValueError('Failed glyph/vector rendering measurement')
+            for name, path in [('README.md', 'docs/APPEARANCE_REVIEW.md'), ('text-rendering.csv', 'docs/appearance/text-rendering.csv')]:
+                if archive.read(name).replace(b'\r\n', b'\n') != (root / path).read_bytes().replace(b'\r\n', b'\n'):
+                    raise ValueError('Stale appearance evidence')
     print(f"Verified {len(names)} release assets for {tag}")
 
 

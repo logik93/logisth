@@ -1,6 +1,6 @@
-# logisth v0.9.8 — GUI and DSP review
+# logisth v0.9.8.1 — GUI and DSP review
 
-This report describes v0.9.8. Earlier published tags and assets are unchanged. The implementation retains all 1071 prior host definitions and
+This report describes v0.9.8.1. Earlier published tags and assets are unchanged. The implementation retains all 1071 prior host definitions and
 appends 13 distortion controls, for 1084 in total.
 
 ## Chorus and distortion
@@ -66,9 +66,12 @@ Settings separates Display, Text, Colours, Skin, MIDI, Files and About. Font siz
 80–125%, theme/regular/bold/italic/bold-italic style and font AA persist globally.
 Base sizes are stable through repeated changes. AA Off thresholds only shaped
 glyph coverage at physical resolution; other vector curves remain antialiased.
-Editable text, menus and tooltips use this path; a dirty-region cache limits GUI
-work. Synthetic italic supplies a slant when no italic face is available. The
-scale of this optional text cache is bounded to 0.5–4×. Native file-dialog fonts
+Editable text, menus and tooltips use this path. Version 0.9.8.1 removes the
+full-console bitmap cache: glyph masks render at physical resolution while
+vectors draw directly. Native/grayscale/2x/4x, AA Off and 50–200% edge weight
+are selectable; 2x is the default. Synthetic italic supplies a slant when no
+italic face is available. The editor applies uniform scaling. Detailed new
+coverage and portable skin images are documented in [APPEARANCE_REVIEW.md](APPEARANCE_REVIEW.md). Native file-dialog fonts
 are controlled by the operating system.
 
 Tests compare actual rendered text pixels: AA-on has intermediate coverage;

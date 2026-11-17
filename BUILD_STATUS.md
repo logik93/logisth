@@ -1,5 +1,17 @@
 # logisth native release checks
 
+Current candidate: **v0.9.8.1**. Windows/Linux publish first; macOS Universal
+is appended afterward. Gates: 20 Linux / 18 Windows and macOS suites plus
+18 Windows ASAN suites, no failures/skips.
+
+Local verification passed all 20 suites and ten publisher regressions. New
+appearance evidence covers 96 glyph scale/DPI/quality/Off cases with exact vector
+pixel parity, edge weight, transparent text replacement, folder controls,
+portable PNG/JPEG/grid backgrounds and all ten popup palettes. The full processor
+suite, 48-WAV convolution review, 47 gain profiles, 48-preset bank, kick benchmark
+and 120 theme/knob renders passed. Source audio algorithms and all 1084 host
+parameters are unchanged. Both English manuals and screenshots are updated.
+
 Completed release: **[v0.9.8](https://github.com/logik93/logisth/releases/tag/v0.9.8)**.
 [Native CI run](https://github.com/logik93/logisth/actions/runs/44140883316)
 passed from tag commit `452596fac14ce0457dcd3dccdedca84991900094`.

@@ -1,4 +1,5 @@
 #pragma once
+#include "SkinBackground.h"
 #include <array>
 #include <atomic>
 #include <cmath>
@@ -12,10 +13,13 @@ struct ThemeDefinition {
     std::array<juce::Colour, 12> colours{};
     juce::String fontFamily = "Open Sans", skin;
     int backgroundStyle = 0, knobStyle = 0;
+    juce::String backgroundImage;
+    double backgroundMix = .5, panelOpacity = .85;
     bool same(const ThemeDefinition &t) const {
         return key == t.key && name == t.name && dark == t.dark && colours == t.colours &&
                fontFamily == t.fontFamily && backgroundStyle == t.backgroundStyle &&
-               knobStyle == t.knobStyle && skin == t.skin;
+               knobStyle == t.knobStyle && skin == t.skin && backgroundImage == t.backgroundImage &&
+               backgroundMix == t.backgroundMix && panelOpacity == t.panelOpacity;
     }
 };
 struct ThemeDraft {
@@ -87,10 +91,13 @@ class ThemeSettings {
         auto *o = new juce::DynamicObject;
         auto *colours = new juce::DynamicObject;
         o->setProperty("format", "logisth-theme");
-        o->setProperty("version", 2);
+        o->setProperty("version", 3);
         o->setProperty("font", theme.fontFamily);
         o->setProperty("skin", theme.skin);
         o->setProperty("backgroundStyle", theme.backgroundStyle);
+        o->setProperty("backgroundImage", theme.backgroundImage);
+        o->setProperty("backgroundMix", theme.backgroundMix);
+        o->setProperty("panelOpacity", theme.panelOpacity);
         o->setProperty("knobStyle", theme.knobStyle);
         o->setProperty("name", theme.name);
         o->setProperty("dark", theme.dark);
@@ -113,7 +120,7 @@ class ThemeSettings {
             return false;
         if (o->getProperty("format").toString() != "logisth-theme" ||
             !o->getProperty("version").isInt() ||
-            (int(o->getProperty("version")) != 1 && int(o->getProperty("version")) != 2))
+            (int(o->getProperty("version")) < 1 || int(o->getProperty("version")) > 3))
             return false;
         theme.skin = o->getProperty("skin").toString();
         if (theme.skin.isNotEmpty() && theme.skin != "ap-flexin")
@@ -135,6 +142,7 @@ class ThemeSettings {
             if (colours->hasProperty(colourNames[i]) &&
                 !colour(colours->getProperty(colourNames[i]).toString(), theme.colours[size_t(i)]))
                 return false;
+        theme.fontFamily = "Open Sans";
         if (o->hasProperty("font")) {
             auto f = o->getProperty("font");
             if (!f.isString() || f.toString().trim().isEmpty() || f.toString().length() > 128)
@@ -144,10 +152,31 @@ class ThemeSettings {
         for (auto property : {"backgroundStyle", "knobStyle"})
             if (o->hasProperty(property) &&
                 (!o->getProperty(property).isInt() || int(o->getProperty(property)) < 0 ||
-                 int(o->getProperty(property)) > 2))
+                 int(o->getProperty(property)) >
+                     (juce::String(property) == "backgroundStyle" ? 4 : 2)))
                 return false;
         theme.backgroundStyle = int(o->getProperty("backgroundStyle"));
         theme.knobStyle = int(o->getProperty("knobStyle"));
+        theme.backgroundImage.clear();
+        theme.backgroundMix = .5;
+        theme.panelOpacity = .85;
+        if (o->hasProperty("backgroundImage")) {
+            auto data = o->getProperty("backgroundImage");
+            if (!data.isString() || !SkinBackground::validEncoding(data.toString()))
+                return false;
+            theme.backgroundImage = data.toString();
+        }
+        for (auto pair : {std::pair<const char *, double *>{"backgroundMix", &theme.backgroundMix},
+                          {"panelOpacity", &theme.panelOpacity}}) {
+            if (o->hasProperty(pair.first)) {
+                auto v = o->getProperty(pair.first);
+                const auto minimum = juce::String(pair.first) == "panelOpacity" ? .4 : 0.;
+                if ((!v.isDouble() && !v.isInt()) || !std::isfinite(double(v)) ||
+                    double(v) < minimum || double(v) > 1)
+                    return false;
+                *pair.second = double(v);
+            }
+        }
         theme.name = name.toString().trim();
         theme.dark = bool(dark);
         return true;
@@ -206,7 +235,8 @@ class ThemeSettings {
             auto next = standard;
             for (auto &f : files) {
                 ThemeDefinition t;
-                if (f.getSize() > 65536 || !decode(juce::JSON::parse(f.loadFileAsString()), t)) {
+                if (f.getSize() > SkinBackground::maxEncoded + 65536 ||
+                    !decode(juce::JSON::parse(f.loadFileAsString()), t)) {
                     ++ignored;
                     continue;
                 }
@@ -222,7 +252,8 @@ class ThemeSettings {
             }
             juce::String content;
             for (auto &t : next)
-                content += t.key + juce::JSON::toString(encode(t), true);
+                content += t.key + ":" +
+                           juce::String(juce::JSON::toString(encode(t), true).hashCode64()) + ";";
             bool changed = content != contentStamp;
             contentStamp = content;
             themes = std::move(next);

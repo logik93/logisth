@@ -1,4 +1,4 @@
-# logisth 0.9.8 factory collection
+# logisth 0.9.8.1 factory collection
 
 48 authored patches, six per category; 58 built-in entries including Init and the nine previous sounds. Each new patch has an editable description and four performance macros: Brightness, Harmonics, Warp, and Space/Drive. Zero preserves the authored sound.
 
@@ -61,7 +61,7 @@ Every patch is saved and restored in a separate processor during testing, checki
 | Sample / Reverse Bloom | Reversed glass grows into a soft, stretched tail. |
 | Sample / Cloud Loom | A moving glass cloud over a soft triangle foundation and spacious release. |
 
-Version 0.9.8 reauditions all 96 profiles with the current engine. Native files
+Version 0.9.8.1 reauditions all 96 profiles with the current engine. Native files
 include saved default effect/distortion order and all 1084 controls. Additional
 distortion slots, clipper and limiter remain off in this bank. Older files retain
 Legacy compressor behavior when recalled.

@@ -140,3 +140,10 @@ EQ separates the analyzer row from its graph and band inspector. Application
 font preferences affect existing labels and editable text without changing
 preset audio data. The standard header contains only the smaller SVG mark;
 manufacturer/product/description appear in the lower-right footer.
+
+Version 0.9.8.1 renders glyphs directly at display resolution, with Native,
+Grayscale, 2x/4x and Off plus edge weight 50–200%. Window scaling is uniform.
+FILES provides CHOOSE/OPEN for five browser directories. SKIN imports portable
+PNG/JPEG images, image/grid combinations and image/panel opacity controls.
+Distortion reserves its heading row; inline-header pages omit redundant titles.
+All Patch/reorder context menus bind the instrument theme explicitly.

@@ -37,7 +37,7 @@ inline void run() {
     check(ThemeSettings::decode(ThemeSettings::encode(theme), decoded) &&
               decoded.fontFamily == theme.fontFamily && decoded.backgroundStyle == 2 &&
               decoded.knobStyle == 2 && decoded.colours == theme.colours,
-          "version-2 theme codec retains font, background, knob style and every colour");
+          "theme codec retains font, background, knob style and every colour");
     auto directory = profile.root.getSiblingFile(profile.root.getFileName() + "-export");
     auto file = directory.getChildFile("Chosen filename.json");
     check(ThemeSettings::saveTo(theme, file).wasOk() && file.existsAsFile() &&

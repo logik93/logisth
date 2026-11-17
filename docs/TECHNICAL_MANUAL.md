@@ -1,14 +1,14 @@
-# logisth 0.9.8 — Technical Manual
+# logisth 0.9.8.1 — Technical Manual
 
 **wavelogik · Architecture, DSP and Engineering Reference**
 
-Document revision: 1.2 · Software baseline: 0.9.8 · State schema: 4
+Document revision: 1.3 · Software baseline: 0.9.8.1 · State schema: 4
 
-Implementation baseline: release tag `v0.9.8`. The technical identity manifest
+Implementation baseline: release tag `v0.9.8.1`. The technical identity manifest
 records the CMake/runtime source identity. Native BUILD_INFO records its tagged
 commit, tree fingerprints, binary hashes and manual identities.
 
-This reference describes the implementation of logisth 0.9.8. It is
+This reference describes the implementation of logisth 0.9.8.1. It is
 intended for sound designers, audio engineers, contributors and integrators.
 The [User Manual](MANUAL.md) describes operating the interface; this document
 explains how its controls affect processing, how data is stored and which
@@ -723,21 +723,41 @@ data is embedded in the plug-in for its bundled families; custom family names
 require an installed font or fall back on the destination system.
 
 `UserSettings.h` stores font size (80–125%), style (theme/regular/bold/italic/
-bold italic), glyph antialiasing, analyzer mode/tilt and successful chooser
-folders in `logisth/preferences.json`. Access is locked and restricted to GUI/
+bold italic), glyph antialiasing, quality (Native/grayscale/2x/4x), edge weight
+(0.5–2), analyzer mode/tilt and successful chooser folders in `logisth/preferences.json`. Access is locked and restricted to GUI/
 import threads; writes use a temporary file and replacement. Folder paths are
 excluded from sound presets. Removed paths resolve to an existing ancestor.
 Separate preset-open/save, shared six-player sample, IR and library paths survive
 instances. Failed imports/loads do not replace remembered directories.
 
 Font sizes are derived from stable base sizes to avoid cumulative scaling.
-`TextRendering.h` intercepts shaped glyph draws, including editable text; AA Off
-thresholds a software-rendered glyph alpha mask to 0/255 at physical display
-resolution. Other vector drawing remains antialiased. A dirty-region image cache
-avoids redrawing the entire console for every small update; its scale is bounded
-to 0.5–4×. Popups/tooltips use the same glyph wrapper. Synthetic italic slants
-outlines when a separate italic face is unavailable. Default AA/style use native
-rendering. These are GUI operations, never audio callback work.
+`TextRendering.h` intercepts shaped glyph draws, including editable text, while
+forwarding vector operations directly to the original graphics context. The old
+full-console image cache and low-quality bitmap resampling are removed. The
+editor uses one uniform scale despite integer window-size rounding. These changes
+avoid second-stage text resampling, aspect distortion and stale transparent text.
+
+Native mode retains platform hinting at neutral weight. Grayscale uses a software
+outline mask; 2x/4x modes rasterise only glyph masks at that multiple of physical
+resolution, then average coverage to physical pixels. Default quality is 2x.
+Edge weight applies `coverage^(1/weight)` through a per-paint 256-entry lookup;
+weight is 0.5–2 (neutral 1). Off thresholds adjusted coverage to 0/255. Native
+with adjusted weight uses grayscale. Curves/knobs are unaffected. Shaped glyph
+positions and fallback typefaces are retained; glyphs without outlines use the
+native renderer. Synthetic italic slants outlines when an italic face is absent.
+Popups/tooltips use the same settings. Work stays on the GUI thread; dirty-region
+repaints continue through JUCE without a full-window backing image.
+
+Theme format 3 embeds optional original PNG/JPEG bytes as base64, plus image mix
+and panel opacity. Input is bounded to 16 MiB / 4096 x 4096; image headers are
+checked before decoding. The selected image is decoded on palette/image changes,
+not in paint/audio callbacks. It is cropped to the canvas and composited under
+panels. Grid and non-flat panel transparency are effective within the panels;
+flat factory palettes retain opaque panels. JSON scan size accommodates the
+bounded base64 payload, and content stamps use compact hashes. Versions 1/2
+remain readable. FILES directory selection is an application preference; library
+changes refresh the preset browser. Context popups bind the owning look-and-feel
+explicitly instead of using the application default.
 
 The exact owner-provided SVG is embedded through BinaryData and tinted on palette
 changes. Standard headers use the smaller mark with no adjacent wordmark; the
@@ -953,4 +973,5 @@ the release tag matching a binary when investigating a specific implementation.
 | --- | --- | --- |
 | 1.0 | 0.9.6.2 | First consolidated engineering reference; architecture, algorithms, dependencies, state and release evidence |
 | 1.1 | 0.9.7 | Reorderable FX, saved order and live fade, 32-note capacity/default 16, additive host control, serial idle horizons, contrast-aware skins and expanded validation |
+| 1.3 | 0.9.8.1 | Direct glyph rendering, selectable AA/supersampling and edge weight, uniform scaling, portable PNG/JPEG/grid backgrounds, folder controls and themed context menus |
 | 1.2 | 0.9.8 | Four-stage distortion, pre/post stereo-power FFT, categorized settings, glyph AA/size/style, persistent dialogs, exact SVG branding and real-WAV stereo checks |

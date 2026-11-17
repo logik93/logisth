@@ -119,6 +119,14 @@ def package(preview: Path, calibration: Path, kick_benchmark: Path | None = None
         if len([name for _, name in files if name.endswith('.wav')]) != 21 or any(not file.is_file() for file, _ in files):
             raise ValueError('Missing complete stereo WAV/GUI review evidence')
         bundles.append(('gui-dsp-review', files))
+    if tuple(map(int, version.split('.'))) >= (0, 9, 8, 1):
+        appearance = root / 'dist' / f'appearance-{version}'
+        files = [(root / 'docs/APPEARANCE_REVIEW.md', 'README.md'), (root / 'LICENSE', 'LICENSE'),
+                 (root / 'docs/appearance/text-rendering.csv', 'text-rendering.csv')]
+        files += [(p, 'images/' + p.name) for p in sorted(appearance.glob('*.png'))]
+        if len(files) < 12 or any(not p.is_file() for p, _ in files):
+            raise ValueError('Missing complete appearance regression evidence')
+        bundles.append(('appearance-review', files))
     folder.mkdir(parents=True)
     for file, name in copies:
         shutil.copyfile(file, folder / name)
