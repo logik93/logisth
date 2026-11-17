@@ -10,3 +10,4 @@ Source/vendor/signalsmith-stretch/** -text -whitespace
 *.logisth binary
 assets/themes/bokkenmmb*.json -text -whitespace
 assets/fonts/ioskeley/** -text -whitespace
+assets/branding/*.svg -text

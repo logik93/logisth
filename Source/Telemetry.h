@@ -32,8 +32,10 @@ class ScopeBuffer {
         return published.load(std::memory_order_acquire);
     }
     void read(int source, float *output, int n) const {
-        uint64_t end = published.load(std::memory_order_acquire),
-                 available = std::min<uint64_t>(end, capacity);
+        readAt(source, output, n, count());
+    }
+    void readAt(int source, float *output, int n, uint64_t end) const {
+        const uint64_t available = std::min<uint64_t>(end, capacity);
         for (int i = 0; i < n; ++i) {
             int64_t at = int64_t(end) - n + i;
             output[i] =

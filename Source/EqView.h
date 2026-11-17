@@ -1,4 +1,5 @@
 #pragma once
+#include "EqSpectrum.h"
 namespace logisth_ui {
 class EqView : public juce::Component, public juce::SettableTooltipClient {
     LogisthProcessor &processor;
@@ -7,6 +8,36 @@ class EqView : public juce::Component, public juce::SettableTooltipClient {
     int dragging = -1, selected = 0;
     float dragY = 0, dragX = 0, dragValue = 0, dragFrequency = 1000;
     juce::RangedAudioParameter *gesture = nullptr, *frequencyGesture = nullptr;
+    logisth::EqSpectrum spectrum;
+    int analysisMode = 3, analysisTilt = 2;
+    void drawSpectrum(juce::Graphics &g, juce::Rectangle<float> area) const {
+        const double rate = std::max(8000., processor.getSampleRate());
+        for (int stream = 0; stream < 2; ++stream) {
+            if (!(analysisMode & (1 << stream)))
+                continue;
+            juce::Path path;
+            bool started = false;
+            for (int i = 0; i < 384; ++i) {
+                const double hz = 20 * std::pow(1000., i / 383.);
+                if (hz >= rate * .5)
+                    break;
+                const double bin = hz * logisth::EqSpectrum::size / rate;
+                const auto at = std::min(size_t(bin), logisth::EqSpectrum::bins - 2);
+                const float fraction = float(bin - at);
+                const auto &values = spectrum.db[size_t(stream)];
+                const auto level = values[at] + fraction * (values[at + 1] - values[at]) +
+                                   logisth::EqSpectrum::tiltDb(hz, analysisTilt);
+                const auto yy = area.getBottom() - float((level + 108) / 120) * area.getHeight();
+                if (!started) {
+                    path.startNewSubPath(x(hz), yy);
+                    started = true;
+                } else
+                    path.lineTo(x(hz), yy);
+            }
+            g.setColour((stream == 0 ? theme.mint : theme.screenAccent).withAlpha(.65f));
+            g.strokePath(path, juce::PathStrokeType(1.2f));
+        }
+    }
     float value(const juce::String &id) const {
         return processor.state.getRawParameterValue(id)->load();
     }
@@ -32,7 +63,7 @@ class EqView : public juce::Component, public juce::SettableTooltipClient {
                                             std::max(44100., processor.getSampleRate()), output);
     }
     juce::Rectangle<float> plot() const {
-        return {30, 5, float(getWidth() - 40), float(getHeight() - 26)};
+        return {30, 5, float(getWidth() - 74), float(getHeight() - 26)};
     }
     float x(double hz) const {
         return plot().getX() + float(std::log(hz / 20) / std::log(1000.)) * plot().getWidth();
@@ -60,12 +91,24 @@ class EqView : public juce::Component, public juce::SettableTooltipClient {
     }
 
   public:
+    void setAnalyzer(int selected, int tilt) {
+        analysisMode = selected;
+        analysisTilt = tilt;
+        repaint();
+    }
+    void updateSpectrum() {
+        if (analysisMode &&
+            spectrum.update(processor.eqSpectrum, std::max(8000., processor.getSampleRate()),
+                            analysisMode))
+            repaint();
+    }
     std::function<void(int)> onSelectionChanged;
     EqView(LogisthProcessor &p, const LogisthColours &c, std::function<int()> m)
         : processor(p), theme(c), mode(std::move(m)) {
         setComponentID("eq.graph");
         setTooltip("Select a point; drag frequency/gain, wheel for Q, double-click for 0 dB. Add "
-                   "bands below.");
+                   "bands below. Left: EQ response dB. Right: stereo-power dBFS with the selected "
+                   "display tilt.");
     }
     ~EqView() override {
         finish();
@@ -92,6 +135,7 @@ class EqView : public juce::Component, public juce::SettableTooltipClient {
         {
             juce::Graphics::ScopedSaveState clip(g);
             g.reduceClipRegion(area.toNearestInt());
+            drawSpectrum(g, area);
             juce::Path curve;
             for (int i = 0; i < 256; ++i) {
                 double hz = 20 * std::pow(1000., i / 255.);
@@ -101,7 +145,7 @@ class EqView : public juce::Component, public juce::SettableTooltipClient {
                 else
                     curve.lineTo(xx, yy);
             }
-            g.setColour(theme.screenAccent);
+            g.setColour(theme.screenText);
             g.strokePath(curve, juce::PathStrokeType(1.8f));
             if (p.eqMode == 1)
                 for (int i = 0; i < logisth::eqMaxBands; ++i)
@@ -119,11 +163,20 @@ class EqView : public juce::Component, public juce::SettableTooltipClient {
         }
         theme.drawCaption(g, "+24", {1, 2, 26, 13}, 8, theme.muted);
         theme.drawCaption(g, "-24", {1, int(area.getBottom() - 13), 26, 13}, 8, theme.muted);
+        if (analysisMode) {
+            const int right = int(area.getRight()) + 3;
+            theme.drawCaption(g, "0dBFS",
+                              {right, int(area.getY() + area.getHeight() * .1f) - 6, 37, 13}, 7,
+                              theme.muted);
+            theme.drawCaption(g, "-96",
+                              {right, int(area.getY() + area.getHeight() * .9f) - 6, 37, 13}, 7,
+                              theme.muted);
+        }
         const int axisY = getHeight() - 18;
         theme.drawCaption(g, "20 Hz", {30, axisY, 58, 15}, 8, theme.muted);
         theme.drawCaption(g, "1 kHz", {int(x(1000)) - 30, axisY, 60, 15}, 8, theme.muted,
                           juce::Justification::centred);
-        theme.drawCaption(g, "20 kHz", {getWidth() - 82, axisY, 72, 15}, 8, theme.muted,
+        theme.drawCaption(g, "20 kHz", {int(area.getRight()) - 72, axisY, 72, 15}, 8, theme.muted,
                           juce::Justification::centredRight);
     }
     void mouseDown(const juce::MouseEvent &e) override {

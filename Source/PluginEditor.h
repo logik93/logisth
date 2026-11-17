@@ -11,6 +11,7 @@ struct LogisthColours {
     juce::Colour screenAccent{0xffbdd8bb};
     juce::String fontFamily = "Open Sans", skin;
     int backgroundStyle = 0, knobStyle = 0;
+    logisth::UserSettings::Text typography = logisth::UserSettings::text();
     juce::Font font(float size, bool bold = false) const;
     void drawCaption(juce::Graphics &, const juce::String &, juce::Rectangle<int>, float,
                      juce::Colour, juce::Justification align = juce::Justification::centredLeft,
@@ -43,6 +44,12 @@ class LogisthLook : public juce::LookAndFeel_V4, public LogisthColours {
     void positionComboBoxText(juce::ComboBox &, juce::Label &) override;
     juce::Font getPopupMenuFont() override;
     juce::Font getTextButtonFont(juce::TextButton &, int) override;
+    void drawPopupMenuItem(juce::Graphics &, const juce::Rectangle<int> &, bool, bool, bool, bool,
+                           bool, const juce::String &, const juce::String &, const juce::Drawable *,
+                           const juce::Colour *) override;
+    juce::Rectangle<int> getTooltipBounds(const juce::String &, juce::Point<int>,
+                                          juce::Rectangle<int>) override;
+    void drawTooltip(juce::Graphics &, const juce::String &, int, int) override;
     juce::PopupMenu::Options getOptionsForComboBoxPopupMenu(juce::ComboBox &,
                                                             juce::Label &) override;
     void drawToggleButton(juce::Graphics &, juce::ToggleButton &, bool, bool) override;

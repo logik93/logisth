@@ -81,6 +81,7 @@ Result LogisthProcessor::loadImpulseRequested(const File &file, uint64_t request
     impulseEngines.push_back(engine);
     impulseRack.publish(engine.get());
     assetStatus = "Impulse response ready: " + data->name;
+    UserSettings::remember(UserSettings::Folder::Impulse, file.getParentDirectory());
     return Result::ok();
 } catch (const std::exception &e) {
     return Result::fail("Cannot load impulse response: " + String(e.what()));

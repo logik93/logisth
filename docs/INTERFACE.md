@@ -22,7 +22,7 @@ functional submenus with symmetric A/B/C and paired scopes. Hover for tooltips a
 Numeric values support units such as kHz, ms and percent. Sync displays musical
 divisions instead of free time/rate controls. Arp steps use 01–08 and 09–16 views.
 
-The current engine exposes 1071 audio parameters. Tests check access, bounds, click
+The current engine exposes 1084 audio parameters. Tests check access, bounds, click
 targets, view changes, bindings, scaling and independent theme persistence.
 See [the English user manual](MANUAL.md) for full operation.
 
@@ -74,7 +74,7 @@ starts. The GUI refresh timer preserves this availability.
 
 0.9.2 adds MOD to every source (FM/AM plus pulse-only PWM), Sampler PLAYBACK
 stretch/interpolation menus, corrected Legacy and 10-band Graphic EQ with a
-response editor. SETTINGS now has a STYLE tab for font/background/knobs, chosen
+response editor. SETTINGS groups DISPLAY, TEXT, COLOURS, SKIN, MIDI, FILES and ABOUT; theme editing supports chosen
 save paths and custom renaming. Unsaved theme drafts survive editor recreation;
 folder scans run every two minutes. All MOD ENV defaults are zero. Reverb adds
 Diffusion and a rebuilt Hall with denser networks and four-window Shimmer.
@@ -131,3 +131,12 @@ POLY combines the preserved 1–16 host parameter with an appended 0–16 compan
 and exposes one 1–32 control, default 16. Light screen knobs now use dark faces;
 cached contrast repair keeps enabled needles/arcs/tracks visible in all ten
 themes and three styles without rewriting supplied palette files.
+
+The current working tree adds a four-slot serial distortion editor. Slots use
+identity numbers 1–4; they are selected independently from their processing
+position. Dragging a slot preserves the active editing selection. Chorus uses a
+stable 4×2 grid with RATE/DUAL at the right and FEEDBACK after DRY/WET.
+EQ separates the analyzer row from its graph and band inspector. Application
+font preferences affect existing labels and editable text without changing
+preset audio data. The standard header contains only the smaller SVG mark;
+manufacturer/product/description appear in the lower-right footer.

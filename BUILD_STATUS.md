@@ -1,5 +1,18 @@
 # logisth native release checks
 
+Current candidate: **0.9.8**. Receipts: `ci-release-v0.9.8`,
+`ci-build-v0.9.8-*` and `ci-check-v0.9.8-windows-asan`.
+Required: 20 Linux / 18 Windows/macOS suites, no failures/skips, plus Windows ASAN.
+Windows/Linux publish first; macOS Universal appends afterward.
+
+Local Linux verification passed all 20 suites (19 core/format suites and the full
+processor/UI suite), plus release export checks and ten publisher regressions.
+Local review covers four-stage distortion, all stage switches and saved order,
+calibrated pre/post stereo-power FFT and display tilts, 48 actual-WAV stereo
+convolution cases plus two sampler integrations, glyph-mask AA and persistent
+font/folder settings. Chorus grid and all 1084 controls are exercised. Source
+SVG and AP source bytes are checked. English user/technical manuals are current.
+
 Completed release: **[v0.9.7](https://github.com/logik93/logisth/releases/tag/v0.9.7)**.
 [Native CI run](https://github.com/logik93/logisth/actions/runs/43963656614)
 passed from tag commit `7975cb668c01b4c13206fdb6e69319b7926b4330`.

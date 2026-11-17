@@ -65,7 +65,7 @@ inline void run() {
     auto *hex = dynamic_cast<TextEditor *>(panel->findChildWithID("settings.theme.hex"));
     hex->setText("#FF8040", false);
     hex->onReturnKey();
-    dynamic_cast<Button *>(panel->findChildWithID("settings.tab.2"))->onClick();
+    dynamic_cast<Button *>(panel->findChildWithID("settings.tab.4"))->onClick();
     auto *notes = dynamic_cast<TextEditor *>(console->findChildWithID("preset.comment"));
     notes->setText("WWWiiiWWWiii", false);
     notes->onTextChange();

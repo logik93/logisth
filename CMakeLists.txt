@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.22)
-project(Logisth VERSION 0.9.7 LANGUAGES C CXX)
+project(Logisth VERSION 0.9.8 LANGUAGES C CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 include(CTest)
@@ -73,7 +73,7 @@ juce_add_binary_data(LogisthFonts SOURCES
   assets/fonts/ioskeley/IoskeleyMonoTermNerdFontMono-Regular.ttf
   assets/fonts/ioskeley/IoskeleyMonoTermNerdFontMono-Bold.ttf
   assets/themes/bokkenmmb-Solarized.json "assets/themes/bokkenmmb-Tokyo Night.json"
-  "assets/themes/bokkenmmb-Solarized Osaka.json" assets/themes/bokkenmmb-gruvbox.json assets/skins/ap-music-group-white.png)
+  "assets/themes/bokkenmmb-Solarized Osaka.json" assets/themes/bokkenmmb-gruvbox.json assets/skins/ap-music-group-white.png assets/branding/logisth.svg)
 target_sources(Logisth PRIVATE Source/PluginProcessor.cpp Source/SourceAssets.cpp Source/ImpulseAssets.cpp Source/ImpulseReverb.cpp Source/OscillatorClipboard.cpp Source/PresetLibrary.cpp Source/PluginEditor.cpp Source/ThemeSettings.cpp)
 target_link_libraries(Logisth PRIVATE LogisthFonts)
 target_compile_definitions(Logisth PUBLIC JUCE_WEB_BROWSER=0 JUCE_USE_CURL=0 JUCE_VST3_CAN_REPLACE_VST2=0)

@@ -1,14 +1,14 @@
-# logisth 0.9.7 — Technical Manual
+# logisth 0.9.8 — Technical Manual
 
 **wavelogik · Architecture, DSP and Engineering Reference**
 
-Document revision: 1.1 · Software baseline: 0.9.7 · State schema: 4
+Document revision: 1.2 · Software baseline: 0.9.8 · State schema: 4
 
-Implementation baseline: release tag `v0.9.7`. The technical identity manifest
-records the CMake/runtime source identity; native BUILD_INFO records the tagged
-commit, tree fingerprints, binary hashes and this manual's identities.
+Implementation baseline: release tag `v0.9.8`. The technical identity manifest
+records the CMake/runtime source identity. Native BUILD_INFO records its tagged
+commit, tree fingerprints, binary hashes and manual identities.
 
-This reference describes the implementation shipped in logisth 0.9.7. It is
+This reference describes the implementation of logisth 0.9.8. It is
 intended for sound designers, audio engineers, contributors and integrators.
 The [User Manual](MANUAL.md) describes operating the interface; this document
 explains how its controls affect processing, how data is stored and which
@@ -54,7 +54,7 @@ a player is one source slot; a unison lane is one component inside a player.
 | Player engines | Classic, Wavetable, Sampler, Granular |
 | Note polyphony | 1–32 voices, default 16; mono/legato and portamento available |
 | Unison selection | 0–8 lanes per player; 0 disables the player |
-| Host parameter count | 1071; all previous 1070 definitions retained, one additive polyphony companion appended |
+| Host parameter count | 1084; previous 1071 definitions retained, thirteen distortion controls appended |
 | Modulators | Two modulation ADSRs, two LFOs, four miscellaneous source selectors, two destinations per modulator |
 | Performance macros | Four macros, four target assignments each |
 | Pattern memory | Twelve pattern slots; sequences up to 32 steps |
@@ -482,13 +482,35 @@ Implementation: [Chords.h](../Source/Chords.h), [Arpeggiator.h](../Source/Arpegg
 
 | Stage | Implementation |
 | --- | --- |
-| Distortion | tanh saturation, folding, hard clipping, sample-rate hold reduction or amplitude quantization; smoothed Drive/Mix |
+| Distortion | Four independently enabled serial stages: tanh, folding, hard clipping, sample hold or quantization; per-stage Drive/Mix smoothing |
 | Phaser | Six all-pass stages per channel, LFO frequency sweep, feedback and width |
 | Chorus | Fractional delay modulation with stereo phase offsets; optional dual lines and feedback |
 | Legacy EQ | Two corrected second-order shelving filters: bass and treble |
 | Graphic EQ | Sixteen independent biquad slots with frequency, gain, Q, type and enable |
 | Reverb | Five original algorithmic models or prepared JUCE convolution |
 | Delay | Stereo fractional delay, separate L/R times/divisions, feedback filtering, smear, ping-pong and width |
+
+Distortion slot 1 retains the original Type/Drive/Mix and its modulation target.
+`dist1on` defaults on; the group master retains its existing bypass behavior.
+Three further slots each append On/Type/Drive/Mix, default disabled. DistortionOrder
+is a validated 8-bit permutation of four identities. Factory Init uses 1/2/3/4.
+Presets/projects save it as optional `distortionOrder` metadata; missing metadata
+uses the original order. Invalid metadata rejects the patch before publication.
+Each stage owns independent hold counters, stereo memory and smoothing. The
+selected order drives actual serial processing. Reordering uses the same 5 ms
+down/switch/5 ms up policy as the outer rack, without duplicate banks. Disabled
+or zero-Mix stages are skipped; all-disabled groups bypass without distortion work.
+
+The EQ analyzer taps full-rate L/R immediately before and after its current
+position in the movable effects rack, including bypassed EQ. Four atomic ring
+lanes carry pre-L/pre-R/post-L/post-R. Audio only copies samples; a GUI-side
+2048-point radix-2 FFT applies a periodic Hann window. One-sided amplitudes are
+normalized by the window sum (DC/Nyquist have no doubling). The trace averages
+L/R power before 10 log10, avoiding antiphase cancellation. A bin-centered
+full-scale stereo sine is 0 dBFS; doubling it gives +6.0206 dB. Attack/release
+smoothing is visual. Display tilt is `1.5 * choice * log2(f/1000)`, choice 0–4.
+It does not alter audio coefficients. Off or a hidden/closed EQ view disables
+capture and FFT work. The response curve remains available with the analyzer off.
 
 Graphic EQ types are Bell, Low shelf, High shelf, High-pass, Low-pass, Notch,
 Band-pass and All-pass. Frequency spans 20–20000 Hz, gain −18–18 dB and Q 0.1–20;
@@ -528,6 +550,15 @@ The logisth Normalise option measures the actual prepared/resampled response and
 uses 1/sqrt(max(left_energy,right_energy)), capped at 1e6. It is energy
 normalization rather than peak normalization. Gain changes are smoothed.
 
+The stereo review decodes real WAV fixtures and compares the complete reverb
+stage against direct L/R FIR reference convolution: 48 cases combine three rates,
+mono/asymmetric-stereo IRs, independent/left-only/right-only/antiphase inputs and
+normalization on/off. Two further cases render the actual sampler through IR
+and Main. The recorded maximum sample error is approximately 1.04e-7; the guard
+threshold is 2e-5. C++ allocation guards cover audio processing. This validates
+lane mapping, polarity, shared normalization and default Width=1, Predelay=0;
+it is not an acoustic quality comparison for arbitrary recorded IRs.
+
 IR file rates span 8–192 kHz. The 32 MiB stereo PCM budget must fit both the
 source and its host-rate resampled length; convolution preparation accepts host
 rates 8–384 kHz. This bound excludes FFT partitions and other engine overhead.
@@ -536,7 +567,8 @@ min/max bins per channel. IR drag/drop imports asynchronously and its PCM is
 embedded in saved patches. The included chamber IR is generated by original
 project code rather than an external recording collection.
 
-Implementation: [Effects.h](../Source/Effects.h), [Equalizer.h](../Source/Equalizer.h),
+Implementation: [Effects.h](../Source/Effects.h), [Distortion.h](../Source/Distortion.h),
+[EqSpectrum.h](../Source/EqSpectrum.h), [Equalizer.h](../Source/Equalizer.h),
 [Reverb.h](../Source/Reverb.h), [ImpulseReverb.cpp](../Source/ImpulseReverb.cpp).
 
 ## 13. Compressor, clipper and final limiter
@@ -668,7 +700,7 @@ one 1–32 numeric control and publishes gestures to the two host parameters.
 Composite numeric/menu attachments cache their incoming values instead of
 re-reading an APVTS raw adapter that may still contain the preceding event.
 This also prevents one-update-late detune and extended destination displays.
-Old automation and presets with zero extension retain their previous values.
+Old automation and presets with zero extension retain their previous values. The subsequent thirteen distortion controls are appended after polyphonyextra; all 1071 earlier definitions remain intact.
 Spectral preparation, readiness and voice indexing use the same effective count.
 Restoration clamps values, handles non-finite numbers and rounds discrete
 controls. Missing fields use defined compatibility defaults; `compmode`,
@@ -690,6 +722,28 @@ that instance. Sound presets do not replace theme, scale or window size. Font
 data is embedded in the plug-in for its bundled families; custom family names
 require an installed font or fall back on the destination system.
 
+`UserSettings.h` stores font size (80–125%), style (theme/regular/bold/italic/
+bold italic), glyph antialiasing, analyzer mode/tilt and successful chooser
+folders in `logisth/preferences.json`. Access is locked and restricted to GUI/
+import threads; writes use a temporary file and replacement. Folder paths are
+excluded from sound presets. Removed paths resolve to an existing ancestor.
+Separate preset-open/save, shared six-player sample, IR and library paths survive
+instances. Failed imports/loads do not replace remembered directories.
+
+Font sizes are derived from stable base sizes to avoid cumulative scaling.
+`TextRendering.h` intercepts shaped glyph draws, including editable text; AA Off
+thresholds a software-rendered glyph alpha mask to 0/255 at physical display
+resolution. Other vector drawing remains antialiased. A dirty-region image cache
+avoids redrawing the entire console for every small update; its scale is bounded
+to 0.5–4×. Popups/tooltips use the same glyph wrapper. Synthetic italic slants
+outlines when a separate italic face is unavailable. Default AA/style use native
+rendering. These are GUI operations, never audio callback work.
+
+The exact owner-provided SVG is embedded through BinaryData and tinted on palette
+changes. Standard headers use the smaller mark with no adjacent wordmark; the
+footer identifies manufacturer/product/instrument. AP bitmap bytes and logo
+geometry remain unchanged.
+
 Knob colors are prepared on palette/style changes for normal and screen contexts.
 Screen knobs use that screen's actual surface, including under Light. Cached
 needle colors target at least 4.5:1 relative-luminance contrast against both face
@@ -702,7 +756,8 @@ check, not a certification of the entire interface. Rendering does not modify
 the supplied theme files.
 
 Implementation: [PresetLibrary.cpp](../Source/PresetLibrary.cpp),
-[SourceAssets.cpp](../Source/SourceAssets.cpp), [THEMES.md](THEMES.md).
+[SourceAssets.cpp](../Source/SourceAssets.cpp), [UserSettings.h](../Source/UserSettings.h),
+[TextRendering.h](../Source/TextRendering.h), [THEMES.md](THEMES.md).
 
 ## 16. Open-source components and licenses
 
@@ -788,7 +843,10 @@ native architecture, and every packaged Mach-O binary is checked for both
 slices. This does not claim separate native test execution on both architectures.
 Windows uses an x64 toolchain. Linux packages are x86_64; BUILD_INFO records
 the actual required glibc version. Windows is unsigned and macOS ad-hoc signed,
-not notarized. Public packages contain VST3, CLAP and Standalone.
+not notarized. Public packages contain VST3, CLAP and Standalone. The standard
+Windows system folders are `C:\Program Files\Common Files\VST3` and
+`C:\Program Files\Common Files\CLAP`. The user manual lists system/user
+locations for all three operating systems; whole bundles must remain intact.
 
 | Validation area | Evidence |
 | --- | --- |
@@ -801,7 +859,7 @@ not notarized. Public packages contain VST3, CLAP and Standalone.
 | Dependency identity | Vendored SHA-256 manifest and upstream source comparison |
 | Release contents | Architecture, source fingerprints, SHA-256, license/font/theme/manual presence |
 
-The 0.9.7 release requires 20 Linux suites, 18 Windows suites, 18 macOS suites
+The native release requires 20 Linux suites, 18 Windows suites, 18 macOS suites
 and 18 suites in the separate Windows AddressSanitizer run, with no skipped or
 failed suites. The smaller non-Linux count reflects Linux-only binary smoke
 tests. It is not a count of assertions or a certification for every DAW. Rack adds all
@@ -877,6 +935,7 @@ provided by `processor_tests`; see the linked reports for arguments and conditio
 | [ALGORITHM_AUDIT.json](ALGORITHM_AUDIT.json) | Machine-readable dependency/conformance record |
 | [FACTORY_PRESETS.md](FACTORY_PRESETS.md) | Authored bank categories and performance controls |
 | [INTERFACE.md](INTERFACE.md) | UI organization and layout conventions |
+| [GUI_DSP_REVIEW.md](GUI_DSP_REVIEW.md) | Working-tree distortion, spectrum, stereo, font/folder and logo evidence |
 | [RACK_REVIEW.md](RACK_REVIEW.md) | Ordered DSP, 32-note capacity, host refresh and ten-theme contrast evidence |
 | [Source](../Source) | Runtime implementation and vendored headers |
 | [tests](../tests) | Core, processor, allocation and binary checks |
@@ -894,3 +953,4 @@ the release tag matching a binary when investigating a specific implementation.
 | --- | --- | --- |
 | 1.0 | 0.9.6.2 | First consolidated engineering reference; architecture, algorithms, dependencies, state and release evidence |
 | 1.1 | 0.9.7 | Reorderable FX, saved order and live fade, 32-note capacity/default 16, additive host control, serial idle horizons, contrast-aware skins and expanded validation |
+| 1.2 | 0.9.8 | Four-stage distortion, pre/post stereo-power FFT, categorized settings, glyph AA/size/style, persistent dialogs, exact SVG branding and real-WAV stereo checks |

@@ -194,8 +194,21 @@ bool LogisthProcessor::moveEffect(int from, int to) {
     auto order = effectOrder();
     return order.move(from, to) && setEffectOrder(order);
 }
+bool LogisthProcessor::setDistortionOrder(DistortionOrder order, bool notifyHost) {
+    if (!order.valid())
+        return false;
+    if (distortionOrderBits.exchange(order.packed()) != order.packed() && notifyHost)
+        updateHostDisplay(
+            AudioProcessorListener::ChangeDetails{}.withNonParameterStateChanged(true));
+    return true;
+}
+bool LogisthProcessor::moveDistortion(int from, int to) {
+    auto order = distortionOrder();
+    return order.move(from, to) && setDistortionOrder(order);
+}
 EffectsParams LogisthProcessor::effectsSnapshot() const {
     EffectsParams p;
+    p.eqTrace = eqSpectrumEnabled.load(std::memory_order_relaxed) ? &eqSpectrum : nullptr;
     p.distortion = get(Param::diston) > 0;
     p.phaser = get(Param::phaseron) > 0;
     p.chorus = get(Param::choruson) > 0;
@@ -216,6 +229,13 @@ EffectsParams LogisthProcessor::effectsSnapshot() const {
     p.delayDivisionR = int(get(Param::delaydivR));
     p.drive = get(Param::drive);
     p.distMix = get(Param::distmix);
+    p.distortionOrder = distortionOrder();
+    p.firstDistortionEnabled = get(Param::dist1on) > 0;
+    for (int i = 0; i < 3; ++i) {
+        const auto at = size_t(Param::dist2on) + size_t(i) * 4;
+        p.extraDistortions[size_t(i)] = {get(Param(at)) > 0, int(get(Param(at + 1))),
+                                         get(Param(at + 2)), get(Param(at + 3))};
+    }
     p.phaserFreq = get(Param::phaserfreq);
     p.phaserSpread = get(Param::phaserspread);
     p.phaserOffset = get(Param::phaseroffset);
@@ -335,6 +355,8 @@ void LogisthProcessor::prepareToPlay(double sampleRate, int blockSize) {
 void LogisthProcessor::reset() {
     engine.reset();
     scope.clear();
+    eqSpectrum.clear();
+    lastEqCapture = false;
     for (auto &trace : playerScopes)
         trace.clear();
     chordMapper.reset();
@@ -406,6 +428,10 @@ void LogisthProcessor::processBlock(AudioBuffer<float> &audio, MidiBuffer &midi)
     }
     const auto p = snapshot();
     const auto fx = effectsSnapshot();
+    if (bool(fx.eqTrace) != lastEqCapture) {
+        eqSpectrum.clear();
+        lastEqCapture = bool(fx.eqTrace);
+    }
     rackTransition.request(effectOrder());
     const ClipperSettings cp{get(Param::clipon) > 0,    get(Param::clipquality) > 0,
                              int(get(Param::clipmode)), get(Param::clipdrive),
@@ -730,6 +756,7 @@ bool LogisthProcessor::applyState(const void *data, int size) try {
 }
 void LogisthProcessor::loadPreset(int index) {
     setEffectOrder(EffectOrder{}, false);
+    setDistortionOrder(DistortionOrder{}, false);
     if (index >= 10 && index < factoryPresetCount) {
         loadPreset(0);
         auto set = [&](const char *id, float value) {

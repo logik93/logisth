@@ -17,8 +17,10 @@
 #include "PluginEditor.h"
 #include "PluginProcessor.h"
 #include "ProcessorPhaseTests.h"
+#include "StereoReviewTests.h"
 #include "ThemeAdvancedTests.h"
 #include "ThemeSettings.h"
+#include "UiReviewTests.h"
 #include <iostream>
 #include <stdexcept>
 #include <thread>
@@ -969,8 +971,21 @@ int main(int argc, char **argv) {
     std::cerr << std::unitbuf;
     try {
         juce::ScopedJuceInitialiser_GUI gui;
+        juce::TemporaryFile userPreferences(".json");
+        logisth::UserSettings::useFileForTests(userPreferences.getFile());
         juce::TemporaryFile themePreferences(".json");
         logisth::ThemeSettings::useStorageFileForTests(themePreferences.getFile());
+        if (argc > 1 && juce::String(argv[1]) == "--review-check") {
+            stereo_review_test::run();
+            ui_review_test::run();
+            return 0;
+        }
+        if (argc > 2 && juce::String(argv[1]) == "--review-report") {
+            const juce::File folder(juce::String::fromUTF8(argv[2]));
+            stereo_review_test::run(folder.getChildFile("stereo"));
+            ui_review_test::run(folder.getChildFile("ui"));
+            return 0;
+        }
         if (argc > 1 && juce::String(argv[1]) == "--advanced-theme-check") {
             theme_advanced_test::run();
             return 0;
@@ -1064,6 +1079,8 @@ int main(int argc, char **argv) {
         oscillator_clipboard_test::run();
         features0962_test::run();
         features097_test::run();
+        stereo_review_test::run();
+        ui_review_test::run();
         factorybank_test::run();
         factorybank_test::search();
         processor_phase_test::run();

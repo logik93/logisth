@@ -3,14 +3,19 @@ using namespace juce;
 using namespace logisth;
 File LogisthProcessor::presetDirectory() const {
     const ScopedLock lock(assetLock);
-    return userPresetFolder == File{} ? File::getSpecialLocation(File::userApplicationDataDirectory)
-                                            .getChildFile("logisth/Presets")
-                                      : userPresetFolder;
+    return userPresetFolder == File{}
+               ? UserSettings::folder(UserSettings::Folder::Library,
+                                      File::getSpecialLocation(File::userApplicationDataDirectory)
+                                          .getChildFile("logisth/Presets"))
+               : userPresetFolder;
 }
 void LogisthProcessor::setPresetDirectory(const File &folder) {
-    const ScopedLock lock(assetLock);
-    userPresetFolder = folder;
-    ++presetRevision;
+    {
+        const ScopedLock lock(assetLock);
+        userPresetFolder = folder;
+        ++presetRevision;
+    }
+    UserSettings::remember(UserSettings::Folder::Library, folder);
 }
 File LogisthProcessor::currentPresetFile() const {
     const ScopedLock lock(assetLock);
@@ -65,6 +70,7 @@ Result LogisthProcessor::savePresetFile(const File &file) try {
         activePresetFile = file;
     }
     ++presetRevision;
+    UserSettings::remember(UserSettings::Folder::PresetSave, file.getParentDirectory());
     return Result::ok();
 } catch (const std::bad_alloc &) {
     return Result::fail("Not enough memory to save this preset.");
@@ -81,6 +87,7 @@ Result LogisthProcessor::loadPresetFile(const File &file) try {
         activePresetFile = file;
     }
     ++presetRevision;
+    UserSettings::remember(UserSettings::Folder::PresetOpen, file.getParentDirectory());
     return Result::ok();
 } catch (const std::bad_alloc &) {
     return Result::fail("Not enough memory to load this preset.");

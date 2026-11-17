@@ -120,6 +120,24 @@ def verify(tag: str) -> None:
                         raise ValueError(f'Contrast fixture below its target: {row["theme"]}/{key}')
             if archive.read('README.md').replace(b'\r\n', b'\n') != (root / 'docs/RACK_REVIEW.md').read_bytes().replace(b'\r\n', b'\n'):
                 raise ValueError('Stale rack/skin review description')
+    if tuple(map(int, version.split('.'))) >= (0, 9, 8):
+        name = f'logisth-{version}-gui-dsp-review.zip'
+        if name not in names:
+            raise ValueError('Missing GUI/DSP and real-WAV stereo evidence')
+        with zipfile.ZipFile(folder / name) as archive:
+            rows = list(csv.DictReader(io.StringIO(archive.read('stereo-convolution.csv').decode('utf-8'))))
+            cases = {(r['sample_rate'], r['ir'], r['source'], r['normalized']) for r in rows}
+            if len(rows) != 48 or len(cases) != 48 or any(not 0 <= float(r['max_error']) < 2e-5 for r in rows):
+                raise ValueError('Incomplete or failed stereo review cases')
+            if len([n for n in archive.namelist() if n.endswith('.wav')]) != 21:
+                raise ValueError('Missing stereo review sample WAVs')
+            if archive.read('README.md') != (root / 'docs/GUI_DSP_REVIEW.md').read_bytes():
+                raise ValueError('Stale GUI/DSP review description')
+            if archive.read('stereo-convolution.csv') != (root / 'docs/gui-review/stereo-convolution.csv').read_bytes():
+                raise ValueError('Stale stereo review measurements')
+        with zipfile.ZipFile(folder / f'logisth-{version}-themes.zip') as archive:
+            if archive.read('logisth.svg') != (root / 'assets/branding/logisth.svg').read_bytes():
+                raise ValueError('Supplied SVG logo differs from the theme archive')
     print(f"Verified {len(names)} release assets for {tag}")
 
 

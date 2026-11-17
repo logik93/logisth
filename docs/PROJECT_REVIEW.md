@@ -1,5 +1,12 @@
 # logisth 0.9.7 — project and algorithm review
 
+The v0.9.8 GUI/DSP changes is documented in [GUI_DSP_REVIEW.md](GUI_DSP_REVIEW.md):
+four serial distortion stages, pre/post stereo-power spectra, font/settings/
+folder preferences, exact new SVG and unchanged AP artwork. The 48 real-WAV
+convolution cases plus two actual sampler integrations validate stereo routing;
+the convolution DSP was retained. Published v0.9.7 assets remain unchanged.
+
+
 ## Algorithm provenance and conformance
 
 | Component | Actual implementation | Evidence and limits |

@@ -151,7 +151,7 @@ inline void run() {
         auto revision = ThemeSettings::revision();
         check(!ThemeSettings::scan(true) && revision == ThemeSettings::revision(),
               "unchanged rescans do not rebuild menus or flicker controls");
-        for (int tab = 0; tab < 4; ++tab) {
+        for (int tab = 0; tab < 7; ++tab) {
             dynamic_cast<Button *>(panel->findChildWithID("settings.tab." + String(tab)))
                 ->onClick();
             auto children = panel->getChildren();
@@ -212,7 +212,7 @@ inline void preview(const File &folder) {
     auto *console = ui->getChildComponent(0);
     dynamic_cast<Button *>(console->findChildWithID("ui.settings"))->onClick();
     auto *panel = console->findChildWithID("settings.panel");
-    for (int tab = 0; tab < 4; ++tab) {
+    for (int tab = 0; tab < 7; ++tab) {
         dynamic_cast<Button *>(panel->findChildWithID("settings.tab." + String(tab)))->onClick();
         write("settings-" + String(tab), ui->createComponentSnapshot(ui->getLocalBounds()));
     }

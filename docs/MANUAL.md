@@ -1,7 +1,10 @@
-# logisth 0.9.7 — User Manual
+# logisth 0.9.8 — User Manual
 
 wavelogik logisth is a three-part polyphonic subtractive synthesizer for VST3, CLAP and standalone use.
 This manual describes logisth's controls, sound engines and preset workflow.
+
+This edition describes **v0.9.8**. Earlier downloads retain their corresponding
+interface and manuals.
 
 ## Contents
 
@@ -24,11 +27,27 @@ native archive contains VST3, CLAP and Standalone folders. Extract it first.
 Copy the entire .vst3 bundle and the .clap file or bundle into a plug-in directory
 scanned by your DAW. Keep the internal structure of bundles intact.
 
-| System | User VST3 directory | User CLAP directory |
+| System | Format | Recommended system directory |
 | --- | --- | --- |
-| Windows | %LOCALAPPDATA%\Programs\Common\VST3 | %LOCALAPPDATA%\Programs\Common\CLAP |
-| macOS | ~/Library/Audio/Plug-Ins/VST3 | ~/Library/Audio/Plug-Ins/CLAP |
-| Linux | ~/.vst3 | ~/.clap |
+| Windows x64 | VST3 | `C:\Program Files\Common Files\VST3` |
+| Windows x64 | CLAP | `C:\Program Files\Common Files\CLAP` |
+| macOS | VST3 | `/Library/Audio/Plug-Ins/VST3` |
+| macOS | CLAP | `/Library/Audio/Plug-Ins/CLAP` |
+| Linux x64 | VST3 | `/usr/lib/vst3` |
+| Linux x64 | CLAP | `/usr/lib/clap` |
+
+System directories may require administrator access. Copy the complete
+`logisth.vst3` bundle, not only its inner binary. On Windows, copy `logisth.clap`
+to the CLAP directory. Restart or rescan the host after installation.
+
+For installation without administrator access, use the user directories:
+Windows `%LOCALAPPDATA%\Programs\Common\VST3` and
+`%LOCALAPPDATA%\Programs\Common\CLAP`; macOS
+`~/Library/Audio/Plug-Ins/VST3` and `~/Library/Audio/Plug-Ins/CLAP`; Linux
+`~/.vst3` and `~/.clap`. Linux also supports `/usr/local/lib/vst3` and
+`/usr/local/lib/clap` for local system installations. If necessary, add the
+chosen directory to the host's scan paths.
+
 
 If your DAW does not scan these user directories, add them to its scan paths or
 use its documented system directory. Rescan plug-ins, insert logisth on a MIDI
@@ -67,7 +86,7 @@ SOLO, POLY, SYNC and SETTINGS. Filters are on the left, the rack in the centre, 
 the mixer on the right. Mod Env, LFO and Misc routing remain visible below them.
 The bottom row contains wheels, the keyboard and mono/portamento controls.
 
-Drag the bottom-right resize handle, or open SETTINGS / APPEARANCE and enter
+Drag the bottom-right resize handle, or open SETTINGS / DISPLAY and enter
 UI SCALE from 80% to 200%. Decimal values such as 137.5% are accepted. The
 nominal size is 1240 by 860 pixels. The displayed percentage shows the last valid
 scale; invalid/out-of-range entries restore it. Exact window dimensions and the
@@ -75,27 +94,39 @@ entered percentage are saved and restored when the editor or a new instance
 opens. A fresh installation adapts the initial size to its display. Each open
 window keeps its own size; changing one sets the default for subsequent windows.
 
-SETTINGS has APPEARANCE, THEME EDITOR, STYLE and ABOUT tabs inside the central
-rack. The standard themes are Light, Midnight Blue (default), Cobalt, Graphite,
+SETTINGS uses seven categories in the central rack: DISPLAY, TEXT, COLOURS,
+SKIN, MIDI and FILES, followed by ABOUT. DISPLAY contains theme selection and
+window scaling; TEXT controls fonts; COLOURS edits a theme; SKIN controls its
+background/knobs; MIDI contains velocity behavior; FILES shows remembered
+folders; ABOUT contains credits and the logo. The standard themes are Light, Midnight Blue (default), Cobalt, Graphite,
 Forest, AP always flexin'!, bokkenmmb-Solarized, bokkenmmb-Tokyo Night,
 bokkenmmb-Solarized Osaka and bokkenmmb-gruvbox (ten themes). The four bokkenmmb
 themes use embedded IoskeleyMonoTerm Nerd Font Mono v2.2.0, Regular and Bold,
 so separate font installation is unnecessary. The AP skin uses a white geometric AP mark without
 the handwritten signature, on a black/blue/cyan/violet palette. Theme selection is shared by open instances and recalled by new
-ones; audio presets/projects preserve theme and scale. Preferences live in
+ones. Appearance preferences remain independent of audio presets and projects. Theme/window preferences live in
 `logisth/appearance.json` under the system user application-data directory.
 
-APPEARANCE / OPEN FOLDER reveals the current theme directory. USE FOLDER selects
+DISPLAY / OPEN FOLDER reveals the current theme directory. USE FOLDER selects
 another directory; missing standard themes are created there. EDIT / NEW opens
-THEME EDITOR. Enter a name and select one of twelve colour roles, then use the
+COLOURS. Enter a name and select one of twelve colour roles, then use the
 colour picker or a six-digit RGB hex colour such as #62ACFF and press Enter.
 DARK CONTROLS selects light/dark control styling. SAVE NEW writes a custom copy
 in the current folder. SAVE AS... lets you choose a folder and exact JSON file
 name. RENAME renames the selected custom theme, including its file; standard
 files remain protected. RESET restores the selected saved theme.
 
-STYLE selects a font family installed on this computer (Open Sans is embedded),
-Flat/Gradient/Grid background and Arc/Solid/Minimal knobs. Knob and Knob Track
+TEXT selects a theme font family (Open Sans and Ioskeley Mono are embedded).
+FONT SIZE accepts 80–125%, including typed values, independently of UI SCALE.
+The reference height and last accepted percentage are displayed. FONT STYLE
+selects Theme default, Regular, Bold, Italic or Bold italic. FONT ANTIALIASING
+smooths glyph edges by default; disabling it gives crisp one-bit glyph edges
+while curves and knobs keep normal antialiasing. Size, style and antialiasing
+are saved globally and recalled by new instances. The theme still owns its font
+family. These application preferences and remembered folders are stored in
+`logisth/preferences.json` under the user application-data directory.
+
+SKIN selects Flat/Gradient/Grid background and Arc/Solid/Minimal knobs. Knob and Knob Track
 colours are separate from the accent. These choices preview immediately and are
 saved with the theme. Unsaved edits stay with this instrument instance when its
 editor closes/reopens or is minimized; save a theme to retain it across sessions.
@@ -126,7 +157,7 @@ read the version, licenses, open-source projects and these project credits:
 | Moander | Tester with a head full of ideas. |
 | bokkenmmb | Tester, idea guy, and resident theme wizard (yes, the FoRReSkin one). |
 
-APPEARANCE includes **FIX MIDI VELOCITY TO MAXIMUM**. It is off by default,
+MIDI includes **FIX MIDI VELOCITY TO MAXIMUM**. It is off by default,
 retaining normal note dynamics. When enabled, every generated or played Note On
 uses velocity 127, including arp output and the engine's Velocity modulation
 source. It does not change MIDI note-off or other controllers. The setting is
@@ -138,6 +169,8 @@ Examples of accepted values include 2.5k for 2500 Hz, 350ms and 65%.
 Double-click a control to restore its default; modulation amount controls return
 to zero. Hover for a tooltip and the parameter/value readout at the bottom.
 PHASE remains editable in Classic and Wavetable with RETRIG either off or on.
+
+![Typography settings](images/logisth-settings-text.png)
 
 ## 3. Oscillators and amplitude envelopes
 
@@ -604,7 +637,7 @@ Limiter when a final sample-peak ceiling is required.
 
 | Section | Controls and use |
 | --- | --- |
-| Distortion | Overdrive, Foldback, Clip, Decimate and Bitcrush; Amount and Dry/Wet set character and blend. |
+| Distortion | Four serial stages, each with its own On/Off, model, Drive and Mix. Drag headers to reorder. |
 | Phaser | Six-stage stereo phasing with centre frequency, spread, L/R offset, width, LFO, feedback and Dry/Wet. Its frequency is a modulation destination. |
 | Chorus | Delay, depth, rate, feedback, dual mode, width and Dry/Wet thicken a sound. |
 | Equalizer | Legacy two-shelf or 16-slot Graphic/parametric; eight filter types, response curve, Auto Gain and output trim. |
@@ -613,6 +646,29 @@ Limiter when a final sample-peak ceiling is required.
 | Compressor | Legacy/Modern, stereo link, threshold, ratio, knee, attack/release, makeup, Mix and live graphs. |
 | Clipper | Hard/Soft, Drive, Ceiling, Knee, Mix and Direct/Antialiased quality, with curve and waveform. |
 | Limiter | Final stereo-linked sample ceiling, release, drive, reduction history and activity. |
+
+### Distortion and Chorus
+
+The Distortion page contains four serial slots, in **1 / 2 / 3 / 4** order for
+a new instance or Init. Click a slot header to edit its Overdrive, Foldback,
+Clip, Decimate or Bitcrush model, Drive and Mix. Each slot has an ON / OFF
+switch. The rack switch bypasses the entire group. Stage 1 retains earlier
+Distortion controls and modulation; the three additional stages are disabled
+in older patches. Host automation exposes each stage's controls separately.
+
+Drag the headers to change their processing order, use Alt+Left/Right, or use
+the header's context menu. Presets and projects store the chosen order and all
+four stages. Live reordering uses a short fade around the switch. A bypassed
+stage is skipped; four bypassed stages add no distortion DSP work.
+
+Chorus keeps the same grid in Sync and free modes. RATE and DUAL share the
+far-right column. FEEDBACK follows DRY/WET on the lower row; Delay, Depth,
+Width and Dry/Wet keep their positions. Sync switches RATE between a musical
+division and Hz without moving its cell.
+
+![Four-stage distortion](images/logisth-distortion.png)
+
+![Chorus grid](images/logisth-chorus.png)
 
 ### Equalizer
 
@@ -647,6 +703,17 @@ around 15 ms. Filter-type changes crossfade over 20 ms; rapid requests settle to
 the latest type. Both EQ modes and every band setting are saved with presets.
 
 ![Graphic EQ selected-band inspector](images/logisth-eq-graphic.png)
+
+The ANALYZER selector offers Off, Pre, Post and Pre + Post. Pre captures the
+actual stereo signal entering the EQ stage; Post captures its output. The
+spectrum is the mean L/R power, so opposite-polarity channels remain visible.
+The frequency-response curve and its band controls are separate from these
+live traces. Bypassing EQ makes Pre and Post coincide.
+
+TILT offers **0, 1.5, 3, 4.5 or 6 dB/oct**, anchored at 1 kHz. It changes the
+display slope only. A 2048-sample Hann-window FFT is calculated on the GUI
+thread. Off, hidden EQ pages and closed editors stop audio capture/FFT work.
+Mode and tilt are application preferences rather than sound-preset parameters.
 
 ### Compressor
 
@@ -740,7 +807,10 @@ background import rather than rescanning the PCM for every redraw. Convolution r
 
 The engine uses JUCE's zero-latency non-uniform partitioned convolution. Mono IRs
 apply the same response independently to L/R; stereo IRs use separate channel
-responses. This is stereo convolution, with no four-channel true-stereo matrix.
+responses. This is stereo convolution, with no four-channel true-stereo matrix. A mono
+IR does not sum the input to mono: it filters both source channels independently.
+A left-only source therefore remains left-only at full wet, and opposite-polarity
+stereo remains opposite-polarity with an identical response on both sides.
 The IR retains its original timing; leading silence is not automatically trimmed.
 Predelay adds additional time. Width and Wet Gain act after the convolver.
 
@@ -862,11 +932,18 @@ Refresh library and Delete current. Save as creates a named **.logisth** file;
 Save current overwrites the active user preset. Delete asks for confirmation
 and moves the file to the OS trash. The default library is logisth/Presets under
 the OS application-data directory. Choose folder selects an instance's working
-library; it does not relocate files. Load file can open a preset from elsewhere.
+library, remembered as the default for later instances; it does not relocate files. Load file can open a preset from elsewhere.
 Save/load run on a worker, with completion/errors in the footer. Wait for the
 completion message before closing the instance or moving a newly saved file.
 
-Presets contain all 1071 audio parameters, effect order, routing, compressed audio for all six
+Successful save and load operations remember separate preset-dialog directories.
+Sample import shares one remembered directory across all six players, while IR
+import has its own. These paths survive editor/instance recreation. Cancelled
+or failed operations retain the previous directory. If a directory was removed,
+the chooser starts at its nearest existing parent. SETTINGS / FILES shows the
+current locations; this is independent of the sound preset.
+
+Presets contain all 1084 audio parameters, effect and distortion-slot order, routing, compressed audio for all six
 slots, the convolution impulse response, WAV regions, chord mappings, twelve named patterns, the preset comment and
 scope selection. Theme and editor size are separate user preferences and are
 retained when sounds change. The original sample files are unnecessary on recall. Saving uses a
@@ -874,7 +951,7 @@ temporary file and atomic replacement. Invalid files leave the current patch
 intact. State/preset files are limited to 1 GiB. These are logisth's own files;
 renaming another format to .logisth does not convert it.
 
-All 1071 parameters are available for host automation. The first 514 parameter
+All 1084 parameters are available for host automation. The first 514 parameter
 IDs and order from 0.4 are retained. Granulizer and global MIDI-only controls
 follow them; the former Graphs parameter block is removed. A/B/C views, rack pages,
 theme and scope source do not change the patch's audio settings. DAW state

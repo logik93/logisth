@@ -6,6 +6,7 @@
 #include "ImpulseReverb.h"
 #include "Morph.h"
 #include "Parameters.h"
+#include "UserSettings.h"
 #include <juce_audio_utils/juce_audio_utils.h>
 #include <optional>
 namespace logisth {
@@ -26,6 +27,13 @@ class LogisthProcessor : public juce::AudioProcessor {
     }
     bool setEffectOrder(logisth::EffectOrder, bool notifyHost = true);
     bool moveEffect(int from, int to);
+    logisth::DistortionOrder distortionOrder() const noexcept {
+        logisth::DistortionOrder order;
+        logisth::DistortionOrder::unpack(distortionOrderBits.load(), order);
+        return order;
+    }
+    bool setDistortionOrder(logisth::DistortionOrder, bool notifyHost = true);
+    bool moveDistortion(int from, int to);
     // GUI-only draft, deliberately excluded from sound presets and DAW audio state.
     std::shared_ptr<logisth::ThemeDraft> appearanceDraft;
     ~LogisthProcessor() override;
@@ -61,6 +69,8 @@ class LogisthProcessor : public juce::AudioProcessor {
     bool spectralReady(int slot) const;
     std::atomic<int> arpPlayhead{-1};
     logisth::ScopeBuffer scope;
+    mutable logisth::ScopeBuffer eqSpectrum;
+    std::atomic<bool> eqSpectrumEnabled{false};
     std::array<logisth::ScopeBuffer, logisth::playerCount> playerScopes;
     std::array<logisth::PlaybackTelemetry, logisth::playerCount> playback;
     void copyPattern(int, int);
@@ -235,6 +245,8 @@ class LogisthProcessor : public juce::AudioProcessor {
     logisth::Engine engine;
     logisth::Effects effects;
     std::atomic<uint32_t> effectOrderBits{logisth::EffectOrder{}.packed()};
+    std::atomic<unsigned> distortionOrderBits{logisth::DistortionOrder{}.packed()};
+    bool lastEqCapture = false;
     logisth::RackTransition rackTransition;
     logisth::Arpeggiator arp;
     std::array<std::array<float, 512>, logisth::playerCount> playerTraces{};

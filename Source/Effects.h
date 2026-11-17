@@ -1,5 +1,6 @@
 #pragma once
 #include "ConvolutionInterface.h"
+#include "Distortion.h"
 #include "Dynamics.h"
 #include "EffectOrder.h"
 #include "Equalizer.h"
@@ -9,6 +10,10 @@
 namespace logisth {
 struct EffectsParams : ReverbControls, EqualizerParams {
     EffectOrder order;
+    DistortionOrder distortionOrder;
+    bool firstDistortionEnabled = true;
+    std::array<DistortionSettings, 3> extraDistortions{};
+    ScopeBuffer *eqTrace = nullptr;
     ImpulseProcessor *convolution = nullptr;
     bool irNormalize = true;
     float reverbOutput = 0, impulseSeconds = 1;
@@ -29,6 +34,16 @@ struct EffectsParams : ReverbControls, EqualizerParams {
     float delayL = .375f, delayR = .5f, feedback = .35f, delaySpread = 1, delayWidth = 1,
           lowCut = 20, highCut = 18000, smear = 0, delayMix = .2f;
     float ratio = 4, threshold = -18, attack = 10, release = 150;
+    bool activeDistortion() const noexcept {
+        if (!distortion)
+            return false;
+        if (firstDistortionEnabled && distMix > 0)
+            return true;
+        for (const auto &stage : extraDistortions)
+            if (stage.enabled && stage.mix > 0)
+                return true;
+        return false;
+    }
 };
 struct ClipperStage {
     Clipper &processor;
@@ -45,7 +60,8 @@ class Effects {
     std::array<std::vector<float>, 2> delayLines, preLines;
     std::array<std::vector<float>, 4> chorusLines;
     std::array<std::array<float, 6>, 2> allpass{};
-    std::array<float, 2> phaserLast{}, lowState{}, highState{}, crushHold{};
+    std::array<float, 2> phaserLast{}, lowState{}, highState{};
+    DistortionRack distortionRack;
     std::array<std::array<float, 3>, 2> smearState{};
     Equalizer equalizer;
     Compressor modern;
@@ -58,7 +74,7 @@ class Effects {
     float reverbGain = 1;
     std::array<float, 512> reverbInputL{}, reverbInputR{};
     bool reverbStarted = false, initialProcess = true;
-    float crushCountdown = 0, detector = 0, drive = 0, distMix = 1, delayMix = 0, reverbMix = 0;
+    float detector = 0, delayMix = 0, reverbMix = 0;
     static float read(const std::vector<float> &data, size_t pos, double samples) {
         double at = double(pos) - samples;
         while (at < 0)
@@ -76,53 +92,10 @@ class Effects {
 
     void distort(float *l, float *r, int n, const EffectsParams &p, const float *driveMod,
                  float smooth) {
-
-        for (int s = 0; s < n; ++s) {
-            float x[2]{l[s], r[s]};
-
-            drive += smooth * (clamp(p.drive + driveMod[s], 0, 1) - drive);
-            distMix += smooth * (p.distMix - distMix);
-            float gain = 1 + drive * 30;
-            const int hold = 1 + int(drive * 63);
-            bool capture = crushCountdown <= 0;
-            if (capture)
-                crushCountdown = float(hold);
-            --crushCountdown;
-            for (int ch = 0; ch < 2; ++ch) {
-                const float a = x[ch] * gain;
-                float wet = a;
-                switch (p.distortionType) {
-                case 0:
-                    wet = std::tanh(a);
-                    break;
-                case 1:
-                    wet = std::fmod(a + 1, 4.f);
-                    if (wet < 0)
-                        wet += 4;
-                    wet = 1 - std::abs(wet - 2);
-                    break;
-                case 2:
-                    wet = clamp(a, -1, 1);
-                    break;
-                case 3:
-                    if (capture)
-                        crushHold[ch] = x[ch];
-                    wet = crushHold[ch];
-                    break;
-                case 4: {
-                    float levels = std::pow(2.f, 16 - 14 * drive);
-                    wet = std::round(x[ch] * levels) / levels;
-                    break;
-                }
-                default:
-                    break;
-                }
-                x[ch] += (wet - x[ch]) * distMix;
-            }
-
-            l[s] = x[0];
-            r[s] = x[1];
-        }
+        std::array<DistortionSettings, 4> settings;
+        settings[0] = {p.firstDistortionEnabled, p.distortionType, p.drive, p.distMix};
+        std::copy(p.extraDistortions.begin(), p.extraDistortions.end(), settings.begin() + 1);
+        distortionRack.process(l, r, n, settings, p.distortionOrder, driveMod, smooth);
     }
     void phaseShift(float *l, float *r, int n, const EffectsParams &p, const float *phaserMod) {
         const double phaserHz = p.sync ? p.bpm / (60 * beatLength(p.phaserDivision)) : p.phaserRate;
@@ -186,12 +159,18 @@ class Effects {
         }
     }
     void equalize(float *l, float *r, int n, const EffectsParams &p) {
-        equalizer.configure(p, p.bass, p.bassFreq, p.treble, p.trebleFreq);
+        if (p.eq)
+            equalizer.configure(p, p.bass, p.bassFreq, p.treble, p.trebleFreq);
         for (int s = 0; s < n; ++s) {
-            auto filtered = equalizer.tick(l[s], r[s]);
+            const auto beforeL = l[s], beforeR = r[s];
+            auto filtered = p.eq ? equalizer.tick(l[s], r[s]) : std::array<float, 2>{l[s], r[s]};
             l[s] = filtered[0];
             r[s] = filtered[1];
+            if (p.eqTrace)
+                p.eqTrace->push(beforeL, beforeR, l[s], r[s]);
         }
+        if (p.eqTrace)
+            p.eqTrace->commit();
     }
     void reverberate(float *l, float *r, int n, const EffectsParams &p, float smooth) {
         for (int s = 0; s < n; ++s) {
@@ -363,6 +342,7 @@ class Effects {
         for (int i = 0; i < 5; ++i)
             reverbModels[size_t(i)].prepare(sr, i);
         equalizer.prepare(sr);
+        distortionRack.prepare(sr);
         reset();
     }
     void reset() {
@@ -374,7 +354,8 @@ class Effects {
         phase = chorusPhase = 0;
         delayPos = chorusPos = prePos = 0;
         allpass = {};
-        phaserLast = lowState = highState = crushHold = {};
+        phaserLast = lowState = highState = {};
+        distortionRack.reset();
         smearState = {};
         equalizer.reset();
         modern.reset();
@@ -387,8 +368,7 @@ class Effects {
         reverbStarted = false;
         reverbGain = 1;
         initialProcess = true;
-        crushCountdown = detector = drive = delayMix = reverbMix = 0;
-        distMix = 1;
+        detector = delayMix = reverbMix = 0;
     }
     void process(float *l, float *r, int n, const float *driveMod, const float *phaserMod,
                  const EffectsParams &p, DynamicsMeters *meter = nullptr,
@@ -424,8 +404,8 @@ class Effects {
         const bool clipEnabled = clip && clip->settings.enabled && clip->settings.mix > 0;
         if (clip && !clipEnabled)
             clip->process(l, r, n);
-        const bool any = clipEnabled || p.distortion || p.phaser || p.chorus || p.eq || p.reverb ||
-                         p.delay || p.compressor;
+        const bool any = clipEnabled || p.eqTrace || p.activeDistortion() || p.phaser || p.chorus ||
+                         p.eq || p.reverb || p.delay || p.compressor;
         if (!any)
             return;
         float inPeak = 0;
@@ -436,6 +416,11 @@ class Effects {
                 {p.threshold, p.ratio, p.compKnee, p.attack, p.release, p.compMakeup, p.compMix},
                 sr);
         if (sleeping && inPeak < 1e-10f) {
+            if (p.eqTrace) {
+                for (int i = 0; i < n; ++i)
+                    p.eqTrace->push(0, 0, 0, 0);
+                p.eqTrace->commit();
+            }
             if (p.phaser) {
                 double hz = p.sync ? p.bpm / (60 * beatLength(p.phaserDivision)) : p.phaserRate;
                 phase += hz * n / sr;
@@ -479,7 +464,7 @@ class Effects {
         for (auto stage : order.stages)
             switch (stage) {
             case EffectStage::Distortion:
-                if (p.distortion)
+                if (p.activeDistortion())
                     distort(l, r, n, p, driveMod, smooth);
                 break;
             case EffectStage::Phaser:
@@ -491,7 +476,7 @@ class Effects {
                     chorus(l, r, n, p);
                 break;
             case EffectStage::Equalizer:
-                if (p.eq)
+                if (p.eq || p.eqTrace)
                     equalize(l, r, n, p);
                 break;
             case EffectStage::Reverb:

@@ -218,14 +218,14 @@ def main():
     metadata = json.dumps(info, indent=2) + '\n'
     (stage / 'BUILD_INFO.json').write_text(metadata)
     (output / f'build-info-{args.platform}.json').write_text(metadata)
-    for name in ['README.md', 'BUILD_STATUS.md', 'LICENSE', 'THIRD_PARTY_NOTICES.md', 'docs/IMPLEMENTATION.md', 'docs/STUDIO-0.5.md', 'docs/CALIBRATION.md', 'docs/ANTICLICK.md', 'docs/THEMES.md', 'docs/INTERFACE.md', 'docs/MANUAL.md', 'docs/TECHNICAL_MANUAL.md', 'docs/logisth-Technical-Manual-English.pdf', 'docs/technical-manual.json', 'docs/ALGORITHM_AUDIT.json', 'docs/PROJECT_REVIEW.md', 'docs/STEREO_REVERB_CALIBRATION.md', 'docs/DYNAMICS_CPU.md', 'docs/RACK_REVIEW.md', f'docs/REVIEW-v{version}.md', 'docs/FACTORY_PRESETS.md', f'docs/factory/after-{version}.csv', 'docs/logisth-Manual-English.pdf',
+    for name in ['README.md', 'BUILD_STATUS.md', 'LICENSE', 'THIRD_PARTY_NOTICES.md', 'docs/IMPLEMENTATION.md', 'docs/STUDIO-0.5.md', 'docs/CALIBRATION.md', 'docs/ANTICLICK.md', 'docs/THEMES.md', 'docs/INTERFACE.md', 'docs/MANUAL.md', 'docs/TECHNICAL_MANUAL.md', 'docs/logisth-Technical-Manual-English.pdf', 'docs/technical-manual.json', 'docs/ALGORITHM_AUDIT.json', 'docs/PROJECT_REVIEW.md', 'docs/STEREO_REVERB_CALIBRATION.md', 'docs/DYNAMICS_CPU.md', 'docs/RACK_REVIEW.md', 'docs/GUI_DSP_REVIEW.md', f'docs/REVIEW-v{version}.md', 'docs/FACTORY_PRESETS.md', f'docs/factory/after-{version}.csv', 'docs/logisth-Manual-English.pdf',
                  'assets/fonts/LICENSE.txt', 'assets/fonts/NOTICE.txt']:
         if not (source / name).is_file():
             continue
         destination = stage / name
         destination.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(source / name, destination)
-    for directory in ['licenses', 'assets/themes', 'assets/skins', 'assets/fonts/ioskeley', 'docs/stereo-reverb', 'docs/cpu', 'docs/rack']:
+    for directory in ['licenses', 'assets/themes', 'assets/skins', 'assets/branding', 'assets/fonts/ioskeley', 'docs/stereo-reverb', 'docs/cpu', 'docs/rack', 'docs/gui-review']:
         if (source / directory).is_dir():
             shutil.copytree(source / directory, stage / directory, dirs_exist_ok=True)
     images = source / 'docs' / 'images'

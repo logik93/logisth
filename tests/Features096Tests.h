@@ -109,6 +109,7 @@ inline void run() {
     auto *settings = dynamic_cast<Button *>(component("ui.settings"));
     settings->onClick();
     auto *panel = component("settings.panel");
+    dynamic_cast<Button *>(panel->findChildWithID("settings.tab.5"))->onClick();
     auto *fixed = dynamic_cast<ToggleButton *>(panel->findChildWithID("settings.fixedvelocity"));
     check(fixed && fixed->isVisible() && !fixed->getToggleState(),
           "Settings exposes optional fixed velocity, disabled by default");

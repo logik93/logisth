@@ -1077,6 +1077,19 @@ enum class Param : size_t {
     limitrelease,
     limitdrive,
     polyphonyextra,
+    dist1on,
+    dist2on,
+    dist2type,
+    dist2drive,
+    dist2mix,
+    dist3on,
+    dist3type,
+    dist3drive,
+    dist3mix,
+    dist4on,
+    dist4type,
+    dist4drive,
+    dist4mix,
     Count
 };
 constexpr size_t parameterCount = size_t(Param::Count);
@@ -2788,6 +2801,22 @@ inline const std::array<ParameterSpec, parameterCount> parameterSpecs{{
     {"limitrelease", "Release / ms", 3, "LIMITER", 5.0f, 2000.0f, 100.0f, 0.4f, "", false},
     {"limitdrive", "Drive / dB", 3, "LIMITER", 0.0f, 24.0f, 0.0f, 1.0f, "", false},
     {"polyphonyextra", "Extra polyphony", 0, "PERFORMANCE", 0, 16, 0, 1, "", true},
+    {"dist1on", "Stage 1 enabled", 3, "DISTORTION", 0, 1, 1, 1, "Off|On", false},
+    {"dist2on", "Stage 2 enabled", 3, "DISTORTION", 0, 1, 0, 1, "Off|On", false},
+    {"dist2type", "Stage 2 type", 3, "DISTORTION", 0, 4, 0, 1,
+     "Overdrive|Foldback|Clip|Decimate|Bitcrush", false},
+    {"dist2drive", "Stage 2 drive", 3, "DISTORTION", 0, 1, 0, 1, "", false},
+    {"dist2mix", "Stage 2 dry / wet", 3, "DISTORTION", 0, 1, 1, 1, "", false},
+    {"dist3on", "Stage 3 enabled", 3, "DISTORTION", 0, 1, 0, 1, "Off|On", false},
+    {"dist3type", "Stage 3 type", 3, "DISTORTION", 0, 4, 0, 1,
+     "Overdrive|Foldback|Clip|Decimate|Bitcrush", false},
+    {"dist3drive", "Stage 3 drive", 3, "DISTORTION", 0, 1, 0, 1, "", false},
+    {"dist3mix", "Stage 3 dry / wet", 3, "DISTORTION", 0, 1, 1, 1, "", false},
+    {"dist4on", "Stage 4 enabled", 3, "DISTORTION", 0, 1, 0, 1, "Off|On", false},
+    {"dist4type", "Stage 4 type", 3, "DISTORTION", 0, 4, 0, 1,
+     "Overdrive|Foldback|Clip|Decimate|Bitcrush", false},
+    {"dist4drive", "Stage 4 drive", 3, "DISTORTION", 0, 1, 0, 1, "", false},
+    {"dist4mix", "Stage 4 dry / wet", 3, "DISTORTION", 0, 1, 1, 1, "", false},
 }};
 
 inline constexpr size_t legacyParameterCount = 736;

@@ -130,6 +130,7 @@ Result LogisthProcessor::loadSource(int index, const File &file, int frameSize) 
                         data->regions.end());
     if (!publishSource(index, data))
         return Result::fail("The six sources exceed the 512 MiB decoded-audio memory budget.");
+    UserSettings::remember(UserSettings::Folder::Sample, file.getParentDirectory());
     return Result::ok();
 } catch (const std::bad_alloc &) {
     return Result::fail("Not enough memory to load this sample; the previous source was kept.");
@@ -294,6 +295,7 @@ void LogisthProcessor::randomisePattern() {
 }
 void LogisthProcessor::saveAssets(ValueTree &tree) {
     tree.setProperty("effectOrder", int(effectOrder().packed()), nullptr);
+    tree.setProperty("distortionOrder", int(distortionOrder().packed()), nullptr);
     saveImpulse(tree);
     std::array<std::shared_ptr<const SourceData>, playerCount> owners;
     std::shared_ptr<const ChordMap> chordsSnapshot;
@@ -365,6 +367,15 @@ bool LogisthProcessor::restoreAssets(const ValueTree &tree) {
             return false;
         const auto bits = text.getLargeIntValue();
         if (bits < 0 || bits > 0xffffff || !EffectOrder::unpack(uint32_t(bits), restoredOrder))
+            return false;
+    }
+    DistortionOrder restoredDistortion;
+    if (tree.hasProperty("distortionOrder")) {
+        const auto value = tree.getProperty("distortionOrder");
+        const auto text = value.toString();
+        if ((!value.isInt() && !value.isInt64() && !value.isString()) || text.isEmpty() ||
+            text.length() > 3 || !text.containsOnly("0123456789") ||
+            !DistortionOrder::unpack(unsigned(text.getIntValue()), restoredDistortion))
             return false;
     }
     auto restoredImpulse = readImpulse(tree);
@@ -492,6 +503,7 @@ bool LogisthProcessor::restoreAssets(const ValueTree &tree) {
         patterns = std::move(restoredPatterns);
         currentPattern = jlimit(0, 11, int(tree.getProperty("currentPattern", 0)));
         setEffectOrder(restoredOrder, false);
+        setDistortionOrder(restoredDistortion, false);
     }
     return true;
 }

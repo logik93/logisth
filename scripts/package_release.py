@@ -58,6 +58,7 @@ def package(preview: Path, calibration: Path, kick_benchmark: Path | None = None
     theme_files = [(p, p.name) for p in sorted((root / 'assets/themes').glob('*.json'))]
     theme_files += [(root / 'docs/THEMES.md', 'README.md'), (root / 'LICENSE', 'LICENSE'),
                     (root / 'assets/skins/ap-music-group-white.png','ap-music-group-white.png'),
+                    (root / 'assets/branding/logisth.svg','logisth.svg'),
                     (root / 'licenses/AP-Music-Group-Logo.txt','AP-Music-Group-Logo.txt')]
     theme_files += [(p, 'fonts/ioskeley/' + p.name) for p in sorted((root / 'assets/fonts/ioskeley').iterdir()) if p.is_file()]
     for file, _ in copies + calibration_files + theme_files:
@@ -109,6 +110,15 @@ def package(preview: Path, calibration: Path, kick_benchmark: Path | None = None
         if any(not file.is_file() for file, _ in files):
             raise ValueError('Missing rack/skin validation evidence')
         bundles.append(('rack-skin-review', files))
+    if tuple(map(int, version.split('.'))) >= (0, 9, 8):
+        review = root / 'dist' / f'review-{version}' / 'stereo'
+        files = [(root / 'docs/GUI_DSP_REVIEW.md', 'README.md'),
+                 (root / 'docs/gui-review/stereo-convolution.csv', 'stereo-convolution.csv')]
+        for file in sorted(review.glob('*.wav')):
+            files.append((file, 'samples/' + file.name))
+        if len([name for _, name in files if name.endswith('.wav')]) != 21 or any(not file.is_file() for file, _ in files):
+            raise ValueError('Missing complete stereo WAV/GUI review evidence')
+        bundles.append(('gui-dsp-review', files))
     folder.mkdir(parents=True)
     for file, name in copies:
         shutil.copyfile(file, folder / name)

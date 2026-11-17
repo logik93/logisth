@@ -1,6 +1,6 @@
 # logisth themes and window preferences
 
-SETTINGS / APPEARANCE / OPEN FOLDER reveals the current theme directory (initially
+SETTINGS / DISPLAY / OPEN FOLDER reveals the current theme directory (initially
 `logisth/themes` under your system user application-data directory). USE FOLDER
 selects another directory and remembers it. Ten standard palettes are written
 there on first use; source/native packages include them in `assets/themes`.
@@ -57,7 +57,7 @@ all twelve colours and knob/background styles are retained. All four select
 IoskeleyMonoTerm Nerd Font Mono from Ioskeley Mono v2.2.0. Both Regular and Bold
 are bundled unchanged, so these themes work without installing fonts separately.
 The font and licenses are also included in the theme download under fonts/ioskeley.
-STYLE lists both embedded families before the installed system fonts.
+TEXT lists both embedded families before the installed system fonts.
 
 Changing font or palette updates existing text in comments, macro names and search
 fields. Editing selections and preset metadata are preserved.
@@ -67,8 +67,8 @@ and border, font to Open Sans, and styles to Flat/Arc. All twelve palette roles
 are emitted when saving version 2. Choose enough text/background contrast for
 your display.
 
-THEME EDITOR previews a draft: choose a role, use the colour picker or type a
-hex value and press Enter. STYLE chooses font, background and knob drawing.
+COLOURS previews a draft: choose a role, use the colour picker or type a
+hex value and press Enter. TEXT chooses the theme font family; SKIN chooses background and knob drawing.
 SAVE NEW writes a unique custom file in the current directory; duplicate names
 receive a suffix. SAVE AS... chooses an exact folder/file name, and makes that
 folder active. RENAME changes the selected custom theme's name/file and saves
@@ -82,7 +82,7 @@ Selecting another saved theme replaces the draft. Saved selection changes
 propagate between open instances in the same host process. Audio presets do not
 change theme, scale or editor size.
 
-APPEARANCE accepts 80–200% UI scaling, including decimals. The displayed value is
+DISPLAY accepts 80–200% UI scaling, including decimals. The displayed value is
 the last accepted percentage; manual input accepts a decimal dot or comma.
 Invalid input restores the last accepted value. Resizing preserves the aspect
 ratio. Actual pixel dimensions and scale are stored in `appearance.json` and
@@ -99,3 +99,18 @@ Version 0.9.7 derives enabled knob/plot colors for their actual rendering surfac
 Light screen knobs use a dark face, with stronger needles and contrast-aware
 tracks/arcs. These cached drawing colors preserve the saved palette values.
 The [rack/skin review](RACK_REVIEW.md) covers all ten themes and three knob styles.
+
+## Text preferences and brand artwork
+
+TEXT also provides 80–125% font size, Theme default/Regular/Bold/Italic/Bold italic,
+and font antialiasing. These settings are stored globally in preferences.json;
+the theme retains its font family. The glyph renderer handles editable text and
+menus; disabling glyph AA leaves vector shapes antialiased. Italic can use a
+synthetic slant where the bundled typeface has no separate italic face.
+The heavier bundled face supplies Bold (Open Sans Semibold or Ioskeley Bold).
+Font-size changes do not change the window scale or saved palette draft.
+
+The standard header uses the exact project-owner SVG in assets/branding/logisth.svg,
+tinted to the theme text color and reduced in size. The text description is in
+the lower-right footer. AP header/About artwork uses the existing AP bitmap;
+its source bytes are unchanged.

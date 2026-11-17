@@ -1,4 +1,4 @@
-# logisth 0.9.7
+# logisth 0.9.8
 
 **wavelogik logisth — a three-part polyphonic subtractive synthesizer with a compact single-window console.**
 VST3, CLAP and Standalone for Windows, macOS and Linux. Built with JUCE and an
@@ -8,6 +8,16 @@ independent synthesis engine.
 [Technical Manual PDF](docs/logisth-Technical-Manual-English.pdf)
 
 ![logisth dark interface](docs/images/logisth-dark.png)
+
+## New in 0.9.8
+
+Version 0.9.8 adds four independently enabled/reorderable distortion stages,
+pre/post stereo-power EQ spectra with five display slopes, stable Chorus layout,
+categorized Settings and persistent font size/style/antialiasing preferences.
+Preset save/load, sample import and IR import remember their own directories.
+The project-owner SVG replaces the standard header mark; the AP artwork is unchanged.
+See the [GUI/DSP review](docs/GUI_DSP_REVIEW.md) for measurement fixtures and limits.
+The published v0.9.7 assets remain unchanged.
 
 ## New in 0.9.7
 
@@ -328,11 +338,27 @@ Presets, chord maps and patterns use the native logisth format.
 Extract your OS archive and copy the complete VST3 and CLAP bundles to your DAW's
 scan directories. Rescan and insert **logisth** on a MIDI instrument track.
 
-| System | VST3 user path | CLAP user path |
+| System | Format | Recommended system directory |
 | --- | --- | --- |
-| Windows x64 | `%LOCALAPPDATA%\Programs\Common\VST3` | `%LOCALAPPDATA%\Programs\Common\CLAP` |
-| macOS Universal | `~/Library/Audio/Plug-Ins/VST3` | `~/Library/Audio/Plug-Ins/CLAP` |
-| Linux x64 | `~/.vst3` | `~/.clap` |
+| Windows x64 | VST3 | `C:\Program Files\Common Files\VST3` |
+| Windows x64 | CLAP | `C:\Program Files\Common Files\CLAP` |
+| macOS | VST3 | `/Library/Audio/Plug-Ins/VST3` |
+| macOS | CLAP | `/Library/Audio/Plug-Ins/CLAP` |
+| Linux x64 | VST3 | `/usr/lib/vst3` |
+| Linux x64 | CLAP | `/usr/lib/clap` |
+
+System directories may require administrator access. Copy the complete
+`logisth.vst3` bundle, not only its inner binary. On Windows, copy `logisth.clap`
+to the CLAP directory. Restart or rescan the host after installation.
+
+For installation without administrator access, use the user directories:
+Windows `%LOCALAPPDATA%\Programs\Common\VST3` and
+`%LOCALAPPDATA%\Programs\Common\CLAP`; macOS
+`~/Library/Audio/Plug-Ins/VST3` and `~/Library/Audio/Plug-Ins/CLAP`; Linux
+`~/.vst3` and `~/.clap`. Linux also supports `/usr/local/lib/vst3` and
+`/usr/local/lib/clap` for local system installations. If necessary, add the
+chosen directory to the host's scan paths.
+
 
 Add the user path to your host if necessary. Standalone includes audio/MIDI device
 settings. macOS requires 11+, includes x86_64 and arm64, and is signed ad-hoc

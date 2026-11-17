@@ -124,3 +124,27 @@ Version 0.9.7 also packages docs/RACK_REVIEW.md and docs/rack/theme-contrast.csv
 as a rack-skin-review bundle. Keep all 120 palette/style/context/trim cases,
 including enabled needle, arc/track and raster targets. Native packages include
 the report and raw CSV. Refresh snapshots and both manuals after the final UI build.
+
+## v0.9.8 GUI/DSP review
+
+Keep the earlier 1071 host definitions frozen. Append the thirteen distortion
+controls; preserve Stage 1 modulation and retain independent state for all four
+serial stages. DistortionOrder is optional validated metadata, default 1/2/3/4.
+Use audio-owned fade state for live changes and skip inactive/zero-Mix stages.
+
+EQ captures pre/post stereo at the actual stage position. Its 2048-point windowed
+FFT and display tilt run on the GUI thread; disable capture when hidden/off.
+The power calculation must not cancel antiphase signals. UserSettings contains
+application-only typography, analyzer and chooser preferences; never read it in
+processBlock. Font AA Off must affect glyph coverage, preserving vector AA.
+Keep the supplied SVG exact and preserve the AP bitmap hash.
+
+`processor_tests --review-check` exercises real-WAV convolution and GUI/state/
+preference tests. `--review-report /absolute/folder` also exports WAV/CSV/PNG
+artifacts. Rack includes four-stage permutations, nonlinear-order/bypass checks,
+FFT calibration and display slope tests. Existing full CTest gates remain.
+
+Version 0.9.8 also includes a gui-dsp-review ZIP with the stereo CSV, the review
+and 21 original WAV fixtures/examples. Native archives include GUI_DSP_REVIEW.md,
+docs/gui-review and the supplied branding SVG. Validate the 48 distinct cases,
+error thresholds and exact SVG bytes before publishing.
