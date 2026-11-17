@@ -1,19 +1,37 @@
 # logisth native release checks
 
-Current candidate: **0.9.8**. Receipts: `ci-release-v0.9.8`,
-`ci-build-v0.9.8-*` and `ci-check-v0.9.8-windows-asan`.
-Required: 20 Linux / 18 Windows/macOS suites, no failures/skips, plus Windows ASAN.
-Windows/Linux publish first; macOS Universal appends afterward.
+Completed release: **[v0.9.8](https://github.com/logik93/logisth/releases/tag/v0.9.8)**.
+[Native CI run](https://github.com/logik93/logisth/actions/runs/44140883316)
+passed from tag commit `452596fac14ce0457dcd3dccdedca84991900094`.
 
-Local Linux verification passed all 20 suites (19 core/format suites and the full
-processor/UI suite), plus release export checks and ten publisher regressions.
-Local review covers four-stage distortion, all stage switches and saved order,
-calibrated pre/post stereo-power FFT and display tilts, 48 actual-WAV stereo
-convolution cases plus two sampler integrations, glyph-mask AA and persistent
-font/folder settings. Chorus grid and all 1084 controls are exercised. Source
-SVG and AP source bytes are checked. English user/technical manuals are current.
+| Platform/check | Passed | Failed | Skipped |
+| --- | ---: | ---: | ---: |
+| Linux x86_64 | 20 | 0 | 0 |
+| Windows x86_64 | 18 | 0 | 0 |
+| macOS Universal | 18 | 0 | 0 |
+| Windows AddressSanitizer | 18 | 0 | 0 |
 
-Completed release: **[v0.9.7](https://github.com/logik93/logisth/releases/tag/v0.9.7)**.
+Windows/Linux published first with 69 files. macOS Universal was appended to
+the same release, bringing the total to 71. Every public asset was downloaded
+and its SHA-256 verified. Native binaries, both Universal architecture slices,
+version metadata, source fingerprints and archive, both English manuals,
+notices, exact SVG/AP artwork, fonts/themes and all measurement bundles were
+checked. Appending macOS preserved the identifiers and bytes of all initial
+assets except the expanded checksum list.
+
+Receipts are in `ci-release-v0.9.8`, `ci-build-v0.9.8-*` and
+`ci-check-v0.9.8-windows-asan`. All platforms provide VST3, CLAP and Standalone.
+macOS runtime tests execute on Intel; both Universal slices are checked.
+
+New coverage includes four-stage distortion with all 24 orders and per-slot
+switches, chorus layout in Sync/free modes, calibrated pre/post stereo-power
+FFT and display tilts, 48 actual-WAV convolution cases and two sampler
+integrations, glyph-mask AA, seven Settings categories and persistent font/folder
+preferences. All 1084 controls are reachable; the prior 1071 host definitions
+remain intact. The release includes 21 WAV review fixtures and measurement CSVs.
+[GUI/DSP evidence](docs/GUI_DSP_REVIEW.md) records methods and limits.
+
+Previous completed release: **[v0.9.7](https://github.com/logik93/logisth/releases/tag/v0.9.7)**.
 [Native CI run](https://github.com/logik93/logisth/actions/runs/43963656614)
 passed from tag commit `7975cb668c01b4c13206fdb6e69319b7926b4330`.
 
