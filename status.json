@@ -5,8 +5,8 @@
   "run_url": "https://github.com/logik93/logisth/actions/runs/44180590713",
   "phase": "published",
   "pipeline_phase": "published",
-  "stage": "windows-linux",
-  "recorded_at": "2026-11-17T22:02:11.607697+00:00",
+  "stage": "final",
+  "recorded_at": "2026-11-17T22:21:00.534235+00:00",
   "jobs": {
     "started": {
       "result": "success",
@@ -23,16 +23,26 @@
     "publish": {
       "result": "success",
       "outputs": {}
+    },
+    "report_initial": {
+      "result": "success",
+      "outputs": {}
+    },
+    "macos": {
+      "result": "success",
+      "outputs": {}
+    },
+    "publish_macos": {
+      "result": "success",
+      "outputs": {}
     }
   },
   "release_url": "https://github.com/logik93/logisth/releases/tag/v0.9.8.1",
   "release_id": 449251642,
   "release_commit": "f701cc35071cb8ec92bd2b20e3fd3b8997ed5fc1",
   "published_at": "2026-11-17T22:01:50Z",
-  "publication_stage": "windows-linux",
-  "pending_platforms": [
-    "macos-universal"
-  ],
+  "publication_stage": "complete",
+  "pending_platforms": [],
   "platforms": [
     {
       "version": "0.9.8.1",
@@ -144,13 +154,71 @@
       "signing": "unsigned",
       "archive": "logisth-0.9.8.1-windows-x86_64.zip",
       "archive_sha256": "0c0f18c377e8a226e9431cd45bf262e6180095589450c096486177352c7b2555"
+    },
+    {
+      "version": "0.9.8.1",
+      "platform": "macos-universal",
+      "source_commit": "f701cc35071cb8ec92bd2b20e3fd3b8997ed5fc1",
+      "source_fingerprint": {
+        "Source": "8e060278f3b0d9f44ab31b39cd56f13877b1cb26",
+        "CMakeLists.txt": "ee487601df48df1d1939b50ec96b07dd3ff039fe",
+        "tests": "b32e2bfacd50db55b99d59e14f5c1831cc5d2a6a",
+        "assets": "39abcdb342210d12cc2be6e2dde425cd6af38add"
+      },
+      "technical_manual": {
+        "format": 1,
+        "software_version": "0.9.8.1",
+        "implementation_sha256": "897f72b0bff459737501de05a687efb45783631b11214c570938df84155d25bd",
+        "markdown_sha256": "f23ce00f46ff3fbaf359c920a5f16c812f34f6e6c4bd3f4b765e9fca3521b768",
+        "pdf_sha256": "bac32c27eb3638ab88e7ee4bfccbbc57530ef44754e9bcd5462256cdd8a95887"
+      },
+      "tests": {
+        "passed": 18,
+        "failed": 0,
+        "skipped": 0
+      },
+      "binaries": [
+        {
+          "path": "VST3/logisth.vst3/Contents/MacOS/logisth",
+          "architectures": [
+            "arm64",
+            "x86_64"
+          ],
+          "sha256": "97c0d9ac9e64f93254332f2e89dc4a6fc4681f4f4eba4a2bf253465b51789082"
+        },
+        {
+          "path": "CLAP/logisth.clap/Contents/MacOS/logisth",
+          "architectures": [
+            "arm64",
+            "x86_64"
+          ],
+          "sha256": "bd9386b3428a93d182d6efa8d256cac43259c7674541c5cfd42f27df8fe746bc"
+        },
+        {
+          "path": "Standalone/logisth.app/Contents/MacOS/logisth",
+          "architectures": [
+            "arm64",
+            "x86_64"
+          ],
+          "sha256": "f490fad5aec3ec9c91b516a56e7f38137d29a0b6bf8cbc02c99d3c6d080872aa"
+        }
+      ],
+      "formats": [
+        "VST3",
+        "CLAP",
+        "Standalone"
+      ],
+      "run_url": "https://github.com/logik93/logisth/actions/runs/44180590713",
+      "signing": "ad-hoc, not notarized",
+      "archive": "logisth-0.9.8.1-macos-universal.zip",
+      "archive_sha256": "7d75c06fafb66c03ea0e0c333d2adcda2c60344bfd803b598f22c81b82655163"
     }
   ],
   "assets": [
     {
       "name": "SHA256SUMS",
-      "id": 760801755,
-      "size": 6656,
+      "id": 760863481,
+      "size": 6856,
       "url": "https://github.com/logik93/logisth/releases/download/v0.9.8.1/SHA256SUMS"
     },
     {
@@ -158,6 +226,12 @@
       "id": 760801706,
       "size": 1742,
       "url": "https://github.com/logik93/logisth/releases/download/v0.9.8.1/build-info-linux-x86_64.json"
+    },
+    {
+      "name": "build-info-macos-universal.json",
+      "id": 760863465,
+      "size": 1822,
+      "url": "https://github.com/logik93/logisth/releases/download/v0.9.8.1/build-info-macos-universal.json"
     },
     {
       "name": "build-info-windows-x86_64.json",
@@ -206,6 +280,12 @@
       "id": 760801702,
       "size": 45518151,
       "url": "https://github.com/logik93/logisth/releases/download/v0.9.8.1/logisth-0.9.8.1-linux-x86_64.tar.gz"
+    },
+    {
+      "name": "logisth-0.9.8.1-macos-universal.zip",
+      "id": 760863462,
+      "size": 70817409,
+      "url": "https://github.com/logik93/logisth/releases/download/v0.9.8.1/logisth-0.9.8.1-macos-universal.zip"
     },
     {
       "name": "logisth-0.9.8.1-rack-skin-review.zip",
