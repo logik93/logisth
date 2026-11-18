@@ -1,19 +1,8 @@
 # logisth native release checks
 
-Release candidate: **v0.9.8.3**. Local Linux release checks cover all twenty C++
-suites, ten Python tool regressions, exact bundled themes/fonts/backgrounds,
-workflow validation, current source/manual identities and PDF text bounds.
-The new runtime crossover matrix has 120 reconstruction cases, two isolation
-cases and continuity/Legacy parity evidence. Fourteen interface PNGs accompany
-pointer, preset, capture and allocation checks. The 47 gain and 96 factory
-profiles remain byte-identical to v0.9.8.2. User/technical manuals contain 26/28
-pages. Native Windows/Linux publication and subsequent macOS append are pending
-at this candidate snapshot; the completed prior release is recorded below.
-
-
-Completed release: **[v0.9.8.2](https://github.com/logik93/logisth/releases/tag/v0.9.8.2)**.
-[Native CI run](https://github.com/logik93/logisth/actions/runs/44352067388)
-passed from tag commit `06ac787b53f3188888b32ec514e569e4c18c39bb`.
+Completed release: **[v0.9.8.3](https://github.com/logik93/logisth/releases/tag/v0.9.8.3)**.
+[Native CI run](https://github.com/logik93/logisth/actions/runs/44382965274)
+passed from tag commit `d77e5de8c02cf6aa3fc939dfba49fdeed97bcdc6`.
 
 | Platform/check | Passed | Failed | Skipped |
 | --- | ---: | ---: | ---: |
@@ -22,32 +11,41 @@ passed from tag commit `06ac787b53f3188888b32ec514e569e4c18c39bb`.
 | macOS Universal | 18 | 0 | 0 |
 | Windows AddressSanitizer | 18 | 0 | 0 |
 
-Windows/Linux published first with 77 files. macOS Universal was appended to the
-same release, bringing the total to 79. Every public asset was downloaded and
-its SHA-256 verified. Checks covered native binaries and architectures, version
-metadata, source fingerprints/archive, both English manuals, exact SVG/AP art,
-fonts/themes, all twenty original backgrounds, PNG integrity and measurement
-bundles. Appending macOS preserved the identifiers and bytes of every initial
-asset except the expanded checksum list.
+Windows/Linux published first with 79 files. macOS Universal was appended to the
+same release, bringing the total to 81. Every public asset was downloaded and
+its SHA-256 verified. Checks covered native binaries/architectures, full version
+and new feature markers, source fingerprints/archive, both English manuals,
+exact SVG/AP artwork, bundled fonts/themes/backgrounds and measurement bundles.
+Appending macOS preserved identifiers and bytes of every initial asset except
+the expanded checksum list. Published older tags and assets remain unchanged.
 
-The MODULATION disclosure folds the complete lower modulation row and changes
-the actual editor from 1240 x 860 to 1240 x 640 at 100%. Coverage includes the
-first mouse click across refresh, visible bounds, parameter reachability, 100
-palette/scale/layout combinations, uniform transforms, hidden automation,
-persisted fractional scale/layout and editor recreation. All twenty embedded
-PNGs were decoded and selected through the real menu, round-tripped through the
-theme codec and saved/reloaded without external image paths. The top edge line
-is removed. AP artwork and the project-owner SVG retain their original hashes.
+The new Distortion routing supports 1–4 LR24/TPT bands, smoothed logarithmic
+crossovers, per-band modules/bypass and independent pre/post spectrum controls.
+Legacy remains sample-identical in all five model fixtures. All 1084 prior host
+parameter definitions retain their positions; five new controls append at the
+end. Actual runtime reconstruction covers 120 rate/count/frequency cases, with
+maximum magnitude error 2.61472848319e-7 dB. DC cutoff sweeps measure zero error;
+the topology-transition maximum adjacent-sample jump is 0.00515945255756 in its
+specified fixture. Isolation, stereo, bypass/idle CPU, no-allocation, preset/state,
+real GUI gestures and capture-off/hidden/close checks also pass. These are bounded
+fixtures, not exhaustive claims about every signal or host.
 
-The 47 gain-calibration profiles and 96 factory-preset profiles are byte-for-byte
-identical to v0.9.8.1. Existing glyph, real-WAV convolution, sampler, gain,
-factory-bank, rack/contrast and memory regressions remain active. Local release
-verification also passed all ten Python tool tests, theme/artwork/manual checks
-and workflow validation. English manuals contain 26 user and 27 technical pages.
+All ten palettes test visible panel/canvas gradient changes. Grid 0/50/100 tests
+line intensity; held pointer drags cross refreshes without hiding controls.
+Gradient/grid amounts round-trip through drafts and portable version-3 themes.
+Fourteen new GUI PNGs and three CSVs are included in the multiband-review bundle.
+ABOUT includes mixedbytrzy's requested credit. Original logo/background/font
+source bytes remain unchanged. Existing compact, typography, convolution and
+rack regressions remain active on the native builds.
 
-Receipts are in `ci-release-v0.9.8.2`, `ci-build-v0.9.8.2-*` and
-`ci-check-v0.9.8.2-windows-asan`. Formats are VST3, CLAP and Standalone on all
+Local validation passed all twenty C++ suites, ten Python tool tests, workflow
+validation, exact theme/artwork checks, source/manual identities and PDF bounds.
+The 47 gain-calibration and 96 factory-preset profiles are byte-identical to
+v0.9.8.2. Updated English manuals contain 26 user and 28 technical pages.
+
+Receipts are in `ci-release-v0.9.8.3`, `ci-build-v0.9.8.3-*` and
+`ci-check-v0.9.8.3-windows-asan`. Formats are VST3, CLAP and Standalone on all
 three platforms. macOS runtime tests execute on Intel; both Universal slices
-are checked. The historical v0.9.8.1 native Windows glyph probe remains attached
-to the unchanged-renderer evidence; current native suites repeat the offscreen
-matrix and new compact-layout/background checks.
+are checked. Linux records glibc 2.35. The historical v0.9.8.1 native Windows
+glyph probe remains attached to unchanged-renderer evidence; current native
+suites repeat its offscreen matrix and the new interface/DSP checks.
