@@ -1,4 +1,5 @@
 #pragma once
+#include "EditorLayout.h"
 #include "SkinBackground.h"
 #include <array>
 #include <atomic>
@@ -40,6 +41,7 @@ class ThemeSettings {
     struct Window {
         int width = 0, height = 0;
         double scale = 100;
+        bool modulationCollapsed = false;
     };
     struct Listener {
         virtual ~Listener() = default;
@@ -282,11 +284,14 @@ class ThemeSettings {
                     auto key = o->getProperty("themeKey");
                     if (key.isString())
                         selectedKey = key.toString();
+                    window.modulationCollapsed = o->getProperty("modulationCollapsed").isBool() &&
+                                                 bool(o->getProperty("modulationCollapsed"));
+                    const int logicalHeight = EditorLayout::height(window.modulationCollapsed);
                     auto w = o->getProperty("width"), h = o->getProperty("height"),
                          scale = o->getProperty("scale");
                     if (w.isInt() && h.isInt() && int(w) >= 992 && int(w) <= 2480 &&
-                        int(h) >= 688 && int(h) <= 1720 &&
-                        std::abs(double(w) / double(h) - 1240. / 860.) < .005) {
+                        int(h) >= logicalHeight * .8 && int(h) <= logicalHeight * 2 &&
+                        std::abs(double(w) / double(h) - 1240. / logicalHeight) < .005) {
                         window.width = int(w);
                         window.height = int(h);
                         window.scale = double(w) * 100 / 1240.;
@@ -309,6 +314,7 @@ class ThemeSettings {
             o->setProperty("width", window.width);
             o->setProperty("height", window.height);
             o->setProperty("scale", window.scale);
+            o->setProperty("modulationCollapsed", window.modulationCollapsed);
             return writeJson(file(), juce::var(o));
         }
     };
@@ -519,14 +525,15 @@ class ThemeSettings {
         s.read();
         return s.window;
     }
-    static bool saveWindow(int width, int height, double scale) {
-        if (width < 992 || width > 2480 || height < 688 || height > 1720 || !std::isfinite(scale) ||
-            scale < 80 || scale > 200)
+    static bool saveWindow(int width, int height, double scale, bool collapsed = false) {
+        const int logicalHeight = EditorLayout::height(collapsed);
+        if (width < 992 || width > 2480 || height < logicalHeight * .8 ||
+            height > logicalHeight * 2 || !std::isfinite(scale) || scale < 80 || scale > 200)
             return false;
         auto &s = store();
         const juce::ScopedLock lock(s.lock);
         s.read();
-        s.window = {width, height, scale};
+        s.window = {width, height, scale, collapsed};
         return s.write();
     }
     static void addListener(Listener *l) {

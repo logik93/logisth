@@ -1,9 +1,9 @@
-# logisth 0.9.8.1 — User Manual
+# logisth 0.9.8.2 — User Manual
 
 wavelogik logisth is a three-part polyphonic subtractive synthesizer for VST3, CLAP and standalone use.
 This manual describes logisth's controls, sound engines and preset workflow.
 
-This edition describes **v0.9.8.1**. Earlier downloads retain their corresponding
+This edition describes **v0.9.8.2**. Earlier downloads retain their corresponding
 interface and manuals.
 
 ## Contents
@@ -83,14 +83,18 @@ Selecting a rack page does not enable or disable its processing.
 
 The upper row contains the preset selector, previous/next preset buttons, A/B/C,
 SOLO, POLY, SYNC and SETTINGS. Filters are on the left, the rack in the centre, and
-the mixer on the right. Mod Env, LFO and Misc routing remain visible below them.
+the mixer on the right. The header MODULATION button folds or unfolds the whole
+Mod Env 1/2, LFO 1/2 and Misc 1/2 row. A plus opens the controls; a minus hides them.
+Hiding the row keeps modulation and automation active and moves the keyboard up.
 The bottom row contains wheels, the keyboard and mono/portamento controls.
+
+![Compact window with modulation controls folded](images/logisth-compact.png)
 
 Drag the bottom-right resize handle, or open SETTINGS / DISPLAY and enter
 UI SCALE from 80% to 200%. Decimal values such as 137.5% are accepted. The
-nominal size is 1240 by 860 pixels. The displayed percentage shows the last valid
+nominal size is 1240 by 860 pixels expanded, or 1240 by 640 collapsed. The displayed percentage shows the last valid
 scale; invalid/out-of-range entries restore it. Exact window dimensions and the
-entered percentage are saved and restored when the editor or a new instance
+entered percentage and modulation-panel state are saved and restored when the editor or a new instance
 opens. A fresh installation adapts the initial size to its display. Each open
 window keeps its own size; changing one sets the default for subsequent windows.
 
@@ -140,6 +144,12 @@ it; a deleted folder falls back to an existing ancestor.
 SKIN selects Flat, Gradient, Grid, Image or Image + grid backgrounds, and
 Arc/Solid/Minimal knobs. LOAD IMAGE... accepts PNG or JPEG. PNG is recommended
 for sharp grids, illustrations and transparency; JPEG suits photographs.
+SKIN also includes a factory-background chooser: 20 original images, two per
+standard theme, with section headings naming their intended palette. Select an
+image, adjust IMAGE MIX and PANELS, then use COLOURS > SAVE AS to retain it in a
+portable theme. The artwork is available offline in the instrument. Choosing an
+image retains your selected palette, knobs, font and AP logo.
+
 Use 1240 x 860, or 2480 x 1720 for a higher-resolution image. Maximum input is
 4096 x 4096 pixels and 16 MiB. The image is centred and cropped to fill the canvas.
 IMAGE MIX sets 0–100%; PANELS sets 40–100% opacity for non-flat skins, so the
@@ -151,7 +161,7 @@ saved with the theme. Unsaved edits stay with this instrument instance when its
 editor closes/reopens or is minimized; save a theme to retain it across sessions.
 Choosing another saved theme or RESET discards the temporary draft.
 
-![Custom PNG background with adjustable panel opacity](images/logisth-skin-image.png)
+![Factory background library with adjustable panel opacity](images/logisth-background-library.png)
 
 ![Grid background inside instrument panels](images/logisth-skin-grid.png)
 

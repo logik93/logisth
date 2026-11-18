@@ -1,0 +1,107 @@
+{
+  "format": "logisth-background-library",
+  "version": 1,
+  "generator": "AI image generation",
+  "backgrounds": [
+    {
+      "theme": "00-light",
+      "name": "Paper Circuit",
+      "file": "00-light-paper.png"
+    },
+    {
+      "theme": "00-light",
+      "name": "Sage Mist",
+      "file": "00-light-mist.png"
+    },
+    {
+      "theme": "01-midnight-blue",
+      "name": "Blue Current",
+      "file": "01-midnight-blue-current.png"
+    },
+    {
+      "theme": "01-midnight-blue",
+      "name": "Orbit",
+      "file": "01-midnight-blue-orbit.png"
+    },
+    {
+      "theme": "02-cobalt",
+      "name": "Tide",
+      "file": "02-cobalt-tide.png"
+    },
+    {
+      "theme": "02-cobalt",
+      "name": "Prism",
+      "file": "02-cobalt-prism.png"
+    },
+    {
+      "theme": "03-graphite",
+      "name": "Carbon",
+      "file": "03-graphite-carbon.png"
+    },
+    {
+      "theme": "03-graphite",
+      "name": "Contour",
+      "file": "03-graphite-contour.png"
+    },
+    {
+      "theme": "04-forest",
+      "name": "Canopy",
+      "file": "04-forest-canopy.png"
+    },
+    {
+      "theme": "04-forest",
+      "name": "Topography",
+      "file": "04-forest-topography.png"
+    },
+    {
+      "theme": "05-ap-always-flexin",
+      "name": "Spectrum",
+      "file": "05-ap-always-flexin-spectrum.png"
+    },
+    {
+      "theme": "05-ap-always-flexin",
+      "name": "Pulse",
+      "file": "05-ap-always-flexin-pulse.png"
+    },
+    {
+      "theme": "bokkenmmb-Solarized",
+      "name": "Dunes",
+      "file": "bokkenmmb-Solarized-sand.png"
+    },
+    {
+      "theme": "bokkenmmb-Solarized",
+      "name": "Signal",
+      "file": "bokkenmmb-Solarized-signal.png"
+    },
+    {
+      "theme": "bokkenmmb-Tokyo Night",
+      "name": "City",
+      "file": "bokkenmmb-Tokyo-Night-city.png"
+    },
+    {
+      "theme": "bokkenmmb-Tokyo Night",
+      "name": "Origami",
+      "file": "bokkenmmb-Tokyo-Night-origami.png"
+    },
+    {
+      "theme": "bokkenmmb-Solarized Osaka",
+      "name": "Depth",
+      "file": "bokkenmmb-Solarized-Osaka-depth.png"
+    },
+    {
+      "theme": "bokkenmmb-Solarized Osaka",
+      "name": "Circuit",
+      "file": "bokkenmmb-Solarized-Osaka-circuit.png"
+    },
+    {
+      "theme": "bokkenmmb-gruvbox",
+      "name": "Ember",
+      "file": "bokkenmmb-gruvbox-ember.png"
+    },
+    {
+      "theme": "bokkenmmb-gruvbox",
+      "name": "Linen",
+      "file": "bokkenmmb-gruvbox-linen.png"
+    }
+  ]
+}

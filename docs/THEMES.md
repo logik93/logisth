@@ -129,3 +129,18 @@ its source bytes are unchanged.
 Text quality is independent of the theme: Native, Grayscale, 2x (default), 4x,
 AA Off and edge weight 50–200% are saved in preferences.json. Only glyph masks
 are supersampled; vector drawing is direct. 4x performs more GUI work than 2x.
+
+## Factory background library (0.9.8.2)
+
+SETTINGS > SKIN contains twenty embedded generated PNG originals: two per
+factory palette, grouped by theme. They work offline and need no installation
+folder. Selecting artwork changes the image only, sets IMAGE MIX to 100%, and
+retains the palette, font, knob drawing, panel opacity and logos. Use PANELS to
+control visibility under the interface, then COLOURS > SAVE AS to preserve it.
+The selected compressed PNG travels inside the theme JSON. The release also
+provides a backgrounds ZIP with the unchanged originals and catalogue.
+
+The header MODULATION button switches the window between 1240 x 860 and
+1240 x 640 at 100%. Resize aspect ratio follows the active layout. The saved
+appearance preference retains this state and fractional scale independently
+of sound presets; collapsing does not disable modulation.

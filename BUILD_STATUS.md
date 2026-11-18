@@ -1,5 +1,15 @@
 # logisth native release checks
 
+Release candidate: **v0.9.8.2**. Local Linux verification passed all 20 suites,
+including first-click modulation disclosure, 100 theme/scale/layout combinations,
+layout/scale persistence, hidden automation, twenty portable PNG backgrounds,
+real-WAV convolution, glyph rendering, gain/factory profiles and plug-in binaries.
+All ten Python release-tool tests and artwork/theme/manual checks passed.
+The native staged workflow will build/test Windows and Linux first, then append
+macOS Universal to the same release; native results are pending at this source snapshot.
+
+Previous completed release:
+
 Completed release: **[v0.9.8.1](https://github.com/logik93/logisth/releases/tag/v0.9.8.1)**.
 [Native CI run](https://github.com/logik93/logisth/actions/runs/44180590713)
 passed from tag commit `f701cc35071cb8ec92bd2b20e3fd3b8997ed5fc1`.

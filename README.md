@@ -1,4 +1,4 @@
-# logisth 0.9.8.1
+# logisth 0.9.8.2
 
 **wavelogik logisth — a three-part polyphonic subtractive synthesizer with a compact single-window console.**
 VST3, CLAP and Standalone for Windows, macOS and Linux. Built with JUCE and an
@@ -8,6 +8,15 @@ independent synthesis engine.
 [Technical Manual PDF](docs/logisth-Technical-Manual-English.pdf)
 
 ![logisth dark interface](docs/images/logisth-dark.png)
+
+## New in 0.9.8.2
+
+Use the header MODULATION button to fold the entire Mod Env/LFO/Misc row.
+The window becomes 220 pixels shorter at 100%, with the keyboard moved up and
+all modulation still active. Layout and fractional scale survive editor reopen.
+SKIN now includes 20 original generated backgrounds, two for each factory theme,
+ready offline from the built-in background chooser. The top highlight line is removed.
+See [Compact Layout and Backgrounds](docs/COMPACT_LAYOUT.md).
 
 ## New in 0.9.8.1
 

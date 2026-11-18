@@ -73,6 +73,21 @@ def package(preview: Path, calibration: Path, kick_benchmark: Path | None = None
     if not (root / 'docs' / f'RELEASE-v{version}.md').is_file():
         raise ValueError('Missing versioned release notes')
     bundles=[('calibration', calibration_files), ('themes', theme_files)]
+    if tuple(map(int, version.split('.'))) >= (0, 9, 8, 2):
+        from verify_background_assets import verify as verify_backgrounds
+        verify_backgrounds(root)
+        artwork = sorted((root / 'assets/backgrounds').glob('*.png'))
+        if len(artwork) != 20:
+            raise ValueError('Exactly twenty factory background originals are required')
+        files = [(p, p.name) for p in artwork]
+        files += [(root / 'assets/backgrounds/catalogue.json', 'catalogue.json'),
+                  (root / 'assets/backgrounds/README.md', 'README.md'), (root / 'LICENSE', 'LICENSE')]
+        bundles.append(('backgrounds', files))
+        evidence = sorted((root / 'dist' / f'compact-{version}').glob('*.png'))
+        if len(evidence) != 12:
+            raise ValueError('Missing compact layout/background preview evidence')
+        bundles.append(('compact-review', [(p, p.name) for p in evidence] +
+                        [(root / 'docs/COMPACT_LAYOUT.md', 'README.md')]))
     if kick_benchmark is not None:
         required=['kick-reference.wav','kick--12st.wav','kick--7st.wav','kick-0st.wav','kick-7st.wav','kick-12st.wav','measurements.csv']
         if any(not (kick_benchmark/name).is_file() for name in required):

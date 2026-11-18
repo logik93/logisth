@@ -1,4 +1,4 @@
-# logisth 0.9.8.1 — project and algorithm review
+# logisth 0.9.8.2 — project and algorithm review
 
 The v0.9.8 GUI/DSP changes are documented in [GUI_DSP_REVIEW.md](GUI_DSP_REVIEW.md):
 four serial distortion stages, pre/post stereo-power spectra, font/settings/
@@ -10,6 +10,10 @@ the convolution DSP was retained. Published v0.9.7 assets remain unchanged.
 Version 0.9.8.1 fixes glyph scaling/cache artefacts, adds AA quality/edge controls,
 portable PNG/JPEG backgrounds and usable folder selection/open buttons, and fixes
 context menu themes and overlapped headings. See [APPEARANCE_REVIEW.md](APPEARANCE_REVIEW.md).
+
+Version 0.9.8.2 folds the full modulation row with actual persistent window
+resizing and adds twenty embedded generated backgrounds. The existing portable
+theme codec stores the original PNG bytes. See [COMPACT_LAYOUT.md](COMPACT_LAYOUT.md).
 
 ## Algorithm provenance and conformance
 

@@ -1,6 +1,6 @@
 # logisth console
 
-The complete console occupies one 1240 × 860 canvas, with no vertical scrolling.
+The console occupies one 1240 × 860 canvas, or 1240 × 640 with MODULATION folded, with no vertical scrolling.
 Its initial size adapts to the monitor. Drag the lower-right corner to resize
 proportionally from 80% to 200%.
 
@@ -147,3 +147,9 @@ FILES provides CHOOSE/OPEN for five browser directories. SKIN imports portable
 PNG/JPEG images, image/grid combinations and image/panel opacity controls.
 Distortion reserves its heading row; inline-header pages omit redundant titles.
 All Patch/reorder context menus bind the instrument theme explicitly.
+
+The header MODULATION +/- button folds the whole lower modulation row and
+moves the keyboard up by 220 logical pixels. The host window really resizes,
+using one uniform scale. Hiding controls does not stop modulation. The last
+layout is restored when opening another editor. SKIN offers 20 offline factory
+backgrounds grouped by their matching palette. No top-edge highlight is drawn.

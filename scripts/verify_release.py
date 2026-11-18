@@ -175,6 +175,20 @@ def verify(tag: str) -> None:
             for name, path in [('README.md', 'docs/APPEARANCE_REVIEW.md'), ('text-rendering.csv', 'docs/appearance/text-rendering.csv')]:
                 if archive.read(name).replace(b'\r\n', b'\n') != (root / path).read_bytes().replace(b'\r\n', b'\n'):
                     raise ValueError('Stale appearance evidence')
+    if tuple(map(int, version.split('.'))) >= (0, 9, 8, 2):
+        with zipfile.ZipFile(folder / f'logisth-{version}-backgrounds.zip') as archive:
+            catalogue = json.loads(archive.read('catalogue.json'))['backgrounds']
+            if len(catalogue) != 20 or len({entry['theme'] for entry in catalogue}) != 10:
+                raise ValueError('Incomplete factory background catalogue')
+            for entry in catalogue:
+                data = archive.read(entry['file'])
+                if data != (root / 'assets/backgrounds' / entry['file']).read_bytes():
+                    raise ValueError('Background original differs from source')
+                if not data.startswith(b'\x89PNG\r\n\x1a\n'):
+                    raise ValueError('Background is not PNG')
+        with zipfile.ZipFile(folder / f'logisth-{version}-compact-review.zip') as archive:
+            if len([n for n in archive.namelist() if n.endswith('.png')]) != 12:
+                raise ValueError('Missing compact layout/background evidence')
     print(f"Verified {len(names)} release assets for {tag}")
 
 

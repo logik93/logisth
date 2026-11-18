@@ -1,4 +1,5 @@
 #include "PluginEditor.h"
+#include "BackgroundLibrary.h"
 #include "BinaryData.h"
 #include "EnvelopePlot.h"
 #include "FactoryPresets.h"
@@ -8,7 +9,7 @@
 using namespace juce;
 using namespace logisth;
 namespace {
-constexpr int canvasWidth = 1240, canvasHeight = 860;
+constexpr int canvasWidth = EditorLayout::width, canvasHeight = EditorLayout::expandedHeight;
 Typeface::Ptr embeddedMonoFace(bool bold) {
     static const auto regularFace =
         Typeface::createSystemTypefaceFor(BinaryData::IoskeleyMonoTermNerdFontMonoRegular_ttf,
@@ -1475,6 +1476,16 @@ class LogisthEditor::Console : public Component,
         for (Component *c : std::array<Component *, 6>{&eqAnalysis, &eqTilt, &eqAnalysisLabel,
                                                        &eqTiltLabel, &eqLegendPre, &eqLegendPost})
             addChildComponent(*c);
+        modulationToggle.setComponentID("ui.modulation");
+        modulationToggle.setButtonText("MODULATION -");
+        modulationToggle.setName("Show or hide modulation controls");
+        modulationToggle.setTooltip("Collapse the modulation panel. Modulation continues playing.");
+        modulationToggle.getProperties().set("fontSize", 9);
+        modulationToggle.onClick = [this] {
+            if (onModulationRequested)
+                onModulationRequested(!modulationCollapsed);
+        };
+        addAndMakeVisible(modulationToggle);
         setSize(canvasWidth, canvasHeight);
         for (size_t i = 0; i < parameterCount; ++i) {
             controls[i] = std::make_unique<Control>(*this, Param(i));
@@ -1969,8 +1980,9 @@ class LogisthEditor::Console : public Component,
             setCachedComponentImage(nullptr);
         userPreferenceRevision = UserSettings::revision();
         keyboard.applyTheme();
-        for (ComboBox *box : {&themeChoice, &scaleChoice, &colourRole, &themeFont, &themeBackground,
-                              &themeKnobs, &textSize, &textWeight, &textQuality})
+        for (ComboBox *box :
+             {&themeChoice, &scaleChoice, &colourRole, &themeFont, &themeBackground, &themeKnobs,
+              &backgroundFactory, &textSize, &textWeight, &textQuality})
             box->setColour(ComboBox::textColourId, screenText);
         for (auto &name : macroNames) {
             name.setColour(TextEditor::backgroundColourId, screen);
@@ -2072,6 +2084,17 @@ class LogisthEditor::Console : public Component,
         return Result::ok();
     }
     std::function<void(double)> onScaleRequested;
+    std::function<void(bool)> onModulationRequested;
+    bool isModulationCollapsed() const {
+        return modulationCollapsed;
+    }
+    void setModulationCollapsed(bool collapsed) {
+        modulationCollapsed = collapsed;
+        modulationToggle.setButtonText(collapsed ? "MODULATION +" : "MODULATION -");
+        modulationToggle.setToggleState(!collapsed, dontSendNotification);
+        layout();
+        repaint();
+    }
     void displayScale(double percent) {
         scaleChoice.setText(String(percent, 2).trimCharactersAtEnd("0").trimCharactersAtEnd(".") +
                                 "%",
@@ -2270,7 +2293,10 @@ class LogisthEditor::Console : public Component,
                !(rack == 0 && value(Param::arppattern) > 0);
     }
     String validate() {
-        const bool oldSettings = settingsOpen;
+        const bool oldSettings = settingsOpen, oldCollapsed = modulationCollapsed;
+        const auto oldBounds = getBounds();
+        modulationCollapsed = false;
+        setSize(canvasWidth, canvasHeight);
         settingsOpen = false;
         const int oldPart = selectedPart, oldRack = rack, oldStep = stepPage,
                   oldMacro = selectedMacro, oldEqBand = selectedEqBand,
@@ -2422,6 +2448,8 @@ class LogisthEditor::Console : public Component,
         previewSync = previewSource = previewPattern = previewGran = -1;
         for (int i = 0; i < playerCount; ++i)
             sourceViews[size_t(i)].setSelectedId(views[size_t(i)], dontSendNotification);
+        modulationCollapsed = oldCollapsed;
+        setBounds(oldBounds);
         layout();
         return error;
     }
@@ -2793,7 +2821,7 @@ class LogisthEditor::Console : public Component,
         colourPicker.setComponentID("settings.theme.picker");
         colourPicker.addChangeListener(this);
         settingsPanel.addAndMakeVisible(colourPicker);
-        for (ComboBox *c : {&themeFont, &themeBackground, &themeKnobs}) {
+        for (ComboBox *c : {&themeFont, &themeBackground, &themeKnobs, &backgroundFactory}) {
             c->getProperties().set("dark", true);
             settingsPanel.addAndMakeVisible(*c);
         }
@@ -2806,6 +2834,33 @@ class LogisthEditor::Console : public Component,
         themeFont.addItemList(families, 1);
         themeBackground.setComponentID("settings.theme.background");
         themeBackground.addItemList({"Flat", "Gradient", "Grid", "Image", "Image + grid"}, 1);
+        backgroundFactory.setComponentID("settings.background.factory");
+        backgroundFactory.setTextWhenNothingSelected("Choose a factory background...");
+        for (size_t i = 0; i < BackgroundLibrary::entries.size(); ++i) {
+            const auto &entry = BackgroundLibrary::entries[i];
+            if (i % 2 == 0) {
+                const auto themes = ThemeSettings::defaults();
+                for (const auto &theme : themes)
+                    if (theme.key == entry.theme)
+                        backgroundFactory.addSectionHeading(theme.name);
+            }
+            backgroundFactory.addItem(entry.name, int(i) + 1);
+        }
+        backgroundFactory.onChange = [this] {
+            const int index = backgroundFactory.getSelectedId() - 1;
+            auto data = BackgroundLibrary::data(index);
+            if (data.isEmpty())
+                return;
+            draftTheme.backgroundImage = Base64::toBase64(data.getData(), data.getSize());
+            draftTheme.backgroundStyle =
+                draftTheme.backgroundStyle == 2 || draftTheme.backgroundStyle == 4 ? 4 : 3;
+            draftTheme.backgroundMix = 1;
+            refreshStyleFields();
+            applyThemePalette(draftTheme);
+            readout = String(BackgroundLibrary::entries[size_t(index)].name) +
+                      " background. Use COLOURS > SAVE AS to keep it.";
+            backgroundFactory.setSelectedId(0, dontSendNotification);
+        };
         backgroundLoad.setButtonText("LOAD IMAGE...");
         backgroundClear.setButtonText("CLEAR");
         backgroundLoad.setComponentID("settings.background.load");
@@ -3029,13 +3084,14 @@ class LogisthEditor::Console : public Component,
             show(backgroundMixControl, {88, 102, 178, 26});
             show(panelOpacityLabel, {280, 102, 65, 26});
             show(panelOpacityControl, {348, 102, 162, 26});
-            show(knobLabel, {0, 138, 112, 26});
-            show(themeKnobs, {116, 138, 394, 26});
+            show(backgroundFactory, {0, 136, 510, 26});
+            show(knobLabel, {0, 168, 112, 26});
+            show(themeKnobs, {116, 168, 394, 26});
             refreshBackgroundFields();
-            settingsHelp.setText("PNG/JPEG, up to 4096 x 4096 / 16 MiB. Image and visibility are "
-                                 "saved in the theme. Use COLOURS > SAVE AS.",
+            settingsHelp.setText("20 factory images. PNG/JPEG up to 4096 px / 16 MiB.\n"
+                                 "Save artwork in your theme: COLOURS > SAVE AS.",
                                  dontSendNotification);
-            show(settingsHelp, {0, 178, 510, 48});
+            show(settingsHelp, {0, 199, 510, 29});
         } else if (settingsTab == 4) {
             refreshTypography();
             show(fontLabel, {0, 32, 150, 26});
@@ -4078,6 +4134,7 @@ class LogisthEditor::Console : public Component,
         put(Param::solo, {927, 28, 68, 24}, Style::Menu);
         put(Param::polyphony, {1010, 16, 60, 38}, Style::Number, "POLY");
         put(Param::sync, {1085, 28, 64, 24}, Style::Toggle, "SYNC");
+        modulationToggle.setBounds(85, 28, 130, 24);
         settings.setBounds(1160, 28, 64, 24);
         settings.setToggleState(settingsOpen, dontSendNotification);
         put(Param::arpout, {225, 29, 82, 24}, Style::Toggle, "MIDI OUT");
@@ -4108,23 +4165,26 @@ class LogisthEditor::Console : public Component,
         put(Param::mixB, {1015, 429, 35, 95}, Style::Fader, "MIX B");
         put(Param::mixC, {1055, 429, 35, 95}, Style::Fader, "MIX C");
         put(Param::master, {1095, 429, 35, 95}, Style::Fader, "MAIN");
-        envelope("env1", {16, 548, 152, 208}, true);
-        envelope("env2", {176, 548, 152, 208}, true);
-        routes("env1", {16, 548, 152, 208}, 128, 35);
-        routes("env2", {176, 548, 152, 208}, 128, 35);
-        lfo(1, {336, 548, 200, 208});
-        lfo(2, {544, 548, 200, 208});
-        misc(1, {752, 548, 232, 208});
-        misc(3, {992, 548, 232, 208});
+        if (!modulationCollapsed) {
+            envelope("env1", {16, 548, 152, 208}, true);
+            envelope("env2", {176, 548, 152, 208}, true);
+            routes("env1", {16, 548, 152, 208}, 128, 35);
+            routes("env2", {176, 548, 152, 208}, 128, 35);
+            lfo(1, {336, 548, 200, 208});
+            lfo(2, {544, 548, 200, 208});
+            misc(1, {752, 548, 232, 208});
+            misc(3, {992, 548, 232, 208});
+        }
+        const int lowerOffset = modulationCollapsed ? EditorLayout::modulationHeight : 0;
         rackLayout();
-        pitch.setBounds(29, 784, 20, 46);
-        mod.setBounds(63, 784, 20, 46);
-        keyboard.setBounds(118, 771, 864, 70);
+        pitch.setBounds(29, 784 - lowerOffset, 20, 46);
+        mod.setBounds(63, 784 - lowerOffset, 20, 46);
+        keyboard.setBounds(118, 771 - lowerOffset, 864, 70);
         keyboard.setLowestVisibleKey(36);
-        put(Param::monolegato, {1004, 779, 94, 21}, Style::Toggle, "MONO / LEGATO");
-        put(Param::portamode, {1108, 779, 104, 21}, Style::Menu);
-        put(Param::bendrange, {1004, 809, 48, 28}, Style::Number, "BEND / st");
-        put(Param::portamento, {1126, 813, 76, 24}, Style::Number);
+        put(Param::monolegato, {1004, 779 - lowerOffset, 94, 21}, Style::Toggle, "MONO / LEGATO");
+        put(Param::portamode, {1108, 779 - lowerOffset, 104, 21}, Style::Menu);
+        put(Param::bendrange, {1004, 809 - lowerOffset, 48, 28}, Style::Number, "BEND / st");
+        put(Param::portamento, {1126, 813 - lowerOffset, 76, 24}, Style::Number);
         parts[0].repaint();
         parts[1].repaint();
         parts[2].repaint();
@@ -4207,7 +4267,7 @@ class LogisthEditor::Console : public Component,
             lastStatus = status;
             if (status.isNotEmpty())
                 readout = status;
-            repaint(120, 844, 870, 16);
+            repaint(120, getHeight() - 16, 870, 16);
         }
         for (int i = 0; i < playerCount; ++i) {
             auto data = processor.sourceData(i);
@@ -4299,9 +4359,9 @@ class LogisthEditor::Console : public Component,
         }
         if (backgroundStyle == 2 || backgroundStyle == 4) {
             g.setColour(readableColour(line, body, panel, 4.5).withAlpha(.75f));
-            for (int x = 0; x < getWidth(); x += 24)
+            for (int x = 24; x < getWidth(); x += 24)
                 g.drawVerticalLine(x, 0, float(getHeight()));
-            for (int y = 0; y < getHeight(); y += 24)
+            for (int y = 24; y < getHeight(); y += 24)
                 g.drawHorizontalLine(y, 0, float(getWidth()));
         }
         if (skin == "ap-flexin") {
@@ -4314,13 +4374,10 @@ class LogisthEditor::Console : public Component,
                 g.drawLine(x, y, x + 12 + (i % 5) * 9, y, 1);
             }
         }
-        g.setColour(darkTheme ? line : Colour(0xfff6f5ee));
-        g.drawHorizontalLine(0, 0, float(canvasWidth));
         g.setColour(green);
         if (skin == "ap-flexin") {
             g.drawImageWithin(apLogo, 17, 8, 47, 58, RectanglePlacement::centred);
-            drawCaption(g, "logisth", {62, 13, 180, 38}, 31, ink, Justification::centredLeft, true);
-            drawCaption(g, "AP always flexin'!", {63, 50, 155, 14}, 8.5f, muted);
+            drawCaption(g, "AP always flexin'!", {85, 9, 130, 14}, 8.5f, muted);
         } else {
             if (headerLogo)
                 headerLogo->drawWithin(g, {20, 10, 54, 54}, RectanglePlacement::centred, 1);
@@ -4473,23 +4530,27 @@ class LogisthEditor::Console : public Component,
             drawCaption(g, "TRANSPOSE  /  VELOCITY  /  HOLD", {414, 512, 520, 14}, 7,
                         mint.withAlpha(.38f), Justification::centredRight);
         }
-        shell(g, {16, 548, 152, 208}, "MOD ENV 1");
-        shell(g, {176, 548, 152, 208}, "MOD ENV 2");
-        shell(g, {336, 548, 200, 208}, "LFO 1");
-        shell(g, {544, 548, 200, 208}, "LFO 2");
-        shell(g, {752, 548, 232, 208}, "MISC 1");
-        shell(g, {992, 548, 232, 208}, "MISC 2");
-        g.setColour(line);
-        g.drawHorizontalLine(656, 762, 974);
-        g.drawHorizontalLine(656, 1002, 1214);
-        shell(g, {16, 768, 90, 76}, {});
-        shell(g, {990, 768, 234, 76}, {});
-        drawCaption(g, "BEND", {25, 769, 29, 13}, 7, muted, Justification::centred);
-        drawCaption(g, "MOD", {60, 769, 29, 13}, 7, muted, Justification::centred);
-        drawCaption(g, "GLIDE", {1060, 818, 53, 16}, 8, muted, Justification::centredRight);
-        drawCaption(g, readout, {120, 846, 718, 12}, 8, muted);
-        drawCaption(g, "wavelogik / logisth / polyphonic instrument", {854, 846, 370, 12}, 7.5f,
-                    muted, Justification::centredRight);
+        if (!modulationCollapsed) {
+            shell(g, {16, 548, 152, 208}, "MOD ENV 1");
+            shell(g, {176, 548, 152, 208}, "MOD ENV 2");
+            shell(g, {336, 548, 200, 208}, "LFO 1");
+            shell(g, {544, 548, 200, 208}, "LFO 2");
+            shell(g, {752, 548, 232, 208}, "MISC 1");
+            shell(g, {992, 548, 232, 208}, "MISC 2");
+            g.setColour(line);
+            g.drawHorizontalLine(656, 762, 974);
+            g.drawHorizontalLine(656, 1002, 1214);
+        }
+        const int lowerOffset = modulationCollapsed ? EditorLayout::modulationHeight : 0;
+        shell(g, {16, 768 - lowerOffset, 90, 76}, {});
+        shell(g, {990, 768 - lowerOffset, 234, 76}, {});
+        drawCaption(g, "BEND", {25, 769 - lowerOffset, 29, 13}, 7, muted, Justification::centred);
+        drawCaption(g, "MOD", {60, 769 - lowerOffset, 29, 13}, 7, muted, Justification::centred);
+        drawCaption(g, "GLIDE", {1060, 818 - lowerOffset, 53, 16}, 8, muted,
+                    Justification::centredRight);
+        drawCaption(g, readout, {120, 846 - lowerOffset, 718, 12}, 8, muted);
+        drawCaption(g, "wavelogik / logisth / polyphonic instrument",
+                    {854, 846 - lowerOffset, 370, 12}, 7.5f, muted, Justification::centredRight);
     }
     LogisthProcessor &processor;
     LogisthLook &look;
@@ -4518,6 +4579,8 @@ class LogisthEditor::Console : public Component,
     Label searchEmpty;
     std::vector<PresetMatch> matches;
     ToggleButton settings;
+    TextButton modulationToggle;
+    bool modulationCollapsed = false;
     TextEditor presetNotes;
     Component settingsPanel;
     ComboBox themeChoice;
@@ -4525,7 +4588,7 @@ class LogisthEditor::Console : public Component,
     TextEditor aboutInfo;
     ToggleButton fixedVelocity;
     std::unique_ptr<AudioProcessorValueTreeState::ButtonAttachment> fixedVelocityAttachment;
-    ComboBox scaleChoice, colourRole, themeFont, themeBackground, themeKnobs;
+    ComboBox scaleChoice, colourRole, themeFont, themeBackground, themeKnobs, backgroundFactory;
     Label fontLabel, backgroundLabel, knobLabel;
     std::unique_ptr<FileChooser> themeChooser;
     TextButton themeSaveAs, themeRename, themeChooseFolder;
@@ -4596,10 +4659,14 @@ LogisthEditor::LogisthEditor(LogisthProcessor &p) : AudioProcessorEditor(p) {
     console = std::make_unique<Console>(p, look);
     addAndMakeVisible(*console);
     setResizable(true, true);
-    getConstrainer()->setFixedAspectRatio(double(canvasWidth) / canvasHeight);
-    setResizeLimits(992, 688, 2480, 1720);
+
     console->onScaleRequested = [this](double percent) { setUIScale(percent); };
+    console->onModulationRequested = [this](bool collapsed) { setModulationCollapsed(collapsed); };
     auto saved = ThemeSettings::window();
+    console->setModulationCollapsed(saved.modulationCollapsed);
+    const int logicalHeight = EditorLayout::height(saved.modulationCollapsed);
+    getConstrainer()->setFixedAspectRatio(double(canvasWidth) / logicalHeight);
+    setResizeLimits(992, roundToInt(logicalHeight * .8), 2480, logicalHeight * 2);
     if (saved.width > 0) {
         scalePercent = saved.scale;
         setSize(saved.width, saved.height);
@@ -4608,9 +4675,9 @@ LogisthEditor::LogisthEditor(LogisthProcessor &p) : AudioProcessorEditor(p) {
         if (auto *display = Desktop::getInstance().getDisplays().getPrimaryDisplay())
             scale = jlimit(.8f, 1.f,
                            jmin(float(display->userArea.getWidth() - 40) / canvasWidth,
-                                float(display->userArea.getHeight() - 40) / canvasHeight));
+                                float(display->userArea.getHeight() - 40) / logicalHeight));
         scalePercent = scale * 100;
-        setSize(roundToInt(canvasWidth * scale), roundToInt(canvasHeight * scale));
+        setSize(roundToInt(canvasWidth * scale), roundToInt(logicalHeight * scale));
     }
     console->displayScale(scalePercent);
     rememberSize = true;
@@ -4621,7 +4688,7 @@ LogisthEditor::LogisthEditor(LogisthProcessor &p) : AudioProcessorEditor(p) {
 LogisthEditor::~LogisthEditor() {
     stopTimer();
     if (rememberSize && sizeDirty)
-        ThemeSettings::saveWindow(getWidth(), getHeight(), scalePercent);
+        ThemeSettings::saveWindow(getWidth(), getHeight(), scalePercent, isModulationCollapsed());
     console.reset();
     setLookAndFeel(nullptr);
 }
@@ -4630,8 +4697,10 @@ void LogisthEditor::resized() {
         scalePercent = std::round(double(getWidth()) * 10000 / canvasWidth) / 100;
     if (console) {
         console->displayScale(scalePercent);
-        console->setBounds(0, 0, canvasWidth, canvasHeight);
-        const auto scale = jmin(float(getWidth()) / canvasWidth, float(getHeight()) / canvasHeight);
+        const int logicalHeight = EditorLayout::height(isModulationCollapsed());
+        console->setBounds(0, 0, canvasWidth, logicalHeight);
+        const auto scale =
+            jmin(float(getWidth()) / canvasWidth, float(getHeight()) / logicalHeight);
         console->setTransform(AffineTransform::scale(scale));
     }
     if (rememberSize) {
@@ -4642,7 +4711,7 @@ void LogisthEditor::resized() {
 void LogisthEditor::timerCallback() {
     stopTimer();
     if (sizeDirty) {
-        ThemeSettings::saveWindow(getWidth(), getHeight(), scalePercent);
+        ThemeSettings::saveWindow(getWidth(), getHeight(), scalePercent, isModulationCollapsed());
         sizeDirty = false;
     }
 }
@@ -4654,7 +4723,7 @@ void LogisthEditor::setUIScale(double percent) {
     scalePercent = std::round(percent * 100) / 100;
     applyingScale = true;
     setSize(roundToInt(canvasWidth * scalePercent / 100),
-            roundToInt(canvasHeight * scalePercent / 100));
+            roundToInt(EditorLayout::height(isModulationCollapsed()) * scalePercent / 100));
     applyingScale = false;
     console->displayScale(scalePercent);
     sizeDirty = true;
@@ -4702,4 +4771,20 @@ Result LogisthEditor::importBackground(const File &file) {
 }
 bool LogisthEditor::setBrowserFolder(UserSettings::Folder kind, const File &folder) {
     return console->setBrowserFolder(kind, folder);
+}
+
+bool LogisthEditor::isModulationCollapsed() const {
+    return console->isModulationCollapsed();
+}
+void LogisthEditor::setModulationCollapsed(bool collapsed) {
+    if (collapsed == isModulationCollapsed())
+        return;
+    const int logicalHeight = EditorLayout::height(collapsed);
+    applyingScale = true;
+    console->setModulationCollapsed(collapsed);
+    getConstrainer()->setFixedAspectRatio(double(canvasWidth) / logicalHeight);
+    setResizeLimits(992, roundToInt(logicalHeight * .8), 2480, logicalHeight * 2);
+    setSize(roundToInt(canvasWidth * scalePercent / 100),
+            roundToInt(logicalHeight * scalePercent / 100));
+    applyingScale = false;
 }

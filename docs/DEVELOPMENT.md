@@ -155,3 +155,10 @@ UI/DPI scales when changing glyph rendering. TextRenderer must not reintroduce a
 resampled full-interface image. Keep image decoding/file access off the audio
 thread, retain theme v1/v2 import, bound decoded image dimensions, and use the
 owning LogisthLook::contextMenu() for manual popups.
+
+Compact layout/background regressions use processor_tests --compact-check or
+--compact-report /absolute/folder. Check first-click disclosure, all ten palettes
+at 80/100/125/133.33/200 percent in both layouts, preference reload, active hidden
+automation and all twenty original PNG resources. Artwork resources must remain
+compressed and decode only on selection on the message thread. Never rebuild
+parameter attachments or modify sound state to fold the UI.

@@ -1,6 +1,7 @@
 #include "AllocationProbe.h"
 #include "Appearance0981Tests.h"
 #include "AppearanceTests.h"
+#include "CompactLayoutTests.h"
 #include "ConvolutionTests.h"
 #include "EffectsReverbTests.h"
 #include "FactoryBankTests.h"
@@ -976,6 +977,14 @@ int main(int argc, char **argv) {
         logisth::UserSettings::useFileForTests(userPreferences.getFile());
         juce::TemporaryFile themePreferences(".json");
         logisth::ThemeSettings::useStorageFileForTests(themePreferences.getFile());
+        if (argc > 1 && juce::String(argv[1]) == "--compact-check") {
+            compact_layout_test::run();
+            return 0;
+        }
+        if (argc > 2 && juce::String(argv[1]) == "--compact-report") {
+            compact_layout_test::run(juce::File(juce::String::fromUTF8(argv[2])));
+            return 0;
+        }
         if (argc > 1 && juce::String(argv[1]) == "--appearance0981-check") {
             appearance0981_test::run();
             return 0;
@@ -1091,6 +1100,7 @@ int main(int argc, char **argv) {
         stereo_review_test::run();
         ui_review_test::run();
         appearance0981_test::run();
+        compact_layout_test::run();
         factorybank_test::run();
         factorybank_test::search();
         processor_phase_test::run();

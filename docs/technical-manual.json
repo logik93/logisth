@@ -1,7 +1,7 @@
 {
   "format": 1,
-  "software_version": "0.9.8.1",
-  "implementation_sha256": "897f72b0bff459737501de05a687efb45783631b11214c570938df84155d25bd",
-  "markdown_sha256": "f23ce00f46ff3fbaf359c920a5f16c812f34f6e6c4bd3f4b765e9fca3521b768",
-  "pdf_sha256": "bac32c27eb3638ab88e7ee4bfccbbc57530ef44754e9bcd5462256cdd8a95887"
+  "software_version": "0.9.8.2",
+  "implementation_sha256": "53366ec7a3eb4cd891a4a24e62efa29c2f71fbb1e51781f23dfee755c86ace92",
+  "markdown_sha256": "53b7fd8800a1318db915a6f8c1626bd32075e0680d33020650bacba7b09d26a1",
+  "pdf_sha256": "6c999fbad78f4e519186204b12f8725c1db304ac0c91e38c98a5aaf9df15d6b0"
 }

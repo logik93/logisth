@@ -1,14 +1,14 @@
-# logisth 0.9.8.1 — Technical Manual
+# logisth 0.9.8.2 — Technical Manual
 
 **wavelogik · Architecture, DSP and Engineering Reference**
 
-Document revision: 1.3 · Software baseline: 0.9.8.1 · State schema: 4
+Document revision: 1.4 · Software baseline: 0.9.8.2 · State schema: 4
 
-Implementation baseline: release tag `v0.9.8.1`. The technical identity manifest
+Implementation baseline: release tag `v0.9.8.2`. The technical identity manifest
 records the CMake/runtime source identity. Native BUILD_INFO records its tagged
 commit, tree fingerprints, binary hashes and manual identities.
 
-This reference describes the implementation of logisth 0.9.8.1. It is
+This reference describes the implementation of logisth 0.9.8.2. It is
 intended for sound designers, audio engineers, contributors and integrators.
 The [User Manual](MANUAL.md) describes operating the interface; this document
 explains how its controls affect processing, how data is stored and which
@@ -716,7 +716,17 @@ every two minutes, with a manual rescan option. Theme files above 64 KiB or with
 invalid fields are ignored; scanning is not recursive.
 
 Appearance stores the selected saved theme, last window dimensions and accepted
-80–200% scale. Unsaved edits survive editor close/reopen/minimization within the
+80–200% scale. The message-thread MODULATION disclosure hides the complete
+modulation row without touching parameter attachments or DSP state. Logical
+height changes from 860 to 640, the keyboard/footer shift up by 220, and the
+host editor receives an actual resize. The active aspect ratio and resize bounds
+are updated together. appearance.json stores modulationCollapsed alongside
+width, height and the exact typed scale; old preferences default to expanded.
+Twenty generated PNG originals are embedded in a separate artwork resource
+library. A selection decodes only that image on the message thread; the original
+compressed bytes are embedded in saved themes through the existing version-3
+backgroundImage field. The palette, font and logos are independent of this choice.
+No image data is allocated or decoded on the audio thread. Unsaved edits survive editor close/reopen/minimization within the
 same instrument instance, but must be saved as a theme to survive destroying
 that instance. Sound presets do not replace theme, scale or window size. Font
 data is embedded in the plug-in for its bundled families; custom family names
@@ -979,5 +989,6 @@ the release tag matching a binary when investigating a specific implementation.
 | --- | --- | --- |
 | 1.0 | 0.9.6.2 | First consolidated engineering reference; architecture, algorithms, dependencies, state and release evidence |
 | 1.1 | 0.9.7 | Reorderable FX, saved order and live fade, 32-note capacity/default 16, additive host control, serial idle horizons, contrast-aware skins and expanded validation |
-| 1.3 | 0.9.8.1 | Direct glyph rendering, selectable AA/supersampling and edge weight, uniform scaling, portable PNG/JPEG/grid backgrounds, folder controls and themed context menus |
 | 1.2 | 0.9.8 | Four-stage distortion, pre/post stereo-power FFT, categorized settings, glyph AA/size/style, persistent dialogs, exact SVG branding and real-WAV stereo checks |
+| 1.3 | 0.9.8.1 | Direct glyph rendering, selectable AA/supersampling and edge weight, uniform scaling, portable PNG/JPEG/grid backgrounds, folder controls and themed context menus |
+| 1.4 | 0.9.8.2 | Collapsible modulation row with actual editor resize and persistent compact state; 20 embedded original backgrounds |

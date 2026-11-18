@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.22)
-project(Logisth VERSION 0.9.8.1 LANGUAGES C CXX)
+project(Logisth VERSION 0.9.8.2 LANGUAGES C CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 include(CTest)
@@ -74,8 +74,10 @@ juce_add_binary_data(LogisthFonts SOURCES
   assets/fonts/ioskeley/IoskeleyMonoTermNerdFontMono-Bold.ttf
   assets/themes/bokkenmmb-Solarized.json "assets/themes/bokkenmmb-Tokyo Night.json"
   "assets/themes/bokkenmmb-Solarized Osaka.json" assets/themes/bokkenmmb-gruvbox.json assets/skins/ap-music-group-white.png assets/branding/logisth.svg)
-target_sources(Logisth PRIVATE Source/PluginProcessor.cpp Source/SourceAssets.cpp Source/ImpulseAssets.cpp Source/ImpulseReverb.cpp Source/OscillatorClipboard.cpp Source/PresetLibrary.cpp Source/PluginEditor.cpp Source/ThemeSettings.cpp)
-target_link_libraries(Logisth PRIVATE LogisthFonts)
+file(GLOB logisth_background_files CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/assets/backgrounds/*.png")
+juce_add_binary_data(LogisthArtwork NAMESPACE LogisthBackgrounds HEADER_NAME BackgroundData.h SOURCES ${logisth_background_files})
+target_sources(Logisth PRIVATE Source/BackgroundLibrary.cpp Source/PluginProcessor.cpp Source/SourceAssets.cpp Source/ImpulseAssets.cpp Source/ImpulseReverb.cpp Source/OscillatorClipboard.cpp Source/PresetLibrary.cpp Source/PluginEditor.cpp Source/ThemeSettings.cpp)
+target_link_libraries(Logisth PRIVATE LogisthFonts LogisthArtwork)
 target_compile_definitions(Logisth PUBLIC JUCE_WEB_BROWSER=0 JUCE_USE_CURL=0 JUCE_VST3_CAN_REPLACE_VST2=0)
 target_link_libraries(Logisth PRIVATE juce::juce_audio_utils juce::juce_dsp PUBLIC juce::juce_recommended_config_flags)
 FetchContent_Declare(clap_juce_extensions GIT_REPOSITORY https://github.com/free-audio/clap-juce-extensions.git GIT_TAG 6bde108329ff9fc24404b79b8b397261a75cf6a8)

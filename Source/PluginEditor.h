@@ -75,6 +75,8 @@ class LogisthEditor : public juce::AudioProcessorEditor, private juce::Timer {
     int selectedTheme() const;
     bool isDarkTheme() const;
     void setUIScale(double percent);
+    void setModulationCollapsed(bool);
+    bool isModulationCollapsed() const;
     juce::Result importBackground(const juce::File &);
     bool setBrowserFolder(logisth::UserSettings::Folder, const juce::File &);
     double uiScale() const {
