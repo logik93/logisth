@@ -30,6 +30,8 @@ remain readable. A minimal version-3 theme is:
   "backgroundStyle": 1,
   "backgroundImage": "",
   "backgroundMix": 0.5,
+  "gradientAmount": 0.75,
+  "gridOpacity": 0.75,
   "panelOpacity": 0.85,
   "knobStyle": 0,
   "colours": {
@@ -144,3 +146,14 @@ The header MODULATION button switches the window between 1240 x 860 and
 1240 x 640 at 100%. Resize aspect ratio follows the active layout. The saved
 appearance preference retains this state and fractional scale independently
 of sound presets; collapsing does not disable modulation.
+
+## Gradient and grid amount (0.9.8.3)
+
+SKIN > GRADIENT controls depth from 0–100% in Gradient mode, including panel
+shells and the central screen. SKIN > GRID controls line alpha in Grid/Image +
+grid modes. Zero hides the relevant layer; both controls retain their values
+when another mode is selected. They update without hiding/recreating controls.
+The draft retains both amounts across editor close/minimize/reopen. SAVE NEW or
+SAVE AS stores them as optional version-3 fields `gradientAmount` and
+`gridOpacity`, finite numbers from 0 to 1. Missing fields default to 0.75; invalid
+values reject the file. Existing factory JSONs and supplied palettes stay intact.

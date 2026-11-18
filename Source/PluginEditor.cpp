@@ -52,9 +52,17 @@ void paintShell(Graphics &g, Rectangle<int> b, const String &title, const String
                 const LogisthColours &colours) {
     g.setColour(Colours::black.withAlpha(colours.darkTheme ? .16f : .035f));
     g.fillRoundedRectangle(b.translated(0, 2).toFloat(), 8);
-    g.setColour(colours.backgroundStyle == 0
-                    ? colours.panel
-                    : colours.panel.withAlpha(float(colours.panelOpacity)));
+    if (colours.backgroundStyle == 1) {
+        const auto amount = float(colours.gradientAmount);
+        const auto alpha = float(colours.panelOpacity);
+        g.setGradientFill(ColourGradient(
+            colours.panel.darker(.2f * amount).withAlpha(alpha), float(b.getX()), float(b.getY()),
+            colours.panel.interpolatedWith(colours.green, .24f * amount).withAlpha(alpha),
+            float(b.getRight()), float(b.getBottom()), false));
+    } else
+        g.setColour(colours.backgroundStyle == 0
+                        ? colours.panel
+                        : colours.panel.withAlpha(float(colours.panelOpacity)));
     g.fillRoundedRectangle(b.toFloat(), 8);
     g.setColour(colours.line);
     g.drawRoundedRectangle(b.toFloat().reduced(.5f), 8, 1);
@@ -106,6 +114,7 @@ class ThemeText {
         theme.drawCaption(g, t, r, s, c, a, b);
     }
 };
+#include "DistortionView.h"
 #include "DynamicsViews.h"
 #include "EqView.h"
 #include "StudioViews.h"
@@ -121,6 +130,8 @@ void LogisthColours::applyPalette(const ThemeDefinition &theme) {
     backgroundStyle = theme.backgroundStyle;
     backgroundMix = theme.backgroundMix;
     panelOpacity = theme.panelOpacity;
+    gradientAmount = theme.gradientAmount;
+    gridOpacity = theme.gridOpacity;
     knobStyle = theme.knobStyle;
     knobColour = theme.colours[10];
     knobTrack = theme.colours[11];
@@ -538,6 +549,11 @@ class LogisthEditor::Console : public Component,
                         choiceAttachment =
                             std::make_unique<AudioProcessorValueTreeState::ComboBoxAttachment>(
                                 owner.processor.state, spec.id, menu);
+                    if (id == Param::distbandmode || id == Param::distbands)
+                        menu.onChange = [this] {
+                            owner.layout();
+                            owner.repaint();
+                        };
                 }
             } else {
                 kind = Style::Knob;
@@ -1150,7 +1166,7 @@ class LogisthEditor::Console : public Component,
                 const auto position = owner.distortionPosition(slot);
                 auto menu = owner.look.contextMenu();
                 menu.addItem(1, "Move left", position > 0);
-                menu.addItem(2, "Move right", position < 3);
+                menu.addItem(2, "Move right", position < owner.distortionColumns() - 1);
                 SafePointer<DistortionButton> safe(this);
                 menu.showMenuAsync(
                     PopupMenu::Options().withTargetComponent(this), [safe](int action) {
@@ -1170,7 +1186,9 @@ class LogisthEditor::Console : public Component,
                 dragged = true;
                 const auto x = e.getEventRelativeTo(&owner).position.x;
                 const int at = owner.distortionPosition(slot);
-                owner.processor.moveDistortion(at, jlimit(0, 3, int((x - 414) / 130)));
+                owner.processor.moveDistortion(
+                    at, jlimit(0, owner.distortionColumns() - 1,
+                               int((x - 414) / (520 / owner.distortionColumns()))));
                 owner.layout();
                 owner.repaint();
             }
@@ -1184,8 +1202,9 @@ class LogisthEditor::Console : public Component,
             if (key.getModifiers().isAltDown() &&
                 (key.isKeyCode(KeyPress::leftKey) || key.isKeyCode(KeyPress::rightKey))) {
                 const auto at = owner.distortionPosition(slot);
-                owner.processor.moveDistortion(at,
-                                               at + (key.isKeyCode(KeyPress::leftKey) ? -1 : 1));
+                owner.processor.moveDistortion(
+                    at, jlimit(0, owner.distortionColumns() - 1,
+                               at + (key.isKeyCode(KeyPress::leftKey) ? -1 : 1)));
                 owner.layout();
                 owner.repaint();
                 return true;
@@ -1198,8 +1217,13 @@ class LogisthEditor::Console : public Component,
             g.fillRoundedRectangle(getLocalBounds().toFloat(), 4);
             const StringArray names{"OVERDRIVE", "FOLDBACK", "CLIP", "DECIMATE", "BITCRUSH"};
             const auto type = jlimit(0, 4, int(owner.value(distortionParameter(slot, 1))));
-            drawCaption(g, String(slot + 1) + " / " + names[type], getLocalBounds().reduced(5, 0),
-                        9, owner.screenText, Justification::centred, selected);
+            drawCaption(g,
+                        (owner.distortionIsMultiband()
+                             ? "B" + String(owner.distortionPosition(slot) + 1) + "/"
+                             : String(slot + 1) + " / ") +
+                            names[type],
+                        getLocalBounds().reduced(5, 0), 9, owner.screenText, Justification::centred,
+                        selected);
         }
     };
     class PatternCanvas : public Component, private ThemeText {
@@ -1391,12 +1415,38 @@ class LogisthEditor::Console : public Component,
           scopeView(p, *this, [this](float h) { return font(h); }),
           impulseView(p, *this, [this](float h) { return font(h); }),
           dynamicsView(p, *this, [this](float h) { return font(h); }),
-          eqView(p, *this, [this] { return int(value(Param::eqmode)); }), tooltips(this, 650) {
+          eqView(p, *this, [this] { return int(value(Param::eqmode)); }),
+          distortionView(p, *this, [this] { return distortionBandCount(); }), tooltips(this, 650) {
         setLookAndFeel(&look);
         addChildComponent(patternCanvas);
         addChildComponent(waveView);
         addAndMakeVisible(scopeView);
         addChildComponent(eqView);
+        addChildComponent(distortionView);
+        distortionView.onSelectionChanged = [this](int band) {
+            selectedDistortion = int(processor.distortionOrder().slots[size_t(band)]);
+            layout();
+        };
+        distAnalysis.setComponentID("distortion.analyzer.mode");
+        distAnalysis.addItemList({"Off", "Pre", "Post", "Pre + Post"}, 1);
+        distTilt.setComponentID("distortion.analyzer.tilt");
+        distTilt.addItemList({"0 dB/oct", "1.5 dB/oct", "3 dB/oct", "4.5 dB/oct", "6 dB/oct"}, 1);
+        for (auto *box : {&distAnalysis, &distTilt}) {
+            box->getProperties().set("dark", true);
+            addChildComponent(*box);
+            box->onChange = [this] {
+                const auto selected = UserSettings::Analyzer{distAnalysis.getSelectedId() - 1,
+                                                             distTilt.getSelectedId() - 1};
+                UserSettings::setDistortionAnalyzer(selected);
+                distortionView.setAnalyzer(selected.mode, selected.tilt);
+                processor.distortionSpectrumEnabled = selected.mode && distortionView.isShowing();
+                distortionView.repaint();
+            };
+        }
+        const auto distAnalyzer = UserSettings::distortionAnalyzer();
+        distAnalysis.setSelectedId(distAnalyzer.mode + 1, dontSendNotification);
+        distTilt.setSelectedId(distAnalyzer.tilt + 1, dontSendNotification);
+        distortionView.setAnalyzer(distAnalyzer.mode, distAnalyzer.tilt);
         addChildComponent(impulseView);
         addChildComponent(dynamicsView);
         eqBandSelect.setComponentID("eq.band.select");
@@ -1841,6 +1891,7 @@ class LogisthEditor::Console : public Component,
     ~Console() override {
         processor.dynamicsView = -1;
         processor.eqSpectrumEnabled = false;
+        processor.distortionSpectrumEnabled = false;
         rememberDraft();
         searchResults.removeKeyListener(this);
         searchResults.setModel(nullptr);
@@ -1982,7 +2033,7 @@ class LogisthEditor::Console : public Component,
         keyboard.applyTheme();
         for (ComboBox *box :
              {&themeChoice, &scaleChoice, &colourRole, &themeFont, &themeBackground, &themeKnobs,
-              &backgroundFactory, &textSize, &textWeight, &textQuality})
+              &backgroundFactory, &textSize, &textWeight, &textQuality, &distAnalysis, &distTilt})
             box->setColour(ComboBox::textColourId, screenText);
         for (auto &name : macroNames) {
             name.setColour(TextEditor::backgroundColourId, screen);
@@ -2288,8 +2339,8 @@ class LogisthEditor::Console : public Component,
         repaint();
     }
     bool rackHeadingVisible() const {
-        return !settingsOpen && rack != 9 && rack != 10 && rack != 4 && rack != 7 && rack != 11 &&
-               rack != 12 && !(rack == 5 && int(value(Param::reverbtype)) == 5) &&
+        return !settingsOpen && rack != 1 && rack != 9 && rack != 10 && rack != 4 && rack != 7 &&
+               rack != 11 && rack != 12 && !(rack == 5 && int(value(Param::reverbtype)) == 5) &&
                !(rack == 0 && value(Param::arppattern) > 0);
     }
     String validate() {
@@ -2428,6 +2479,16 @@ class LogisthEditor::Console : public Component,
             selectedDistortion = slot;
             inspect();
         }
+        previewDistortion = 1;
+        for (int count = 1; count <= 4; ++count) {
+            previewDistortionBands = count;
+            for (int slot = 0; slot < count; ++slot) {
+                selectedDistortion = int(processor.distortionOrder().slots[size_t(slot)]);
+                inspect();
+            }
+        }
+        previewDistortion = -1;
+        previewDistortionBands = -1;
         selectedDistortion = oldDistortion;
         rack = 10;
         for (int macro = 0; macro < 4; ++macro) {
@@ -2894,28 +2955,46 @@ class LogisthEditor::Console : public Component,
         };
         backgroundMixLabel.setText("IMAGE MIX", dontSendNotification);
         panelOpacityLabel.setText("PANELS", dontSendNotification);
-        for (auto *label : {&backgroundMixLabel, &panelOpacityLabel})
+        for (auto *label : {&backgroundMixLabel, &panelOpacityLabel, &gradientLabel, &gridLabel})
             label->setFont(font(9));
-        for (auto *slider : {&backgroundMixControl, &panelOpacityControl}) {
+        for (auto *slider :
+             {&backgroundMixControl, &panelOpacityControl, &gradientControl, &gridControl}) {
             slider->getProperties().set("dark", true);
             slider->setSliderStyle(Slider::LinearHorizontal);
             slider->setRange(slider == &panelOpacityControl ? 40 : 0, 100, 1);
             slider->setTextBoxStyle(Slider::TextBoxRight, false, 48, 24);
             slider->setTextValueSuffix("%");
         }
+        gradientLabel.setText("GRADIENT", dontSendNotification);
+        gridLabel.setText("GRID", dontSendNotification);
+        gradientControl.setComponentID("settings.background.gradient");
+        gridControl.setComponentID("settings.background.grid");
+        gridControl.setTooltip(
+            "Grid opacity. PANELS controls how much background is visible below the controls.");
+        gradientControl.setTooltip(
+            "Strength of the theme-coloured gradient across background and panels.");
+        gradientControl.onValueChange = [this] {
+            draftTheme.gradientAmount = gradientControl.getValue() / 100;
+            previewBackgroundAmounts();
+        };
+        gridControl.onValueChange = [this] {
+            draftTheme.gridOpacity = gridControl.getValue() / 100;
+            previewBackgroundAmounts();
+        };
         backgroundMixControl.setComponentID("settings.background.mix");
         panelOpacityControl.setComponentID("settings.background.panels");
         backgroundMixControl.onValueChange = [this] {
             draftTheme.backgroundMix = backgroundMixControl.getValue() / 100;
-            applyThemePalette(draftTheme);
+            previewBackgroundAmounts();
         };
         panelOpacityControl.onValueChange = [this] {
             draftTheme.panelOpacity = panelOpacityControl.getValue() / 100;
-            applyThemePalette(draftTheme);
+            previewBackgroundAmounts();
         };
-        for (auto *c : std::array<Component *, 7>{
+        for (auto *c : std::array<Component *, 11>{
                  &backgroundLoad, &backgroundClear, &backgroundName, &backgroundMixControl,
-                 &panelOpacityControl, &backgroundMixLabel, &panelOpacityLabel})
+                 &panelOpacityControl, &backgroundMixLabel, &panelOpacityLabel, &gradientControl,
+                 &gridControl, &gradientLabel, &gridLabel})
             settingsPanel.addChildComponent(*c);
         themeKnobs.setComponentID("settings.theme.knobs");
         themeKnobs.addItemList({"Arc", "Solid", "Minimal"}, 1);
@@ -2964,6 +3043,8 @@ class LogisthEditor::Console : public Component,
                               "Moander - Tester with a head full of ideas.\n\n"
                               "bokkenmmb - Tester, idea guy, and resident theme wizard (yes, the "
                               "FoRReSkin one).\n\n"
+                              "mixedbytrzy - Tester, suggested hiding the modulation menu and "
+                              "contributed many other ideas.\n\n"
                               "Open-source projects: JUCE, clap-juce-extensions, Signalsmith "
                               "Stretch, Signalsmith Linear, Open Sans and Ioskeley Mono.\n\n"
                               "Theme and size are independent of audio presets.",
@@ -2984,6 +3065,14 @@ class LogisthEditor::Console : public Component,
                           dontSendNotification);
         themeHelp.setTooltip(ThemeSettings::folder().getFullPathName());
     }
+    void previewBackgroundAmounts() {
+        backgroundMix = look.backgroundMix = draftTheme.backgroundMix;
+        panelOpacity = look.panelOpacity = draftTheme.panelOpacity;
+        gradientAmount = look.gradientAmount = draftTheme.gradientAmount;
+        gridOpacity = look.gridOpacity = draftTheme.gridOpacity;
+        rememberDraft();
+        repaint();
+    }
     void refreshBackgroundFields() {
         backgroundName.setText(skinImage.isValid()
                                    ? "Embedded image / " + String(skinImage.getWidth()) + " x " +
@@ -2993,6 +3082,10 @@ class LogisthEditor::Console : public Component,
         backgroundClear.setEnabled(draftTheme.backgroundImage.isNotEmpty());
         backgroundMixControl.setValue(draftTheme.backgroundMix * 100, dontSendNotification);
         panelOpacityControl.setValue(draftTheme.panelOpacity * 100, dontSendNotification);
+        gradientControl.setValue(draftTheme.gradientAmount * 100, dontSendNotification);
+        gridControl.setValue(draftTheme.gridOpacity * 100, dontSendNotification);
+        gradientControl.setEnabled(draftTheme.backgroundStyle == 1);
+        gridControl.setEnabled(draftTheme.backgroundStyle == 2 || draftTheme.backgroundStyle == 4);
         backgroundMixControl.setEnabled(draftTheme.backgroundStyle >= 3 && skinImage.isValid());
         panelOpacityControl.setEnabled(draftTheme.backgroundStyle != 0);
     }
@@ -3075,18 +3168,23 @@ class LogisthEditor::Console : public Component,
             show(themeReset, {346, 199, 168, 27});
             show(colourPicker, {224, 33, 290, 158});
         } else if (settingsTab == 2) {
-            show(backgroundLabel, {0, 34, 112, 26});
-            show(themeBackground, {116, 34, 394, 26});
-            show(backgroundName, {0, 68, 274, 26});
-            show(backgroundLoad, {282, 68, 112, 26});
-            show(backgroundClear, {402, 68, 108, 26});
-            show(backgroundMixLabel, {0, 102, 85, 26});
-            show(backgroundMixControl, {88, 102, 178, 26});
-            show(panelOpacityLabel, {280, 102, 65, 26});
-            show(panelOpacityControl, {348, 102, 162, 26});
-            show(backgroundFactory, {0, 136, 510, 26});
-            show(knobLabel, {0, 168, 112, 26});
-            show(themeKnobs, {116, 168, 394, 26});
+            show(backgroundLabel, {0, 34, 94, 26});
+            show(themeBackground, {100, 34, 202, 26});
+            knobLabel.setText("KNOBS", dontSendNotification);
+            show(knobLabel, {314, 34, 54, 26});
+            show(themeKnobs, {374, 34, 136, 26});
+            show(gradientLabel, {0, 66, 85, 26});
+            show(gradientControl, {88, 66, 178, 26});
+            show(gridLabel, {280, 66, 65, 26});
+            show(gridControl, {348, 66, 162, 26});
+            show(backgroundName, {0, 98, 274, 26});
+            show(backgroundLoad, {282, 98, 112, 26});
+            show(backgroundClear, {402, 98, 108, 26});
+            show(backgroundFactory, {0, 130, 510, 26});
+            show(backgroundMixLabel, {0, 162, 85, 26});
+            show(backgroundMixControl, {88, 162, 178, 26});
+            show(panelOpacityLabel, {280, 162, 65, 26});
+            show(panelOpacityControl, {348, 162, 162, 26});
             refreshBackgroundFields();
             settingsHelp.setText("20 factory images. PNG/JPEG up to 4096 px / 16 MiB.\n"
                                  "Save artwork in your theme: COLOURS > SAVE AS.",
@@ -3146,6 +3244,16 @@ class LogisthEditor::Console : public Component,
                                                     Param::distmix};
         return slot == 0 ? first[size_t(field)]
                          : Param(size_t(Param::dist2on) + size_t(slot - 1) * 4 + size_t(field));
+    }
+    bool distortionIsMultiband() const {
+        return previewDistortion >= 0 ? previewDistortion != 0 : value(Param::distbandmode) > 0;
+    }
+    int distortionBandCount() const {
+        return previewDistortionBands > 0 ? previewDistortionBands
+                                          : jlimit(1, 4, int(value(Param::distbands)) + 1);
+    }
+    int distortionColumns() const {
+        return distortionIsMultiband() ? distortionBandCount() : 4;
     }
     int distortionPosition(int slot) const {
         const auto order = processor.distortionOrder();
@@ -3755,23 +3863,58 @@ class LogisthEditor::Console : public Component,
         }
         if (rack == 1) {
             const auto order = processor.distortionOrder();
-            for (int position = 0; position < 4; ++position) {
+            const bool multi = distortionIsMultiband();
+            const int columns = distortionColumns(), columnWidth = 520 / columns;
+            put(Param::distbandmode,
+                multi ? Rectangle<int>{520, 286, 116, 24} : Rectangle<int>{710, 286, 224, 24},
+                Style::Menu, {}, true);
+            if (multi) {
+                put(Param::distbands, {642, 286, 46, 24}, Style::Menu, {}, true);
+                distAnalysis.setBounds(694, 286, 120, 24);
+                distAnalysis.setVisible(true);
+                distTilt.setBounds(820, 286, 114, 24);
+                distTilt.setVisible(true);
+                if (distortionPosition(selectedDistortion) >= columns)
+                    selectedDistortion = int(order.slots[0]);
+            }
+            for (int position = 0; position < columns; ++position) {
                 const auto slot = int(order.slots[size_t(position)]);
                 auto &button = *distortionButtons[size_t(slot)];
-                button.setBounds(414 + position * 130, 315, 122, 25);
+                button.setBounds(414 + position * columnWidth, 315, columnWidth - 8, 25);
                 button.setVisible(true);
-                put(distortionParameter(slot, 0), {414 + position * 130, 346, 122, 24},
+                put(distortionParameter(slot, 0),
+                    {414 + position * columnWidth, multi ? 343 : 346, columnWidth - 8,
+                     multi ? 22 : 24},
                     Style::Toggle, "ON / OFF", true);
             }
-            put(distortionParameter(selectedDistortion, 1), {414, 383, 180, 43}, Style::Menu,
-                "MODEL", true);
-            put(distortionParameter(selectedDistortion, 2), {612, 383, 152, 129}, Style::Knob,
-                "DRIVE", true);
-            put(distortionParameter(selectedDistortion, 3), {782, 383, 152, 129}, Style::Knob,
-                "MIX", true);
-            distortionHelp.setBounds(414, 434, 180, 81);
-            distortionHelp.setColour(Label::textColourId, screenText);
-            distortionHelp.setVisible(true);
+            if (multi) {
+                distortionView.setBounds(414, 368, 520, 81);
+                distortionView.selectBand(distortionPosition(selectedDistortion));
+                const auto analysis = UserSettings::distortionAnalyzer();
+                distortionView.setAnalyzer(analysis.mode, analysis.tilt);
+                distortionView.setVisible(true);
+                processor.distortionSpectrumEnabled = analysis.mode != 0;
+                put(distortionParameter(selectedDistortion, 1), {414, 453, 240, 38}, Style::Menu,
+                    "MODEL", true);
+                for (int cut = 0; cut < columns - 1; ++cut)
+                    put(Param(size_t(Param::distcross1) + size_t(cut)),
+                        {414 + cut * 82, 494, 76, 30}, Style::Number,
+                        "C" + String(cut + 1) + " / Hz", true);
+                put(distortionParameter(selectedDistortion, 2), {674, 453, 124, 71}, Style::Knob,
+                    "DRIVE", true);
+                put(distortionParameter(selectedDistortion, 3), {810, 453, 124, 71}, Style::Knob,
+                    "MIX", true);
+            } else {
+                put(distortionParameter(selectedDistortion, 1), {414, 383, 180, 43}, Style::Menu,
+                    "MODEL", true);
+                put(distortionParameter(selectedDistortion, 2), {612, 383, 152, 129}, Style::Knob,
+                    "DRIVE", true);
+                put(distortionParameter(selectedDistortion, 3), {782, 383, 152, 129}, Style::Knob,
+                    "MIX", true);
+                distortionHelp.setBounds(414, 434, 180, 81);
+                distortionHelp.setColour(Label::textColourId, screenText);
+                distortionHelp.setVisible(true);
+            }
             return;
         }
         if (rack == 7 || rack == 11 || rack == 12) {
@@ -4073,6 +4216,10 @@ class LogisthEditor::Console : public Component,
         patternCanvas.setVisible(false);
         waveView.setVisible(false);
         eqView.setVisible(false);
+        distortionView.setVisible(false);
+        distAnalysis.setVisible(false);
+        distTilt.setVisible(false);
+        processor.distortionSpectrumEnabled = false;
         processor.eqSpectrumEnabled = false;
         for (auto &button : distortionButtons)
             button->setVisible(false);
@@ -4192,8 +4339,8 @@ class LogisthEditor::Console : public Component,
             b->repaint();
         layoutStamp = currentLayoutState();
     }
-    std::array<int, 12 + 4 * playerCount> currentLayoutState() const {
-        std::array<int, 12 + 4 * playerCount> state{
+    std::array<int, 14 + 4 * playerCount> currentLayoutState() const {
+        std::array<int, 14 + 4 * playerCount> state{
             int(value(Param::sync)), int(value(Param::lfo1free)), int(value(Param::lfo2free)),
             int(value(Param::arpmode) >= 8), int(value(Param::arppattern))};
         for (int o = 0; o < playerCount; ++o) {
@@ -4216,6 +4363,8 @@ class LogisthEditor::Console : public Component,
         state[9 + 4 * playerCount] = int(value(Param::clipmode));
         state[10 + 4 * playerCount] = int(processor.effectOrder().packed());
         state[11 + 4 * playerCount] = int(processor.distortionOrder().packed());
+        state[12 + 4 * playerCount] = int(value(Param::distbandmode));
+        state[13 + 4 * playerCount] = int(value(Param::distbands));
         return state;
     }
     void refreshImpulseLabel() {
@@ -4238,6 +4387,14 @@ class LogisthEditor::Console : public Component,
         }
         if (dynamicsView.isVisible())
             dynamicsView.repaint();
+        const auto distAnalyzer = UserSettings::distortionAnalyzer();
+        processor.distortionSpectrumEnabled = distortionView.isShowing() && distAnalyzer.mode != 0;
+        if (distortionView.isVisible()) {
+            distAnalysis.setSelectedId(distAnalyzer.mode + 1, dontSendNotification);
+            distTilt.setSelectedId(distAnalyzer.tilt + 1, dontSendNotification);
+            distortionView.setAnalyzer(distAnalyzer.mode, distAnalyzer.tilt);
+            distortionView.updateSpectrum();
+        }
         const auto analyzer = UserSettings::analyzer();
         processor.eqSpectrumEnabled = eqView.isShowing() && analyzer.mode != 0;
         if (eqView.isVisible()) {
@@ -4347,8 +4504,11 @@ class LogisthEditor::Console : public Component,
         if (backgroundStyle == 0)
             g.fillAll(body);
         else {
-            g.setGradientFill(
-                ColourGradient(body, 0, 0, panel, float(getWidth()), float(getHeight()), false));
+            g.setGradientFill(ColourGradient(
+                backgroundStyle == 1 ? body.darker(float(.3 * gradientAmount)) : body, 0, 0,
+                backgroundStyle == 1 ? body.interpolatedWith(green, float(.45 * gradientAmount))
+                                     : panel,
+                float(getWidth()), float(getHeight()), false));
             g.fillAll();
         }
         if (backgroundStyle >= 3 && skinImage.isValid()) {
@@ -4357,8 +4517,8 @@ class LogisthEditor::Console : public Component,
                               RectanglePlacement::fillDestination);
             g.setOpacity(1);
         }
-        if (backgroundStyle == 2 || backgroundStyle == 4) {
-            g.setColour(readableColour(line, body, panel, 4.5).withAlpha(.75f));
+        if ((backgroundStyle == 2 || backgroundStyle == 4) && gridOpacity > 0) {
+            g.setColour(readableColour(line, body, panel, 4.5).withAlpha(float(gridOpacity)));
             for (int x = 24; x < getWidth(); x += 24)
                 g.drawVerticalLine(x, 0, float(getHeight()));
             for (int y = 24; y < getHeight(); y += 24)
@@ -4463,7 +4623,14 @@ class LogisthEditor::Console : public Component,
                     {1140, 517, 76, 16}, 9, outputLevel > 1 ? Colour(0xffd35f55) : muted,
                     Justification::centred);
 
-        g.setColour(backgroundStyle == 0 ? screen : screen.withAlpha(float(panelOpacity)));
+        if (backgroundStyle == 1)
+            g.setGradientFill(ColourGradient(
+                screen.darker(float(.2 * gradientAmount)).withAlpha(float(panelOpacity)), 280, 278,
+                screen.interpolatedWith(green, float(.16 * gradientAmount))
+                    .withAlpha(float(panelOpacity)),
+                948, 536, false));
+        else
+            g.setColour(backgroundStyle == 0 ? screen : screen.withAlpha(float(panelOpacity)));
         g.fillRoundedRectangle(Rectangle<float>(280, 278, 668, 258), 8);
         g.setColour(screenLine);
         g.drawRoundedRectangle(Rectangle<float>(280.5f, 278.5f, 667, 257), 8, 1);
@@ -4475,8 +4642,12 @@ class LogisthEditor::Console : public Component,
         StringArray titles{"ARPEGGIATOR", "DISTORTION", "PHASER",     "CHORUS", "EQUALIZER",
                            "REVERB",      "DELAY",      "COMPRESSOR", "CHORDS", "SAMPLE",
                            "MORPH",       "CLIPPER",    "LIMITER"};
-        drawCaption(g, rackHeadingVisible() ? titles[rack] : String{}, {414, 289, 350, 20}, 12,
-                    screenText, Justification::centredLeft, true);
+        drawCaption(g,
+                    !settingsOpen && rack == 1 ? String("DISTORTION")
+                    : rackHeadingVisible()     ? titles[rack]
+                                               : String{},
+                    {414, 289, rack == 1 ? 100 : 350, 20}, 12, screenText,
+                    Justification::centredLeft, true);
 
         if (settingsOpen) {
             // The settings labels and selector draw inside the central rack.
@@ -4597,8 +4768,9 @@ class LogisthEditor::Console : public Component,
     TextButton themeEdit, themeScan, themeFolder, themeSave, themeReset;
     std::array<TextButton, 7> settingsTabs;
     ComboBox textSize, textWeight, textQuality;
-    Slider textEdge, backgroundMixControl, panelOpacityControl;
-    Label textEdgeLabel, backgroundName, backgroundMixLabel, panelOpacityLabel;
+    Slider textEdge, backgroundMixControl, panelOpacityControl, gradientControl, gridControl;
+    Label textEdgeLabel, backgroundName, backgroundMixLabel, panelOpacityLabel, gradientLabel,
+        gridLabel;
     TextButton backgroundLoad, backgroundClear;
     Image skinImage;
     String skinImageData;
@@ -4622,6 +4794,9 @@ class LogisthEditor::Console : public Component,
     logisth_ui::ImpulseView impulseView;
     logisth_ui::DynamicsView dynamicsView;
     logisth_ui::EqView eqView;
+    logisth_ui::DistortionView distortionView;
+    ComboBox distAnalysis, distTilt;
+    int previewDistortion = -1, previewDistortionBands = -1;
     ComboBox eqBandSelect;
     TextButton eqAdd, eqRemove;
     Label eqHelp;
@@ -4651,7 +4826,7 @@ class LogisthEditor::Console : public Component,
     TooltipWindow tooltips;
     String readout, lastStatus;
     std::array<uint64_t, playerCount> displayedRevisions{};
-    std::array<int, 12 + 4 * playerCount> layoutStamp{};
+    std::array<int, 14 + 4 * playerCount> layoutStamp{};
     int selectedPart = 0, rack = 9, stepPage = 0, previewSync = -1;
 };
 LogisthEditor::LogisthEditor(LogisthProcessor &p) : AudioProcessorEditor(p) {

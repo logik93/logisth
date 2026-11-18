@@ -32,6 +32,22 @@ class UserSettings {
         s.read();
         return s.spectrum;
     }
+    static Analyzer distortionAnalyzer() {
+        auto &s = store();
+        const juce::ScopedLock lock(s.lock);
+        s.read();
+        return s.distSpectrum;
+    }
+    static bool setDistortionAnalyzer(Analyzer value) {
+        if (value.mode < 0 || value.mode > 3 || value.tilt < 0 || value.tilt > 4)
+            return false;
+        auto &s = store();
+        const juce::ScopedLock lock(s.lock);
+        s.read();
+        s.distSpectrum = value;
+        ++s.revision;
+        return s.write();
+    }
     static bool setText(Text value) {
         if (!std::isfinite(value.size) || value.size < 80 || value.size > 125 || value.style < 0 ||
             value.style > 4 || value.quality < 0 || value.quality > 3 ||
@@ -97,6 +113,7 @@ class UserSettings {
         s.loaded = false;
         s.typography = {};
         s.spectrum = {};
+        s.distSpectrum = {};
         s.folders = {};
         ++s.revision;
     }
@@ -108,7 +125,7 @@ class UserSettings {
         juce::CriticalSection lock;
         juce::File overrideFile;
         Text typography;
-        Analyzer spectrum;
+        Analyzer spectrum, distSpectrum;
         std::array<juce::File, size_t(Folder::Count)> folders;
         bool loaded = false;
         std::atomic<uint64_t> revision{0};
@@ -150,6 +167,12 @@ class UserSettings {
                 spectrum.mode = int(mode);
             if (tilt.isInt() && int(tilt) >= 0 && int(tilt) <= 4)
                 spectrum.tilt = int(tilt);
+            auto distMode = o->getProperty("distortionAnalyzerMode"),
+                 distTilt = o->getProperty("distortionAnalyzerTilt");
+            if (distMode.isInt() && int(distMode) >= 0 && int(distMode) <= 3)
+                distSpectrum.mode = int(distMode);
+            if (distTilt.isInt() && int(distTilt) >= 0 && int(distTilt) <= 4)
+                distSpectrum.tilt = int(distTilt);
             for (size_t i = 0; i < keys.size(); ++i) {
                 const auto value = o->getProperty(keys[i]);
                 if (value.isString() && value.toString().isNotEmpty() &&
@@ -168,6 +191,8 @@ class UserSettings {
             o->setProperty("textEdgeWeight", typography.edgeWeight);
             o->setProperty("analyzerMode", spectrum.mode);
             o->setProperty("analyzerTilt", spectrum.tilt);
+            o->setProperty("distortionAnalyzerMode", distSpectrum.mode);
+            o->setProperty("distortionAnalyzerTilt", distSpectrum.tilt);
             for (size_t i = 0; i < keys.size(); ++i)
                 o->setProperty(keys[i], folders[i].getFullPathName());
             const auto target = file();

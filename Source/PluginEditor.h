@@ -11,7 +11,7 @@ struct LogisthColours {
     juce::Colour screenAccent{0xffbdd8bb};
     juce::String fontFamily = "Open Sans", skin;
     int backgroundStyle = 0, knobStyle = 0;
-    double backgroundMix = .5, panelOpacity = .85;
+    double backgroundMix = .5, panelOpacity = .85, gradientAmount = .75, gridOpacity = .75;
     logisth::UserSettings::Text typography = logisth::UserSettings::text();
     juce::Font font(float size, bool bold = false) const;
     void drawCaption(juce::Graphics &, const juce::String &, juce::Rectangle<int>, float,

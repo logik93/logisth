@@ -1,14 +1,14 @@
-# logisth 0.9.8.2 — Technical Manual
+# logisth 0.9.8.3 — Technical Manual
 
 **wavelogik · Architecture, DSP and Engineering Reference**
 
-Document revision: 1.4 · Software baseline: 0.9.8.2 · State schema: 4
+Document revision: 1.5 · Software baseline: 0.9.8.3 · State schema: 4
 
-Implementation baseline: release tag `v0.9.8.2`. The technical identity manifest
+Implementation baseline: release tag `v0.9.8.3`. The technical identity manifest
 records the CMake/runtime source identity. Native BUILD_INFO records its tagged
 commit, tree fingerprints, binary hashes and manual identities.
 
-This reference describes the implementation of logisth 0.9.8.2. It is
+This reference describes the implementation of logisth 0.9.8.3. It is
 intended for sound designers, audio engineers, contributors and integrators.
 The [User Manual](MANUAL.md) describes operating the interface; this document
 explains how its controls affect processing, how data is stored and which
@@ -54,7 +54,7 @@ a player is one source slot; a unison lane is one component inside a player.
 | Player engines | Classic, Wavetable, Sampler, Granular |
 | Note polyphony | 1–32 voices, default 16; mono/legato and portamento available |
 | Unison selection | 0–8 lanes per player; 0 disables the player |
-| Host parameter count | 1084; previous 1071 definitions retained, thirteen distortion controls appended |
+| Host parameter count | 1089; previous 1084 definitions retained, five multiband controls appended |
 | Modulators | Two modulation ADSRs, two LFOs, four miscellaneous source selectors, two destinations per modulator |
 | Performance macros | Four macros, four target assignments each |
 | Pattern memory | Twelve pattern slots; sequences up to 32 steps |
@@ -482,7 +482,7 @@ Implementation: [Chords.h](../Source/Chords.h), [Arpeggiator.h](../Source/Arpegg
 
 | Stage | Implementation |
 | --- | --- |
-| Distortion | Four independently enabled serial stages: tanh, folding, hard clipping, sample hold or quantization; per-stage Drive/Mix smoothing |
+| Distortion | Four serial modules in Legacy, or 1–4 parallel bands with LR24 crossovers; tanh/folding/clipping/hold/quantization |
 | Phaser | Six all-pass stages per channel, LFO frequency sweep, feedback and width |
 | Chorus | Fractional delay modulation with stereo phase offsets; optional dual lines and feedback |
 | Legacy EQ | Two corrected second-order shelving filters: bass and treble |
@@ -500,6 +500,41 @@ Each stage owns independent hold counters, stereo memory and smoothing. The
 selected order drives actual serial processing. Reordering uses the same 5 ms
 down/switch/5 ms up policy as the outer rack, without duplicate banks. Disabled
 or zero-Mix stages are skipped; all-disabled groups bypass without distortion work.
+
+Optional Multiband routing reuses those four module identities as parallel
+frequency bands. Five host parameters are appended after the preceding 1084:
+`distbandmode` (Legacy/Multiband, default Legacy), `distbands` (four choices,
+default four), and `distcross1/2/3` (20–20000 Hz, defaults 200/2000/8000 Hz).
+Legacy calls the original serial rack unchanged. A one-band parallel configuration
+has no split. Order maps the first N identities to ascending bands; the remaining
+modules are preserved in state but excluded from activity and rendering.
+
+Each split uses fourth-order Linkwitz–Riley low/high paths: two cascaded
+second-order Butterworth filters implemented with TPT state-variable integrators.
+Lower bands pass through second-order allpasses for all subsequent splits. This
+aligns phase at recombination: the summed linear signal has unity magnitude,
+with frequency-dependent phase rather than dry-signal identity. The filters add
+no fixed block/host latency. Stereo channels have separate state and identical
+coefficients. Cutoffs are bounded below 0.45 Fs and maintain 3% ascending spacing;
+nonfinite inputs use defaults. A 15 ms logarithmic smoother updates coefficients
+every 32 samples. TPT state preserves DC while coefficients move.
+
+Band enable and dry/filtered blend use approximately 10 ms smoothing; bypassed
+bands pass their clean frequency region. All-off settles to exact dry bypass.
+Mode, count, model and assignment changes use a 5 ms down/switch/reset/5 ms up
+transition. Only the active N band processors run. Inactive slots cannot wake
+Distortion. Its remaining transition is included in idle detection, and silence
+clears filter state. The original module-1 modulation target follows module 1,
+including reassignment to another band. This is host-rate nonlinear processing;
+no new oversampling or true multiband modulation matrix is claimed.
+
+A dedicated preallocated four-lane ring captures Distortion's actual pre/post
+position in the reorderable chain. Its analyzer reuses EqSpectrum and the shared
+SpectrumPlot drawing helper, with independent mode/tilt preferences. Capture is
+requested only for a visible Multiband graph with analysis enabled. FFT and plot
+response calculation stay on the GUI thread. Audio capture uses two fixed
+512-frame member arrays, with no callback allocation or file access. See
+[MULTIBAND_REVIEW.md](MULTIBAND_REVIEW.md) for reconstruction and transition data.
 
 The EQ analyzer taps full-rate L/R immediately before and after its current
 position in the movable effects rack, including bypassed EQ. Four atomic ring
@@ -700,7 +735,7 @@ one 1–32 numeric control and publishes gestures to the two host parameters.
 Composite numeric/menu attachments cache their incoming values instead of
 re-reading an APVTS raw adapter that may still contain the preceding event.
 This also prevents one-update-late detune and extended destination displays.
-Old automation and presets with zero extension retain their previous values. The subsequent thirteen distortion controls are appended after polyphonyextra; all 1071 earlier definitions remain intact.
+Old automation and presets with zero extension retain their previous values. The subsequent thirteen distortion controls are appended after polyphonyextra; all 1071 earlier definitions remain intact. The next five multiband parameters are likewise appended, preserving all 1084 earlier indices and IDs.
 Spectral preparation, readiness and voice indexing use the same effective count.
 Restoration clamps values, handles non-finite numbers and rounds discrete
 controls. Missing fields use defined compatibility defaults; `compmode`,
@@ -759,7 +794,7 @@ Popups/tooltips use the same settings. Work stays on the GUI thread; dirty-regio
 repaints continue through JUCE without a full-window backing image.
 
 Theme format 3 embeds optional original PNG/JPEG bytes as base64, plus image mix
-and panel opacity. Input is bounded to 16 MiB / 4096 x 4096; image headers are
+and panel opacity. Optional `gradientAmount` and `gridOpacity` are finite 0–1 values, default 0.75 in older files. Gradient composition affects the canvas, panel shells and central screen; grid opacity scales its line layer, with exact off at zero. Slider previews repaint existing controls without rebuilding layout or attachments. Input is bounded to 16 MiB / 4096 x 4096; image headers are
 checked before decoding. The selected image is decoded on palette/image changes,
 not in paint/audio callbacks. It is cropped to the canvas and composited under
 panels. Grid and non-flat panel transparency are effective within the panels;
@@ -971,6 +1006,7 @@ provided by `processor_tests`; see the linked reports for arguments and conditio
 | [ALGORITHM_AUDIT.json](ALGORITHM_AUDIT.json) | Machine-readable dependency/conformance record |
 | [FACTORY_PRESETS.md](FACTORY_PRESETS.md) | Authored bank categories and performance controls |
 | [INTERFACE.md](INTERFACE.md) | UI organization and layout conventions |
+| [MULTIBAND_REVIEW.md](MULTIBAND_REVIEW.md) | LR24/TPT reconstruction, band isolation, Legacy parity, routing transitions and appearance evidence |
 | [GUI_DSP_REVIEW.md](GUI_DSP_REVIEW.md) | Working-tree distortion, spectrum, stereo, font/folder and logo evidence |
 | [RACK_REVIEW.md](RACK_REVIEW.md) | Ordered DSP, 32-note capacity, host refresh and ten-theme contrast evidence |
 | [Source](../Source) | Runtime implementation and vendored headers |
@@ -992,3 +1028,4 @@ the release tag matching a binary when investigating a specific implementation.
 | 1.2 | 0.9.8 | Four-stage distortion, pre/post stereo-power FFT, categorized settings, glyph AA/size/style, persistent dialogs, exact SVG branding and real-WAV stereo checks |
 | 1.3 | 0.9.8.1 | Direct glyph rendering, selectable AA/supersampling and edge weight, uniform scaling, portable PNG/JPEG/grid backgrounds, folder controls and themed context menus |
 | 1.4 | 0.9.8.2 | Collapsible modulation row with actual editor resize and persistent compact state; 20 embedded original backgrounds |
+| 1.5 | 0.9.8.3 | Optional 1–4-band LR24/TPT distortion, graphic crossovers/pre-post analysis, five appended controls, visible panel gradients and persistent grid/gradient amounts |

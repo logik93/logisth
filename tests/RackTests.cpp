@@ -64,6 +64,19 @@ static void checkDistortionsAndSpectrum() {
     float idleL[128]{}, idleR[128]{}, idleMod[128]{};
     inactive->process(idleL, idleR, 128, idleMod, idleMod, bypassed);
     check(inactive->processedSamples == 0, "all bypassed distortion slots contribute no DSP work");
+    bypassed.distortionMultiband = true;
+    bypassed.distortionBands = 2;
+    bypassed.extraDistortions[2] = {true, 0, .5f, 1};
+    check(!bypassed.activeDistortion(), "unused multiband slots do not activate processing");
+    for (int i = 0; i < 128; ++i) {
+        idleL[i] = .2f * std::sin(i * .09f);
+        idleR[i] = -idleL[i];
+    }
+    const auto beforeIdle = std::array<float, 2>{idleL[127], idleR[127]};
+    inactive->process(idleL, idleR, 128, idleMod, idleMod, bypassed);
+    check(inactive->processedSamples == 0 && idleL[127] == beforeIdle[0] &&
+              idleR[127] == beforeIdle[1],
+          "inactive multiband slots skip DSP and keep exact stereo bypass");
     auto capture = std::make_unique<ScopeBuffer>();
     for (int i = 0; i < int(EqSpectrum::size); ++i) {
         const float sample = float(std::sin(2 * pi * 43 * i / EqSpectrum::size));
@@ -126,9 +139,15 @@ class SparseImpulse : public ImpulseProcessor {
         position = 0;
     }
 };
-int main() {
+#include "MultibandTests.h"
+int main(int argc, char **argv) {
     try {
+        if (argc > 2 && std::string(argv[1]) == "--multiband-report") {
+            multiband_test::run(argv[2]);
+            return 0;
+        }
         checkDistortionsAndSpectrum();
+        multiband_test::run();
         EffectOrder order;
         int permutations = 0;
         do {

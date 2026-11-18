@@ -209,7 +209,22 @@ bool LogisthProcessor::moveDistortion(int from, int to) {
 EffectsParams LogisthProcessor::effectsSnapshot() const {
     EffectsParams p;
     p.eqTrace = eqSpectrumEnabled.load(std::memory_order_relaxed) ? &eqSpectrum : nullptr;
+    p.distortionTrace =
+        distortionSpectrumEnabled.load(std::memory_order_relaxed) ? &distortionSpectrum : nullptr;
     p.distortion = get(Param::diston) > 0;
+    p.distortionMultiband = get(Param::distbandmode) > 0;
+    if (p.distortionMultiband) {
+        p.distortionBands = int(get(Param::distbands)) + 1;
+        p.distortionOrder = distortionOrder();
+        for (int i = 0; i < 3; ++i)
+            p.distortionCrossovers[size_t(i)] = get(Param(size_t(Param::distcross1) + size_t(i)));
+        if (!p.distortion) {
+            p.distortionType = int(get(Param::disttype));
+            for (int i = 0; i < 3; ++i)
+                p.extraDistortions[size_t(i)].type =
+                    int(get(Param(size_t(Param::dist2type) + size_t(i) * 4)));
+        }
+    }
     p.phaser = get(Param::phaseron) > 0;
     p.chorus = get(Param::choruson) > 0;
     p.eq = get(Param::eqon) > 0;
@@ -356,7 +371,8 @@ void LogisthProcessor::reset() {
     engine.reset();
     scope.clear();
     eqSpectrum.clear();
-    lastEqCapture = false;
+    distortionSpectrum.clear();
+    lastEqCapture = lastDistortionCapture = false;
     for (auto &trace : playerScopes)
         trace.clear();
     chordMapper.reset();
@@ -431,6 +447,10 @@ void LogisthProcessor::processBlock(AudioBuffer<float> &audio, MidiBuffer &midi)
     if (bool(fx.eqTrace) != lastEqCapture) {
         eqSpectrum.clear();
         lastEqCapture = bool(fx.eqTrace);
+    }
+    if (bool(fx.distortionTrace) != lastDistortionCapture) {
+        distortionSpectrum.clear();
+        lastDistortionCapture = bool(fx.distortionTrace);
     }
     rackTransition.request(effectOrder());
     const ClipperSettings cp{get(Param::clipon) > 0,    get(Param::clipquality) > 0,

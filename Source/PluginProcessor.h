@@ -71,6 +71,8 @@ class LogisthProcessor : public juce::AudioProcessor {
     logisth::ScopeBuffer scope;
     mutable logisth::ScopeBuffer eqSpectrum;
     std::atomic<bool> eqSpectrumEnabled{false};
+    mutable logisth::ScopeBuffer distortionSpectrum;
+    std::atomic<bool> distortionSpectrumEnabled{false};
     std::array<logisth::ScopeBuffer, logisth::playerCount> playerScopes;
     std::array<logisth::PlaybackTelemetry, logisth::playerCount> playback;
     void copyPattern(int, int);
@@ -246,7 +248,7 @@ class LogisthProcessor : public juce::AudioProcessor {
     logisth::Effects effects;
     std::atomic<uint32_t> effectOrderBits{logisth::EffectOrder{}.packed()};
     std::atomic<unsigned> distortionOrderBits{logisth::DistortionOrder{}.packed()};
-    bool lastEqCapture = false;
+    bool lastEqCapture = false, lastDistortionCapture = false;
     logisth::RackTransition rackTransition;
     logisth::Arpeggiator arp;
     std::array<std::array<float, 512>, logisth::playerCount> playerTraces{};

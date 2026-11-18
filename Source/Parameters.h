@@ -1090,6 +1090,11 @@ enum class Param : size_t {
     dist4type,
     dist4drive,
     dist4mix,
+    distbandmode,
+    distbands,
+    distcross1,
+    distcross2,
+    distcross3,
     Count
 };
 constexpr size_t parameterCount = size_t(Param::Count);
@@ -2817,6 +2822,11 @@ inline const std::array<ParameterSpec, parameterCount> parameterSpecs{{
      "Overdrive|Foldback|Clip|Decimate|Bitcrush", false},
     {"dist4drive", "Stage 4 drive", 3, "DISTORTION", 0, 1, 0, 1, "", false},
     {"dist4mix", "Stage 4 dry / wet", 3, "DISTORTION", 0, 1, 1, 1, "", false},
+    {"distbandmode", "Routing", 3, "DISTORTION", 0, 1, 0, 1, "Legacy|Multiband", false},
+    {"distbands", "Band count", 3, "DISTORTION", 0, 3, 3, 1, "1|2|3|4", false},
+    {"distcross1", "Crossover 1 / Hz", 3, "DISTORTION", 20, 20000, 200, .3f, "", false},
+    {"distcross2", "Crossover 2 / Hz", 3, "DISTORTION", 20, 20000, 2000, .3f, "", false},
+    {"distcross3", "Crossover 3 / Hz", 3, "DISTORTION", 20, 20000, 8000, .3f, "", false},
 }};
 
 inline constexpr size_t legacyParameterCount = 736;

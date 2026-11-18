@@ -73,6 +73,18 @@ def package(preview: Path, calibration: Path, kick_benchmark: Path | None = None
     if not (root / 'docs' / f'RELEASE-v{version}.md').is_file():
         raise ValueError('Missing versioned release notes')
     bundles=[('calibration', calibration_files), ('themes', theme_files)]
+    if tuple(map(int, version.split('.'))) >= (0, 9, 8, 3):
+        evidence = root / 'dist' / f'features-{version}'
+        images = sorted(evidence.glob('*.png'))
+        if len(images) != 14:
+            raise ValueError('Missing gradient/grid/multiband interface evidence')
+        files = [(p, 'images/' + p.name) for p in images]
+        files += [(root / 'docs/multiband' / n, n) for n in
+                  ('reconstruction.csv', 'isolation.csv', 'summary.csv')]
+        files += [(root / 'docs/MULTIBAND_REVIEW.md', 'README.md'), (root / 'LICENSE', 'LICENSE')]
+        if any(not p.is_file() for p, _ in files):
+            raise ValueError('Missing multiband reconstruction/transition measurements')
+        bundles.append(('multiband-review', files))
     if tuple(map(int, version.split('.'))) >= (0, 9, 8, 2):
         from verify_background_assets import verify as verify_backgrounds
         verify_backgrounds(root)

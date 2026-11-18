@@ -1,4 +1,4 @@
-# logisth 0.9.8.2 — project and algorithm review
+# logisth 0.9.8.3 — project and algorithm review
 
 The v0.9.8 GUI/DSP changes are documented in [GUI_DSP_REVIEW.md](GUI_DSP_REVIEW.md):
 four serial distortion stages, pre/post stereo-power spectra, font/settings/
@@ -14,6 +14,13 @@ context menu themes and overlapped headings. See [APPEARANCE_REVIEW.md](APPEARAN
 Version 0.9.8.2 folds the full modulation row with actual persistent window
 resizing and adds twenty embedded generated backgrounds. The existing portable
 theme codec stores the original PNG bytes. See [COMPACT_LAYOUT.md](COMPACT_LAYOUT.md).
+
+Version 0.9.8.3 adds original LR24/TPT multiband routing around the existing
+nonlinear modules, leaving Legacy sample-identical. The 120 actual runtime sine
+cases measure unity recombination; DC/cutoff and topology-change tests cover
+control continuity. Optional spectrum capture stays outside inactive processing.
+Gradient composition now reaches panel interiors; explicit grid/gradient amounts
+round-trip through draft and portable themes. See [MULTIBAND_REVIEW.md](MULTIBAND_REVIEW.md).
 
 ## Algorithm provenance and conformance
 

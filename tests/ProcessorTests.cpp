@@ -13,6 +13,7 @@
 #include "Features0962Tests.h"
 #include "Features096Tests.h"
 #include "Features097Tests.h"
+#include "Features0983Tests.h"
 #include "GainCalibration.h"
 #include "KickBenchmark.h"
 #include "OscillatorClipboardTests.h"
@@ -977,6 +978,14 @@ int main(int argc, char **argv) {
         logisth::UserSettings::useFileForTests(userPreferences.getFile());
         juce::TemporaryFile themePreferences(".json");
         logisth::ThemeSettings::useStorageFileForTests(themePreferences.getFile());
+        if (argc > 1 && juce::String(argv[1]) == "--features0983-check") {
+            features0983_test::run();
+            return 0;
+        }
+        if (argc > 2 && juce::String(argv[1]) == "--features0983-report") {
+            features0983_test::run(juce::File(juce::String::fromUTF8(argv[2])));
+            return 0;
+        }
         if (argc > 1 && juce::String(argv[1]) == "--compact-check") {
             compact_layout_test::run();
             return 0;
@@ -1101,6 +1110,7 @@ int main(int argc, char **argv) {
         ui_review_test::run();
         appearance0981_test::run();
         compact_layout_test::run();
+        features0983_test::run();
         factorybank_test::run();
         factorybank_test::search();
         processor_phase_test::run();

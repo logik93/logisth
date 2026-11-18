@@ -1,9 +1,9 @@
-# logisth 0.9.8.2 — User Manual
+# logisth 0.9.8.3 — User Manual
 
 wavelogik logisth is a three-part polyphonic subtractive synthesizer for VST3, CLAP and standalone use.
 This manual describes logisth's controls, sound engines and preset workflow.
 
-This edition describes **v0.9.8.2**. Earlier downloads retain their corresponding
+This edition describes **v0.9.8.3**. Earlier downloads retain their corresponding
 interface and manuals.
 
 ## Contents
@@ -142,7 +142,11 @@ load or save updates its last-used directory. Cancelled/failed operations retain
 it; a deleted folder falls back to an existing ancestor.
 
 SKIN selects Flat, Gradient, Grid, Image or Image + grid backgrounds, and
-Arc/Solid/Minimal knobs. LOAD IMAGE... accepts PNG or JPEG. PNG is recommended
+Arc/Solid/Minimal knobs. GRADIENT sets gradient depth from 0 to 100% in Gradient
+mode, including instrument panels. GRID sets line intensity from 0 to 100% in
+Grid or Image + grid mode; zero hides the grid. Both values preview immediately,
+survive editor reopen as a draft, and save with the theme. Other background modes
+retain these amounts without applying the corresponding layer. LOAD IMAGE... accepts PNG or JPEG. PNG is recommended
 for sharp grids, illustrations and transparency; JPEG suits photographs.
 SKIN also includes a factory-background chooser: 20 original images, two per
 standard theme, with section headings naming their intended palette. Select an
@@ -670,7 +674,7 @@ Limiter when a final sample-peak ceiling is required.
 
 | Section | Controls and use |
 | --- | --- |
-| Distortion | Four serial stages, each with its own On/Off, model, Drive and Mix. Drag headers to reorder. |
+| Distortion | Legacy serial stages or 1–4 parallel frequency bands; independent On/Off, model, Drive and Mix. |
 | Phaser | Six-stage stereo phasing with centre frequency, spread, L/R offset, width, LFO, feedback and Dry/Wet. Its frequency is a modulation destination. |
 | Chorus | Delay, depth, rate, feedback, dual mode, width and Dry/Wet thicken a sound. |
 | Equalizer | Legacy two-shelf or 16-slot Graphic/parametric; eight filter types, response curve, Auto Gain and output trim. |
@@ -682,7 +686,7 @@ Limiter when a final sample-peak ceiling is required.
 
 ### Distortion and Chorus
 
-The Distortion page contains four serial slots, in **1 / 2 / 3 / 4** order for
+The Distortion page defaults to **Legacy**, with four serial slots, in **1 / 2 / 3 / 4** order for
 a new instance or Init. Click a slot header to edit its Overdrive, Foldback,
 Clip, Decimate or Bitcrush model, Drive and Mix. Each slot has an ON / OFF
 switch. The rack switch bypasses the entire group. Stage 1 retains earlier
@@ -693,6 +697,32 @@ Drag the headers to change their processing order, use Alt+Left/Right, or use
 the header's context menu. Presets and projects store the chosen order and all
 four stages. Live reordering uses a short fade around the switch. A bypassed
 stage is skipped; four bypassed stages add no distortion DSP work.
+
+Choose **Multiband** in ROUTING to split the full frequency range into **1–4**
+bands. Each band uses one of the same four module slots; the leftmost band is
+lowest in frequency. Click its header or graph region to edit its model, DRIVE
+and MIX. ON / OFF bypasses that band's distortion while preserving its dry
+frequency region. The rack switch bypasses the complete group. With one band,
+the selected module processes the full range without crossovers.
+
+Drag a vertical divider in the graph or type its frequency into C1/C2/C3. The
+mouse wheel adjusts the selected divider; double-click a divider to reset it.
+Crossovers span 20 Hz to 20 kHz, limited below Nyquist and kept in ascending order.
+Reducing the number of bands hides unused modules and dividers, retaining their
+settings. Drag headers, use Alt+Left/Right or the context menu to exchange module
+assignments between active bands. All routing, counts, cutoffs and module settings
+save in presets/projects and support automation. Switching routing or band count
+uses a short fade. Return to Legacy to restore serial processing.
+
+The analyzer selector offers Off, Pre, Post and Both. These traces measure the
+stereo signal immediately before/after Distortion at its current rack position.
+Display tilt offers 0, 1.5, 3, 4.5 or 6 dB/oct, anchored at 1 kHz; it changes only
+the drawing. Crossover response curves use their own relative scale. Off or
+leaving the page stops spectrum capture/FFT. Analyzer/tilt choices are remembered
+separately from EQ, as application preferences. The existing Distortion Amount
+modulation target continues to address original module 1, wherever it is assigned.
+
+![Four-band distortion with pre/post spectrum](images/logisth-distortion-multiband.png)
 
 Chorus keeps the same grid in Sync and free modes. RATE and DUAL share the
 far-right column. FEEDBACK follows DRY/WET on the lower row; Delay, Depth,
@@ -976,7 +1006,7 @@ or failed operations retain the previous directory. If a directory was removed,
 the chooser starts at its nearest existing parent. SETTINGS / FILES shows the
 current locations; this is independent of the sound preset.
 
-Presets contain all 1084 audio parameters, effect and distortion-slot order, routing, compressed audio for all six
+Presets contain all 1089 audio parameters, effect and distortion-slot order, routing, compressed audio for all six
 slots, the convolution impulse response, WAV regions, chord mappings, twelve named patterns, the preset comment and
 scope selection. Theme and editor size are separate user preferences and are
 retained when sounds change. The original sample files are unnecessary on recall. Saving uses a
@@ -984,7 +1014,7 @@ temporary file and atomic replacement. Invalid files leave the current patch
 intact. State/preset files are limited to 1 GiB. These are logisth's own files;
 renaming another format to .logisth does not convert it.
 
-All 1084 parameters are available for host automation. The first 514 parameter
+All 1089 parameters are available for host automation. The first 514 parameter
 IDs and order from 0.4 are retained. Granulizer and global MIDI-only controls
 follow them; the former Graphs parameter block is removed. A/B/C views, rack pages,
 theme and scope source do not change the patch's audio settings. DAW state

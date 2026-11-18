@@ -1,5 +1,5 @@
 #pragma once
-#include "EqSpectrum.h"
+#include "SpectrumPlot.h"
 namespace logisth_ui {
 class EqView : public juce::Component, public juce::SettableTooltipClient {
     LogisthProcessor &processor;
@@ -11,33 +11,10 @@ class EqView : public juce::Component, public juce::SettableTooltipClient {
     logisth::EqSpectrum spectrum;
     int analysisMode = 3, analysisTilt = 2;
     void drawSpectrum(juce::Graphics &g, juce::Rectangle<float> area) const {
-        const double rate = std::max(8000., processor.getSampleRate());
-        for (int stream = 0; stream < 2; ++stream) {
-            if (!(analysisMode & (1 << stream)))
-                continue;
-            juce::Path path;
-            bool started = false;
-            for (int i = 0; i < 384; ++i) {
-                const double hz = 20 * std::pow(1000., i / 383.);
-                if (hz >= rate * .5)
-                    break;
-                const double bin = hz * logisth::EqSpectrum::size / rate;
-                const auto at = std::min(size_t(bin), logisth::EqSpectrum::bins - 2);
-                const float fraction = float(bin - at);
-                const auto &values = spectrum.db[size_t(stream)];
-                const auto level = values[at] + fraction * (values[at + 1] - values[at]) +
-                                   logisth::EqSpectrum::tiltDb(hz, analysisTilt);
-                const auto yy = area.getBottom() - float((level + 108) / 120) * area.getHeight();
-                if (!started) {
-                    path.startNewSubPath(x(hz), yy);
-                    started = true;
-                } else
-                    path.lineTo(x(hz), yy);
-            }
-            g.setColour((stream == 0 ? theme.mint : theme.screenAccent).withAlpha(.65f));
-            g.strokePath(path, juce::PathStrokeType(1.2f));
-        }
+        drawStereoSpectrum(g, area, theme, spectrum, analysisMode, analysisTilt,
+                           processor.getSampleRate());
     }
+
     float value(const juce::String &id) const {
         return processor.state.getRawParameterValue(id)->load();
     }

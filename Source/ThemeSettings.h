@@ -15,12 +15,13 @@ struct ThemeDefinition {
     juce::String fontFamily = "Open Sans", skin;
     int backgroundStyle = 0, knobStyle = 0;
     juce::String backgroundImage;
-    double backgroundMix = .5, panelOpacity = .85;
+    double backgroundMix = .5, panelOpacity = .85, gradientAmount = .75, gridOpacity = .75;
     bool same(const ThemeDefinition &t) const {
         return key == t.key && name == t.name && dark == t.dark && colours == t.colours &&
                fontFamily == t.fontFamily && backgroundStyle == t.backgroundStyle &&
                knobStyle == t.knobStyle && skin == t.skin && backgroundImage == t.backgroundImage &&
-               backgroundMix == t.backgroundMix && panelOpacity == t.panelOpacity;
+               backgroundMix == t.backgroundMix && panelOpacity == t.panelOpacity &&
+               gradientAmount == t.gradientAmount && gridOpacity == t.gridOpacity;
     }
 };
 struct ThemeDraft {
@@ -100,6 +101,8 @@ class ThemeSettings {
         o->setProperty("backgroundImage", theme.backgroundImage);
         o->setProperty("backgroundMix", theme.backgroundMix);
         o->setProperty("panelOpacity", theme.panelOpacity);
+        o->setProperty("gradientAmount", theme.gradientAmount);
+        o->setProperty("gridOpacity", theme.gridOpacity);
         o->setProperty("knobStyle", theme.knobStyle);
         o->setProperty("name", theme.name);
         o->setProperty("dark", theme.dark);
@@ -162,6 +165,7 @@ class ThemeSettings {
         theme.backgroundImage.clear();
         theme.backgroundMix = .5;
         theme.panelOpacity = .85;
+        theme.gradientAmount = theme.gridOpacity = .75;
         if (o->hasProperty("backgroundImage")) {
             auto data = o->getProperty("backgroundImage");
             if (!data.isString() || !SkinBackground::validEncoding(data.toString()))
@@ -169,7 +173,9 @@ class ThemeSettings {
             theme.backgroundImage = data.toString();
         }
         for (auto pair : {std::pair<const char *, double *>{"backgroundMix", &theme.backgroundMix},
-                          {"panelOpacity", &theme.panelOpacity}}) {
+                          {"panelOpacity", &theme.panelOpacity},
+                          {"gradientAmount", &theme.gradientAmount},
+                          {"gridOpacity", &theme.gridOpacity}}) {
             if (o->hasProperty(pair.first)) {
                 auto v = o->getProperty(pair.first);
                 const auto minimum = juce::String(pair.first) == "panelOpacity" ? .4 : 0.;

@@ -1,0 +1,3 @@
+sample_rate,input_frequency_hz,selected_band,third_harmonic_amplitude
+48000,99.609375,0,0.417247643091
+48000,6000,0,2.02742729994e-08

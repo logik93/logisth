@@ -1,4 +1,4 @@
-# logisth 0.9.8.2
+# logisth 0.9.8.3
 
 **wavelogik logisth — a three-part polyphonic subtractive synthesizer with a compact single-window console.**
 VST3, CLAP and Standalone for Windows, macOS and Linux. Built with JUCE and an
@@ -8,6 +8,16 @@ independent synthesis engine.
 [Technical Manual PDF](docs/logisth-Technical-Manual-English.pdf)
 
 ![logisth dark interface](docs/images/logisth-dark.png)
+
+## New in 0.9.8.3
+
+Distortion adds optional **Multiband** routing with 1–4 parallel bands, draggable
+crossovers, per-band models/Drive/Mix/On, and independent pre/post spectrum and
+display tilt. **Legacy** retains the four-stage serial path and older patch sound.
+SETTINGS > SKIN adds **GRADIENT** and **GRID** amount sliders. Gradients now show
+inside panels as well as the canvas; both amounts travel with portable themes.
+ABOUT adds mixedbytrzy's testing and interface contributions.
+See the [multiband and appearance review](docs/MULTIBAND_REVIEW.md).
 
 ## New in 0.9.8.2
 

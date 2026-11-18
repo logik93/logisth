@@ -162,3 +162,21 @@ at 80/100/125/133.33/200 percent in both layouts, preference reload, active hidd
 automation and all twenty original PNG resources. Artwork resources must remain
 compressed and decode only on selection on the message thread. Never rebuild
 parameter attachments or modify sound state to fold the UI.
+
+## v0.9.8.3 multiband/appearance regression
+
+Keep all 1084 prior parameter IDs/order/defaults unchanged; append mode, count
+and three crossovers. Missing new fields must restore Legacy. Preserve exact
+serial DSP through the router. Use fixed storage and independent stereo states.
+LR24 sum needs downstream allpass phase compensation; do not just sum nested
+low/high splits. TPT integrators and log smoothing avoid coefficient-change DC
+jumps. Only active bands may activate the rack; analyzer capture must stop when
+off/hidden/closed. Keep EQ/Distortion display preferences separate.
+
+`Rack_tests --multiband-report /absolute/folder` exports 120 runtime reconstruction
+cases, two band-isolation cases and continuity/parity summary. `processor_tests
+--features0983-report /absolute/folder` exports 14 real interface PNGs and checks
+palette/draft/codec, pointer sliders, counts/crossover gestures, preset/state,
+audio allocation and pre/post/off lifecycle. The same tests run in ordinary CTest.
+Native archives include MULTIBAND_REVIEW.md and docs/multiband; the release adds
+a multiband-review ZIP. Never regenerate or replace already published releases.

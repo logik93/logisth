@@ -1,5 +1,16 @@
 # logisth native release checks
 
+Release candidate: **v0.9.8.3**. Local Linux release checks cover all twenty C++
+suites, ten Python tool regressions, exact bundled themes/fonts/backgrounds,
+workflow validation, current source/manual identities and PDF text bounds.
+The new runtime crossover matrix has 120 reconstruction cases, two isolation
+cases and continuity/Legacy parity evidence. Fourteen interface PNGs accompany
+pointer, preset, capture and allocation checks. The 47 gain and 96 factory
+profiles remain byte-identical to v0.9.8.2. User/technical manuals contain 26/28
+pages. Native Windows/Linux publication and subsequent macOS append are pending
+at this candidate snapshot; the completed prior release is recorded below.
+
+
 Completed release: **[v0.9.8.2](https://github.com/logik93/logisth/releases/tag/v0.9.8.2)**.
 [Native CI run](https://github.com/logik93/logisth/actions/runs/44352067388)
 passed from tag commit `06ac787b53f3188888b32ec514e569e4c18c39bb`.

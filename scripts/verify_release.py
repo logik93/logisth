@@ -189,6 +189,33 @@ def verify(tag: str) -> None:
         with zipfile.ZipFile(folder / f'logisth-{version}-compact-review.zip') as archive:
             if len([n for n in archive.namelist() if n.endswith('.png')]) != 12:
                 raise ValueError('Missing compact layout/background evidence')
+    if tuple(map(int, version.split('.'))) >= (0, 9, 8, 3):
+        with zipfile.ZipFile(folder / f'logisth-{version}-multiband-review.zip') as archive:
+            rows = list(csv.DictReader(io.StringIO(archive.read('reconstruction.csv').decode())))
+            cases = {(r['sample_rate'], r['bands'], r['frequency_hz']) for r in rows}
+            if len(rows) != 120 or len(cases) != 120:
+                raise ValueError('Incomplete multiband runtime reconstruction matrix')
+            if any(not abs(float(r['magnitude_error_db'])) < .005 for r in rows):
+                raise ValueError('Multiband reconstruction exceeds unity-magnitude tolerance')
+            summary = list(csv.DictReader(io.StringIO(archive.read('summary.csv').decode())))
+            if (len(summary) != 1 or summary[0]['legacy_exact'] != '1'
+                    or not float(summary[0]['dc_automation_error']) < 1e-5
+                    or not float(summary[0]['maximum_transition_jump']) < .08):
+                raise ValueError('Multiband continuity or Legacy parity failed')
+            isolation = list(csv.DictReader(io.StringIO(archive.read('isolation.csv').decode())))
+            if (len(isolation) != 2
+                    or not float(isolation[0]['input_frequency_hz']) < 200
+                    or not float(isolation[0]['third_harmonic_amplitude']) > .02
+                    or not float(isolation[1]['input_frequency_hz']) > 2000
+                    or not 0 <= float(isolation[1]['third_harmonic_amplitude']) < 1e-5):
+                raise ValueError('Incomplete frequency-isolation evidence')
+            if len([n for n in archive.namelist() if n.endswith('.png')]) != 14:
+                raise ValueError('Incomplete gradient/grid/multiband screenshots')
+            for name in ('reconstruction.csv', 'isolation.csv', 'summary.csv'):
+                if archive.read(name) != (root / 'docs/multiband' / name).read_bytes():
+                    raise ValueError('Stale multiband measurement archive')
+            if archive.read('README.md') != (root / 'docs/MULTIBAND_REVIEW.md').read_bytes():
+                raise ValueError('Stale multiband review description')
     print(f"Verified {len(names)} release assets for {tag}")
 
 

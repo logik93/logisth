@@ -122,6 +122,11 @@ class DistortionRack {
         initial = true;
         transition.reset(rate, {});
     }
+    // Reuse the original stage kernel for an isolated crossover band.
+    void processIsolatedStage(float *l, float *r, int n, DistortionSettings settings,
+                              const float *driveMod, float smooth) noexcept {
+        stages[0].process(l, r, n, settings, driveMod, smooth);
+    }
     void process(float *l, float *r, int n, const std::array<DistortionSettings, 4> &settings,
                  DistortionOrder order, const float *driveMod, float smooth) noexcept {
         const auto expanded = order.expanded();

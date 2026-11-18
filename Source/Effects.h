@@ -1,10 +1,10 @@
 #pragma once
 #include "ConvolutionInterface.h"
-#include "Distortion.h"
 #include "Dynamics.h"
 #include "EffectOrder.h"
 #include "Equalizer.h"
 #include "Modulation.h"
+#include "MultibandDistortion.h"
 #include "Reverb.h"
 #include <vector>
 namespace logisth {
@@ -13,7 +13,16 @@ struct EffectsParams : ReverbControls, EqualizerParams {
     DistortionOrder distortionOrder;
     bool firstDistortionEnabled = true;
     std::array<DistortionSettings, 3> extraDistortions{};
-    ScopeBuffer *eqTrace = nullptr;
+    ScopeBuffer *eqTrace = nullptr, *distortionTrace = nullptr;
+    bool distortionMultiband = false;
+    int distortionBands = 4;
+    std::array<float, 3> distortionCrossovers{200, 2000, 8000};
+    std::array<DistortionSettings, 4> distortionSettings() const noexcept {
+        std::array<DistortionSettings, 4> result;
+        result[0] = {firstDistortionEnabled, distortionType, drive, distMix};
+        std::copy(extraDistortions.begin(), extraDistortions.end(), result.begin() + 1);
+        return result;
+    }
     ImpulseProcessor *convolution = nullptr;
     bool irNormalize = true;
     float reverbOutput = 0, impulseSeconds = 1;
@@ -37,6 +46,9 @@ struct EffectsParams : ReverbControls, EqualizerParams {
     bool activeDistortion() const noexcept {
         if (!distortion)
             return false;
+        if (distortionMultiband)
+            return MultibandDistortionRack::active(distortionSettings(), distortionOrder,
+                                                   distortionBands);
         if (firstDistortionEnabled && distMix > 0)
             return true;
         for (const auto &stage : extraDistortions)
@@ -61,13 +73,13 @@ class Effects {
     std::array<std::vector<float>, 4> chorusLines;
     std::array<std::array<float, 6>, 2> allpass{};
     std::array<float, 2> phaserLast{}, lowState{}, highState{};
-    DistortionRack distortionRack;
+    MultibandDistortionRack distortionRack;
     std::array<std::array<float, 3>, 2> smearState{};
     Equalizer equalizer;
     Compressor modern;
     bool compWasEnabled = false, compWasModern = true, sleeping = true;
     uint64_t quietInput = 0, quietOutput = 0;
-    std::array<float, 512> wetL{}, wetR{};
+    std::array<float, 512> wetL{}, wetR{}, distortionBeforeL{}, distortionBeforeR{};
     std::array<CharacterReverb, 5> reverbModels;
     std::array<float, 6> reverbWeights{};
     std::array<float, 512> convolutionL{}, convolutionR{};
@@ -92,10 +104,21 @@ class Effects {
 
     void distort(float *l, float *r, int n, const EffectsParams &p, const float *driveMod,
                  float smooth) {
-        std::array<DistortionSettings, 4> settings;
-        settings[0] = {p.firstDistortionEnabled, p.distortionType, p.drive, p.distMix};
-        std::copy(p.extraDistortions.begin(), p.extraDistortions.end(), settings.begin() + 1);
-        distortionRack.process(l, r, n, settings, p.distortionOrder, driveMod, smooth);
+        const auto settings = p.distortionSettings();
+        if (p.distortionTrace) {
+            std::copy_n(l, n, distortionBeforeL.begin());
+            std::copy_n(r, n, distortionBeforeR.begin());
+        }
+        if (p.distortion && (p.activeDistortion() || distortionRack.hasTail()))
+            distortionRack.process(l, r, n, settings, p.distortionOrder, driveMod, smooth,
+                                   p.distortionMultiband, p.distortionBands,
+                                   p.distortionCrossovers);
+        if (p.distortionTrace) {
+            for (int i = 0; i < n; ++i)
+                p.distortionTrace->push(distortionBeforeL[size_t(i)], distortionBeforeR[size_t(i)],
+                                        l[i], r[i]);
+            p.distortionTrace->commit();
+        }
     }
     void phaseShift(float *l, float *r, int n, const EffectsParams &p, const float *phaserMod) {
         const double phaserHz = p.sync ? p.bpm / (60 * beatLength(p.phaserDivision)) : p.phaserRate;
@@ -404,7 +427,14 @@ class Effects {
         const bool clipEnabled = clip && clip->settings.enabled && clip->settings.mix > 0;
         if (clip && !clipEnabled)
             clip->process(l, r, n);
-        const bool any = clipEnabled || p.eqTrace || p.activeDistortion() || p.phaser || p.chorus ||
+        if (!p.distortion)
+            distortionRack.silence(p.distortionMultiband, p.distortionBands, p.distortionOrder,
+                                   p.distortionSettings());
+        else if (!p.activeDistortion() && !distortionRack.hasTail())
+            distortionRack.synchronize(p.distortionMultiband, p.distortionBands, p.distortionOrder,
+                                       p.distortionSettings());
+        const bool any = clipEnabled || p.eqTrace || p.distortionTrace ||
+                         distortionRack.hasTail() || p.activeDistortion() || p.phaser || p.chorus ||
                          p.eq || p.reverb || p.delay || p.compressor;
         if (!any)
             return;
@@ -416,6 +446,13 @@ class Effects {
                 {p.threshold, p.ratio, p.compKnee, p.attack, p.release, p.compMakeup, p.compMix},
                 sr);
         if (sleeping && inPeak < 1e-10f) {
+            distortionRack.silence(p.distortionMultiband, p.distortionBands, p.distortionOrder,
+                                   p.distortionSettings());
+            if (p.distortionTrace) {
+                for (int i = 0; i < n; ++i)
+                    p.distortionTrace->push(0, 0, 0, 0);
+                p.distortionTrace->commit();
+            }
             if (p.eqTrace) {
                 for (int i = 0; i < n; ++i)
                     p.eqTrace->push(0, 0, 0, 0);
@@ -464,7 +501,7 @@ class Effects {
         for (auto stage : order.stages)
             switch (stage) {
             case EffectStage::Distortion:
-                if (p.activeDistortion())
+                if (p.activeDistortion() || distortionRack.hasTail() || p.distortionTrace)
                     distort(l, r, n, p, driveMod, smooth);
                 break;
             case EffectStage::Phaser:

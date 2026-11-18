@@ -22,7 +22,7 @@ functional submenus with symmetric A/B/C and paired scopes. Hover for tooltips a
 Numeric values support units such as kHz, ms and percent. Sync displays musical
 divisions instead of free time/rate controls. Arp steps use 01–08 and 09–16 views.
 
-The current engine exposes 1084 audio parameters. Tests check access, bounds, click
+The current engine exposes 1089 audio parameters. Tests check access, bounds, click
 targets, view changes, bindings, scaling and independent theme persistence.
 See [the English user manual](MANUAL.md) for full operation.
 
@@ -153,3 +153,11 @@ moves the keyboard up by 220 logical pixels. The host window really resizes,
 using one uniform scale. Hiding controls does not stop modulation. The last
 layout is restored when opening another editor. SKIN offers 20 offline factory
 backgrounds grouped by their matching palette. No top-edge highlight is drawn.
+
+Version 0.9.8.3 reserves a separate toolbar for Distortion title, routing, band
+count, analyzer and tilt. Multiband mode shows 1–4 mapped headers and On/Off
+buttons, a log-frequency graph, selected module controls and only N−1 crossover
+fields. Legacy retains the serial layout. Selecting bands changes editing only;
+the power toggles remain separate. Drag/wheel/reset edits send host gestures.
+SKIN adds gradient/grid amount sliders, with immediate repaint and no control
+visibility changes while dragging. The About list adds mixedbytrzy.
