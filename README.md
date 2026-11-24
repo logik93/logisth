@@ -1,4 +1,4 @@
-# logisth 1.0.0
+# logisth 1.0.1
 
 **wavelogik logisth — a three-part polyphonic subtractive synthesizer with a compact single-window console.**
 VST3, CLAP and Standalone for Windows, macOS and Linux. Built with JUCE and an
@@ -9,9 +9,9 @@ independent synthesis engine.
 
 ![logisth dark interface](docs/images/logisth-dark.png)
 
-## New in 1.0.0
+## New in 1.0.1
 
-Set or automate both sample boundaries directly above the waveform for A1 through C2. The header and About panel give the AP logo and caption a shared layout. Long sampler and granular notes survive a same-rate graph restart on a continuous transport. MIDI cleanup and pending sample imports are scoped to their owner. [Release notes](docs/RELEASE-v1.0.0.md) · [Playback measurements and test method](docs/REVIEW-v1.0.0.md)
+Set or automate both sample boundaries directly above the waveform for A1 through C2. The header and About panel give the AP logo and caption a shared layout. Long sampler and granular notes survive a same-rate graph restart on a continuous transport. MIDI cleanup and pending sample imports are scoped to their owner. [Release notes](docs/RELEASE-v1.0.1.md) · [Playback measurements and test method](docs/REVIEW-v1.0.1.md)
 
 ## New in 0.9.8.3
 

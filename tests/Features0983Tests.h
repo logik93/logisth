@@ -168,7 +168,6 @@ inline void run(const File &report = {}) {
     set(*p, "diston", 1);
     for (int count = 1; count <= 4; ++count) {
         selectChoice(*console, "distbands", count);
-        tick();
         auto *graph = console->findChildWithID("distortion.graph");
         check(graph && graph->isVisible(), "multiband graph is visible");
         for (int cut = 0; cut < 3; ++cut) {

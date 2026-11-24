@@ -1,9 +1,9 @@
-# logisth 1.0.0 — User Manual
+# logisth 1.0.1 — User Manual
 
 wavelogik logisth is a three-part polyphonic subtractive synthesizer for VST3, CLAP and standalone use.
 This manual describes logisth's controls, sound engines and preset workflow.
 
-This edition describes **v1.0.0**. Earlier downloads retain their corresponding
+This edition describes **v1.0.1**. Earlier downloads retain their corresponding
 interface and manuals.
 
 ## Contents

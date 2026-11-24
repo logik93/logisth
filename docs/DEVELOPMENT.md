@@ -46,7 +46,7 @@ ad-hoc signed, not notarized; Windows builds are unsigned. Preserve upstream
 library/SDK/font licenses independently of the original-code MIT license.
 
 The owner resumed automatic small 0.9.x releases on 2026-11-15. Keep Windows/Linux
-first and append macOS afterward. Do not advance to 1.0.0 without a later request.
+first and append macOS afterward. Do not advance to 1.0.1 without a later request.
 
 Version 0.9.4.1 uses a fourth release component. Tags and scripts support either
 three or four numeric parts. Keep full plug-in strings; Apple marketing versions
@@ -183,4 +183,4 @@ a multiband-review ZIP. Never regenerate or replace already published releases.
 
 ## Sample automation and host lifecycle
 
-Run `processor_tests --continuity /absolute/report/path` to compare long stereo notes with an uninterrupted reference and inspect the trim-handle close-up. The same fixtures run inside the processor suite. The `vst3_binary` CTest loads the compiled module and exercises actual processing suspension, bus activation and transport positions. Linux also exercises the CLAP activation path. [Fixture design and measured results](REVIEW-v1.0.0.md)
+Run `processor_tests --continuity /absolute/report/path` to compare long stereo notes with an uninterrupted reference and inspect the trim-handle close-up. The same fixtures run inside the processor suite. The `vst3_binary` CTest loads the compiled module and exercises actual processing suspension, bus activation and transport positions. Linux also exercises the CLAP activation path. [Fixture design and measured results](REVIEW-v1.0.1.md)

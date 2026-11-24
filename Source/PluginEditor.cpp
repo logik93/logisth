@@ -550,11 +550,6 @@ class LogisthEditor::Console : public Component,
                         choiceAttachment =
                             std::make_unique<AudioProcessorValueTreeState::ComboBoxAttachment>(
                                 owner.processor.state, spec.id, menu);
-                    if (id == Param::distbandmode || id == Param::distbands)
-                        menu.onChange = [this] {
-                            owner.layout();
-                            owner.repaint();
-                        };
                 }
             } else {
                 kind = Style::Knob;
@@ -627,6 +622,12 @@ class LogisthEditor::Console : public Component,
                     int slot = String(spec.id).substring(1).getIntValue() - 1;
                     owner.sourceViews[size_t(slot)].setSelectedId(menu.getSelectedId() == 1 ? 1 : 2,
                                                                   dontSendNotification);
+                    owner.layout();
+                    owner.repaint();
+                }
+                if (id == Param::distbandmode || id == Param::distbands) {
+                    // JUCE has committed the attached choice before onChange. Reveal the
+                    // matching crossover handles immediately, even while the UI timer is idle.
                     owner.layout();
                     owner.repaint();
                 }
