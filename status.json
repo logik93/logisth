@@ -1,0 +1,69 @@
+{
+  "tag": "v1.0.1",
+  "automation_commit": "f88437927808ac0ee4d34d74a71e2d0ca8d50b5d",
+  "run_id": "45456076887",
+  "run_url": "https://github.com/logik93/logisth/actions/runs/45456076887",
+  "phase": "passed",
+  "pipeline_phase": "passed",
+  "stage": "",
+  "recorded_at": "2026-11-24T19:05:17.007481+00:00",
+  "platform": "macos-universal",
+  "build": {
+    "version": "1.0.1",
+    "platform": "macos-universal",
+    "source_commit": "f88437927808ac0ee4d34d74a71e2d0ca8d50b5d",
+    "source_fingerprint": {
+      "Source": "3f7aee0848c2710f8ba26dc9bc4532fff01c8324",
+      "CMakeLists.txt": "46a065d27a9abd4024b2f628444f41996bcfa58a",
+      "tests": "5ee694ebfbbbdf1f78f3eb46e804919cc9f97423",
+      "assets": "d1cf91f49de4a7b9198e2e60fc9b9f071266f235"
+    },
+    "technical_manual": {
+      "format": 1,
+      "software_version": "1.0.1",
+      "implementation_sha256": "ec11a4327c195f83033de63c424c6b3d65068d2256c96a9195816869128e2ba5",
+      "markdown_sha256": "e0c79760e76912a17d4606eb15d40588ddb5178021e2f234d0eed56968ebc615",
+      "pdf_sha256": "958af399a2d0c021bed7a034dac09c07971c3fbfb7313aab9fa2e039701a6739"
+    },
+    "tests": {
+      "passed": 19,
+      "failed": 0,
+      "skipped": 0
+    },
+    "binaries": [
+      {
+        "path": "VST3/logisth.vst3/Contents/MacOS/logisth",
+        "architectures": [
+          "arm64",
+          "x86_64"
+        ],
+        "sha256": "f23fdfb77d7fc2b45eb8274670010e4e91ee5c6836c7d0862e56a01a904473de"
+      },
+      {
+        "path": "CLAP/logisth.clap/Contents/MacOS/logisth",
+        "architectures": [
+          "arm64",
+          "x86_64"
+        ],
+        "sha256": "8b678ff7a1c10b96c14a5068bf48929c619062bcf4167008ebfa1d315592ec24"
+      },
+      {
+        "path": "Standalone/logisth.app/Contents/MacOS/logisth",
+        "architectures": [
+          "arm64",
+          "x86_64"
+        ],
+        "sha256": "8037d35498fb4a94674a565804107f6774295a425735d01e22b9979fd42d50a3"
+      }
+    ],
+    "formats": [
+      "VST3",
+      "CLAP",
+      "Standalone"
+    ],
+    "run_url": "https://github.com/logik93/logisth/actions/runs/45456076887",
+    "signing": "ad-hoc, not notarized",
+    "archive": "logisth-1.0.1-macos-universal.zip",
+    "archive_sha256": "7ce5bf82efded26e6c4f625b1a21022fd6807d1c0ef234e5612567e5fc706957"
+  }
+}
