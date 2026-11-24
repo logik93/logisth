@@ -7,6 +7,7 @@
 #include "Morph.h"
 #include "Parameters.h"
 #include "UserSettings.h"
+#include <bitset>
 #include <juce_audio_utils/juce_audio_utils.h>
 #include <optional>
 namespace logisth {
@@ -192,6 +193,9 @@ class LogisthProcessor : public juce::AudioProcessor {
     logisth::ArpParams arpSnapshot() const;
     std::array<std::atomic<float> *, logisth::parameterCount> raw{};
     bool publishSource(int, std::shared_ptr<const logisth::SourceData>);
+    juce::Result loadSourceRequested(int, const juce::File &, int frameSize, uint64_t request,
+                                     bool switchClassicToSampler);
+    std::array<uint64_t, logisth::playerCount> sourceImportRequest{};
     void publishChords(std::shared_ptr<const logisth::ChordMap>);
     void publishImpulse(std::shared_ptr<const logisth::ImpulseData>);
     juce::Result loadImpulseRequested(const juce::File &, uint64_t);
@@ -243,7 +247,16 @@ class LogisthProcessor : public juce::AudioProcessor {
     juce::ThreadPool importWorkers{1};
     logisth::ChordMapper chordMapper;
     bool chordsWereEnabled = false, midiWasEnabled = false;
+    struct OutputChannel {
+        std::bitset<128> keys;
+        bool sustain = false;
+        void release(juce::MidiBuffer &, int channel, int offset);
+    };
+    std::array<OutputChannel, 16> outputChannels{};
     juce::MidiBuffer generatedMidi;
+    double preparedSampleRate = 0;
+    bool pendingVstRestart = false, releaseOutputNotes = false;
+    void resetDsp();
     logisth::Engine engine;
     logisth::Effects effects;
     std::atomic<uint32_t> effectOrderBits{logisth::EffectOrder{}.packed()};

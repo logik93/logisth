@@ -67,6 +67,7 @@ class LogisthEditor : public juce::AudioProcessorEditor, private juce::Timer {
     explicit LogisthEditor(LogisthProcessor &);
     ~LogisthEditor() override;
     void resized() override;
+    int getControlParameterIndex(juce::Component &) override;
     juce::Image snapshotPage(int scenario);
     juce::Image snapshotTheme(int theme);
     juce::String validateLayout();

@@ -89,3 +89,5 @@ engines or claim unperformed DAW/reference-binary tests.
 The [v0.9.6.1 review](REVIEW-v0.9.6.1.md) documents stereo/reverb calibration, convolution, oscillator clipboard, symmetric MORPH menus and the new compatibility baseline.
 
 The [v0.9.6.2 review](REVIEW-v0.9.6.2.md) and [dynamics/CPU measurements](DYNAMICS_CPU.md) cover the new dynamics, IR waveform/drop, ordered rack and idle/dependency improvements.
+
+The [1.0.0 engineering review](REVIEW-v1.0.0.md) covers held-note continuity, outgoing MIDI ownership, background sample import ordering and host automation for both sample boundaries.

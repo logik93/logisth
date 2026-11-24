@@ -356,18 +356,36 @@ ArpParams LogisthProcessor::arpSnapshot() const {
 }
 void LogisthProcessor::prepareToPlay(double sampleRate, int blockSize) {
     setRateAndBufferSizeDetails(sampleRate, blockSize);
+    const bool rateChanged = preparedSampleRate != sampleRate;
     impulseRate = sampleRate;
-    impulseRack.detach();
+    if (rateChanged)
+        impulseRack.detach();
     ensureImpulse(true);
     spectralRate = sampleRate;
     ensureSpectral(true);
+    // Block capacity is negotiated by the host. Only a new clock rate invalidates
+    // our time-domain state. Sound sources and DSP histories belong to this instance.
+    if (!rateChanged)
+        return;
+    preparedSampleRate = sampleRate;
     generatedMidi.ensureSize(131072);
     engine.prepare(sampleRate);
     effects.prepare(sampleRate);
     arp.prepare(sampleRate);
-    reset();
+    resetDsp();
 }
 void LogisthProcessor::reset() {
+    // The VST3 wrapper maps setProcessing(false) to reset(), including when a host
+    // temporarily suspends a playing graph to insert an instrument. The next audio
+    // block supplies the transport information needed to distinguish this from a stop.
+    if (wrapperType == wrapperType_VST3 && wasPlaying && expectedSample >= 0)
+        pendingVstRestart = true;
+    else
+        resetDsp();
+}
+void LogisthProcessor::resetDsp() {
+    pendingVstRestart = false;
+    releaseOutputNotes = true;
     engine.reset();
     scope.clear();
     eqSpectrum.clear();
@@ -395,6 +413,16 @@ void LogisthProcessor::reset() {
     channelPeaks[1] = 0;
     voices = 0;
 }
+void LogisthProcessor::OutputChannel::release(MidiBuffer &midi, int channel, int offset) {
+    if (keys.any())
+        for (int key = 0; key < 128; ++key)
+            if (keys.test(size_t(key)))
+                midi.addEvent(MidiMessage::noteOff(channel, key), offset);
+    if (sustain)
+        midi.addEvent(MidiMessage::controllerEvent(channel, 64, 0), offset);
+    keys.reset();
+    sustain = false;
+}
 void LogisthProcessor::processBlock(AudioBuffer<float> &audio, MidiBuffer &midi) {
     ScopedNoDenormals noDenormals;
     audio.clear();
@@ -414,24 +442,35 @@ void LogisthProcessor::processBlock(AudioBuffer<float> &audio, MidiBuffer &midi)
     bool stop = false, seek = false;
     clockAvailable = false;
     hostPpqValid = false;
-    if (auto *head = getPlayHead())
-        if (auto position = head->getPosition()) {
-            clockAvailable = true;
-            if (auto ppq = position->getPpqPosition()) {
-                hostPpq = *ppq;
-                hostPpqValid = std::isfinite(hostPpq);
-            }
-            if (auto tempo = position->getBpm())
-                if (std::isfinite(*tempo) && *tempo > 0)
-                    bpm = jlimit(20., 400., *tempo);
-            stop = wasPlaying && !position->getIsPlaying();
-            if (auto samples = position->getTimeInSamples()) {
-                seek = wasPlaying && position->getIsPlaying() && expectedSample >= 0 &&
-                       *samples != expectedSample;
-                expectedSample = *samples + n;
-            }
-            wasPlaying = position->getIsPlaying();
+    auto *head = getPlayHead();
+    auto position = head ? head->getPosition() : Optional<AudioPlayHead::PositionInfo>{};
+    if (pendingVstRestart) {
+        pendingVstRestart = false;
+        if (!position || !position->getIsPlaying() ||
+            position->getTimeInSamples().orFallback(-1) != expectedSample)
+            resetDsp();
+    }
+    if (position) {
+        clockAvailable = true;
+        if (auto ppq = position->getPpqPosition()) {
+            hostPpq = *ppq;
+            hostPpqValid = std::isfinite(hostPpq);
         }
+        if (auto tempo = position->getBpm())
+            if (std::isfinite(*tempo) && *tempo > 0)
+                bpm = jlimit(20., 400., *tempo);
+        stop = wasPlaying && !position->getIsPlaying();
+        if (auto samples = position->getTimeInSamples()) {
+            seek = wasPlaying && position->getIsPlaying() && expectedSample >= 0 &&
+                   *samples != expectedSample;
+            expectedSample = *samples + n;
+        } else
+            expectedSample = -1;
+        wasPlaying = position->getIsPlaying();
+    } else {
+        expectedSample = -1;
+        wasPlaying = false;
+    }
     keyboard.processNextMidiBuffer(midi, 0, n, true);
     const bool midiOnly = get(Param::midionly) > 0;
     if (midiOnly != wasMidiOnly) {
@@ -526,25 +565,35 @@ void LogisthProcessor::processBlock(AudioBuffer<float> &audio, MidiBuffer &midi)
         }
     };
     const bool output = get(Param::arpout) > 0;
-    const bool flushMidi = midiWasEnabled && !output;
+    const bool flushMidi = midiWasEnabled && (!output || releaseOutputNotes);
+    releaseOutputNotes = false;
     if (flushMidi)
         for (int ch = 1; ch <= 16; ++ch)
-            generatedMidi.addEvent(MidiMessage::allNotesOff(ch), 0);
+            outputChannels[size_t(ch - 1)].release(generatedMidi, ch, 0);
     midiWasEnabled = output;
     auto emit = [&](MidiEvent event) {
         if (p.fixedVelocity && event.type == EventType::NoteOn)
             event.value = 1;
         if (output && event.time < n) {
-            if (event.type == EventType::NoteOn)
+            auto &sent = outputChannels[size_t(event.channel - 1)];
+            if (event.localCleanup)
+                sent.release(generatedMidi, event.channel, event.time);
+            else if (event.type == EventType::NoteOn) {
+                sent.keys.set(size_t(event.key));
                 generatedMidi.addEvent(MidiMessage::noteOn(event.channel, event.key, event.value),
                                        event.time);
-            else if (event.type == EventType::NoteOff)
+            } else if (event.type == EventType::NoteOff) {
+                sent.keys.reset(size_t(event.key));
                 generatedMidi.addEvent(MidiMessage::noteOff(event.channel, event.key), event.time);
-            else if (event.type == EventType::Controller)
+            } else if (event.type == EventType::Controller) {
+                if (event.key == 64)
+                    sent.sustain = event.value >= 64;
+                if (event.key == 120 || event.key == 123)
+                    sent.keys.reset();
                 generatedMidi.addEvent(
                     MidiMessage::controllerEvent(event.channel, event.key, int(event.value)),
                     event.time);
-            else if (event.type == EventType::PitchWheel)
+            } else if (event.type == EventType::PitchWheel)
                 generatedMidi.addEvent(
                     MidiMessage::pitchWheel(event.channel,
                                             jlimit(0, 16383, int(event.value * 8192 + 8192))),

@@ -26,6 +26,8 @@ struct MidiEvent {
     EventType type = EventType::NoteOn;
     int channel = 1, key = 60;
     float value = 0;
+    // Local voice cleanup must never broadcast a panic to other instruments on a MIDI bus.
+    bool localCleanup = false;
 };
 
 } // namespace logisth

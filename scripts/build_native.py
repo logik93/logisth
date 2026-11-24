@@ -41,6 +41,8 @@ def source_fingerprint(root, revision='HEAD'):
 
 def required_test_count(version, platform):
     linux, other = (20, 18) if tuple(map(int, version.split('.'))) >= (0, 9, 7) else (19, 17)
+    if tuple(map(int, version.split('.'))) >= (1, 0, 0):
+        other = 19  # The shipped VST3 now runs a two-instance host test on every OS.
     return linux if platform.startswith('linux') else other
 
 
@@ -225,7 +227,7 @@ def main():
         destination = stage / name
         destination.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(source / name, destination)
-    for directory in ['licenses', 'assets/themes', 'assets/backgrounds', 'assets/skins', 'assets/branding', 'assets/fonts/ioskeley', 'docs/stereo-reverb', 'docs/cpu', 'docs/rack', 'docs/gui-review', 'docs/appearance', 'docs/multiband']:
+    for directory in ['licenses', 'assets/themes', 'assets/backgrounds', 'assets/skins', 'assets/branding', 'assets/fonts/ioskeley', 'docs/stereo-reverb', 'docs/cpu', 'docs/rack', 'docs/gui-review', 'docs/appearance', 'docs/multiband', 'docs/continuity']:
         if (source / directory).is_dir():
             shutil.copytree(source / directory, stage / directory, dirs_exist_ok=True)
     images = source / 'docs' / 'images'

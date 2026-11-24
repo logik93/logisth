@@ -28,6 +28,7 @@ bool LogisthProcessor::publishSource(int index, std::shared_ptr<const SourceData
             bytes += sourceOwners[size_t(i)]->samples[0].size() * 8ull;
     if (bytes > sampleMemoryBudget)
         return false;
+    ++sourceImportRequest[size_t(index)];
     if (sourceOwners[size_t(index)])
         retiredSources.push_back(sourceOwners[size_t(index)]);
     sourceOwners[size_t(index)] = std::move(data);
@@ -75,7 +76,18 @@ int wavetableFrameSize(const File &file, int64 length) {
     return length <= 2048 && SourceData::validFrameSize(int(length)) ? int(length) : 2048;
 }
 } // namespace
-Result LogisthProcessor::loadSource(int index, const File &file, int frameSize) try {
+Result LogisthProcessor::loadSource(int index, const File &file, int frameSize) {
+    if (index < 0 || index >= playerCount)
+        return Result::fail("Invalid source slot");
+    uint64_t request;
+    {
+        const ScopedLock lock(assetLock);
+        request = ++sourceImportRequest[size_t(index)];
+    }
+    return loadSourceRequested(index, file, frameSize, request, false);
+}
+Result LogisthProcessor::loadSourceRequested(int index, const File &file, int frameSize,
+                                             uint64_t request, bool switchClassicToSampler) try {
     if (index < 0 || index >= playerCount)
         return Result::fail("Invalid source slot");
     if (frameSize != 0 && !SourceData::validFrameSize(frameSize))
@@ -128,8 +140,21 @@ Result LogisthProcessor::loadSource(int index, const File &file, int frameSize) 
     std::sort(data->regions.begin(), data->regions.end());
     data->regions.erase(std::unique(data->regions.begin(), data->regions.end()),
                         data->regions.end());
-    if (!publishSource(index, data))
-        return Result::fail("The six sources exceed the 512 MiB decoded-audio memory budget.");
+    {
+        // Decoding is deliberately unlocked. A preset recall, clear or newer drop
+        // invalidates only this player's request while the decoder is working.
+        const ScopedLock lock(assetLock);
+        if (request != sourceImportRequest[size_t(index)])
+            return Result::fail("Sample import superseded");
+        if (!publishSource(index, data))
+            return Result::fail("The six sources exceed the 512 MiB decoded-audio memory budget.");
+        if (switchClassicToSampler) {
+            auto *engineParam = state.getParameter("o" + String(index + 1) + "engine");
+            if (engineParam->getValue() == 0)
+                engineParam->setValueNotifyingHost(engineParam->convertTo0to1(2));
+        }
+        assetStatus = "Loaded " + file.getFileName();
+    }
     UserSettings::remember(UserSettings::Folder::Sample, file.getParentDirectory());
     return Result::ok();
 } catch (const std::bad_alloc &) {
@@ -137,21 +162,19 @@ Result LogisthProcessor::loadSource(int index, const File &file, int frameSize) 
 }
 void LogisthProcessor::loadSourceAsync(int index, const File &file, int frameSize,
                                        bool switchClassicToSampler) {
+    if (index < 0 || index >= playerCount)
+        return;
+    uint64_t request;
     {
         const ScopedLock lock(assetLock);
+        request = ++sourceImportRequest[size_t(index)];
         assetStatus = "Loading " + file.getFileName() + "...";
     }
-    importWorkers.addJob([this, index, file, frameSize, switchClassicToSampler] {
-        auto result = loadSource(index, file, frameSize);
-        if (result.wasOk() && switchClassicToSampler) {
-            auto id = "o" + String(index + 1) + "engine";
-            if (state.getRawParameterValue(id)->load() == 0) {
-                auto *parameter = state.getParameter(id);
-                parameter->setValueNotifyingHost(parameter->convertTo0to1(2));
-            }
-        }
+    importWorkers.addJob([this, index, file, frameSize, switchClassicToSampler, request] {
+        auto result = loadSourceRequested(index, file, frameSize, request, switchClassicToSampler);
         const ScopedLock lock(assetLock);
-        assetStatus = result.wasOk() ? "Loaded " + file.getFileName() : result.getErrorMessage();
+        if (result.failed() && request == sourceImportRequest[size_t(index)])
+            assetStatus = result.getErrorMessage();
     });
 }
 std::shared_ptr<const ChordMap> LogisthProcessor::chordMap() const {
@@ -493,6 +516,7 @@ bool LogisthProcessor::restoreAssets(const ValueTree &tree) {
         retiredSources.reserve(retiredSources.size() + playerCount);
         retiredChords.reserve(retiredChords.size() + 1);
         for (int slot = 0; slot < playerCount; ++slot) {
+            ++sourceImportRequest[size_t(slot)];
             retiredSources.push_back(sourceOwners[size_t(slot)]);
             sourceOwners[size_t(slot)] = std::move(sources[size_t(slot)]);
             sourcePointers[size_t(slot)].store(sourceOwners[size_t(slot)].get());

@@ -180,3 +180,7 @@ palette/draft/codec, pointer sliders, counts/crossover gestures, preset/state,
 audio allocation and pre/post/off lifecycle. The same tests run in ordinary CTest.
 Native archives include MULTIBAND_REVIEW.md and docs/multiband; the release adds
 a multiband-review ZIP. Never regenerate or replace already published releases.
+
+## Sample automation and host lifecycle
+
+Run `processor_tests --continuity /absolute/report/path` to compare long stereo notes with an uninterrupted reference and inspect the trim-handle close-up. The same fixtures run inside the processor suite. The `vst3_binary` CTest loads the compiled module and exercises actual processing suspension, bus activation and transport positions. Linux also exercises the CLAP activation path. [Fixture design and measured results](REVIEW-v1.0.0.md)

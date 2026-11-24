@@ -452,6 +452,7 @@ class LogisthEditor::Console : public Component,
             : ThemeText(o), owner(o), spec(parameterSpecs[size_t(index)]), id(index) {
             setLookAndFeel(&owner.look);
             setComponentID(spec.id);
+            getProperties().set("hostParameterID", spec.id);
             addAndMakeVisible(label);
             addAndMakeVisible(slider);
             addAndMakeVisible(menu);
@@ -584,10 +585,13 @@ class LogisthEditor::Console : public Component,
                             compositeWide->endGesture();
                         compositeGesture = false;
                     };
-                } else
+                } else {
+                    slider.onDragStart = [this] { attachedDrag = true; };
+                    slider.onDragEnd = [this] { attachedDrag = false; };
                     sliderAttachment =
                         std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(
                             owner.processor.state, spec.id, slider);
+                }
                 slider.textFromValueFunction = [this](double v) { return formatted(v); };
                 slider.valueFromTextFunction = [this](const String &t) {
                     double v = t.getDoubleValue();
@@ -648,6 +652,9 @@ class LogisthEditor::Console : public Component,
             addMouseListener(this, true);
         }
         ~Control() override {
+            // A host mode change can remove a trim field before mouseUp arrives.
+            if (attachedDrag)
+                owner.processor.state.getParameter(spec.id)->endChangeGesture();
             removeMouseListener(this);
             setLookAndFeel(nullptr);
         }
@@ -680,7 +687,13 @@ class LogisthEditor::Console : public Component,
             bool heading = caption.isNotEmpty() && kind != Style::Toggle && kind != Style::Trim;
             label.setVisible(heading);
             auto b = getLocalBounds();
-            if (heading)
+            if (heading && getComponentID().startsWith("sample.")) {
+                const int width = GlyphArrangement::getStringWidthInt(label.getFont(), caption) + 2;
+                label.setBorderSize({});
+                label.setJustificationType(Justification::centredRight);
+                label.setBounds(b.removeFromLeft(width));
+                b.removeFromLeft(2);
+            } else if (heading)
                 label.setBounds(b.removeFromTop(13));
             slider.setVisible(kind == Style::Knob || kind == Style::Trim || kind == Style::Fader ||
                               kind == Style::Number);
@@ -775,7 +788,7 @@ class LogisthEditor::Console : public Component,
                 name == "env2d" || name == "env2r" || name == "portamento")
                 return v < 1 ? String(v * 1000, 0) + "ms" : String(v, 1) + "s";
             if (percent())
-                return String(v * 100, 0) + "%";
+                return String(v * 100, getComponentID().startsWith("sample.") ? 2 : 0) + "%";
             if (spec.integer)
                 return (v > 0 && spec.low < 0 ? "+" : "") + String(int(v));
             if (name.endsWith("ssblock") && v == 0)
@@ -1036,6 +1049,7 @@ class LogisthEditor::Console : public Component,
         Console &owner;
         const ParameterSpec &spec;
         Param id;
+        bool attachedDrag = false;
         Style kind = Style::Knob;
         String caption;
         Label label;
@@ -2050,6 +2064,7 @@ class LogisthEditor::Console : public Component,
         aboutInfo.applyColourToAllText(screenText, true);
         colourPicker.setColour(ColourSelector::backgroundColourId, screen);
         waveSlot.setColour(ComboBox::textColourId, screenText);
+        aboutSkinName.setColour(Label::textColourId, screenText);
         for (ComboBox *box : {&patternSlot, &chordTrigger, &chordType})
             box->setColour(ComboBox::textColourId, screenText);
         for (TextButton *button : {&patternSave, &patternRandom, &chordLearn, &chordCopy}) {
@@ -2337,6 +2352,23 @@ class LogisthEditor::Console : public Component,
         stepPage = index == 3 ? 1 : 0;
         layout();
         repaint();
+    }
+    void showSampleTrim(int slot, int mode) {
+        // Both editor locations drive the same APVTS parameter. Keep attachments alive
+        // across repaints and only rebind when the selected player or engine changes.
+        std::array<Param, 2> ids{logisth_ui::WaveView::startParameter(slot, mode),
+                                 Param(playerParamIndex(Param::o1end, slot, 16))};
+        for (size_t i = 0; i < ids.size(); ++i) {
+            auto &field = sampleTrim[i];
+            if (!field || field->parameter() != ids[i]) {
+                field = std::make_unique<Control>(*this, ids[i]);
+                field->setComponentID(i == 0 ? "sample.start" : "sample.end");
+                addChildComponent(*field);
+            }
+            const String label = i == 0 ? "START" : "END";
+            field->setName("Sample " + label.toLowerCase());
+            field->configure({734 + int(i) * 103, 289, 97, 23}, Style::Number, label, true);
+        }
     }
     bool rackHeadingVisible() const {
         return !settingsOpen && rack != 1 && rack != 9 && rack != 10 && rack != 4 && rack != 7 &&
@@ -3021,6 +3053,10 @@ class LogisthEditor::Console : public Component,
         }
         aboutLogo.setImage(apLogo);
         settingsPanel.addChildComponent(aboutLogo);
+        aboutSkinName.setText(apCaption, dontSendNotification);
+        aboutSkinName.setFont(font(12, true));
+        aboutSkinName.setJustificationType(Justification::centred);
+        settingsPanel.addChildComponent(aboutSkinName);
         brandAboutLogo.setComponentID("settings.about.logo");
         settingsPanel.addChildComponent(brandAboutLogo);
         aboutLabel.setFont(font(11, true));
@@ -3233,9 +3269,10 @@ class LogisthEditor::Console : public Component,
         } else {
             show(aboutLabel, {0, 40, 510, 25});
             show(aboutInfo, {0, 74, 338, 150});
-            if (skin == "ap-flexin")
-                show(aboutLogo, {350, 74, 160, 150});
-            else
+            if (skin == "ap-flexin") {
+                show(aboutLogo, {372, 78, 116, 116});
+                show(aboutSkinName, {347, 200, 166, 22});
+            } else
                 show(brandAboutLogo, {350, 74, 160, 150});
         }
     }
@@ -4032,7 +4069,10 @@ class LogisthEditor::Console : public Component,
             int slot = waveView.selectedSlot();
             int mode = int(value(Param(playerParamIndex(Param::o1engine, slot, 16))));
             waveView.setMode(mode);
-            if (mode == 1) {
+            if (mode == 2 || mode == 3) {
+                waveSlot.setSize(67, 23);
+                showSampleTrim(slot, mode);
+            } else if (mode == 1) {
                 sourceFrame[size_t(slot)].setBounds(846, 289, 88, 23);
                 sourceFrame[size_t(slot)].setVisible(true);
             }
@@ -4215,6 +4255,9 @@ class LogisthEditor::Console : public Component,
         }
         patternCanvas.setVisible(false);
         waveView.setVisible(false);
+        for (auto &field : sampleTrim)
+            if (field)
+                field->setVisible(false);
         eqView.setVisible(false);
         distortionView.setVisible(false);
         distAnalysis.setVisible(false);
@@ -4281,7 +4324,8 @@ class LogisthEditor::Console : public Component,
         put(Param::solo, {927, 28, 68, 24}, Style::Menu);
         put(Param::polyphony, {1010, 16, 60, 38}, Style::Number, "POLY");
         put(Param::sync, {1085, 28, 64, 24}, Style::Toggle, "SYNC");
-        modulationToggle.setBounds(85, 28, 130, 24);
+        modulationToggle.setBounds(skin == "ap-flexin" ? Rectangle<int>(120, 28, 95, 24)
+                                                       : Rectangle<int>(85, 28, 130, 24));
         settings.setBounds(1160, 28, 64, 24);
         settings.setToggleState(settingsOpen, dontSendNotification);
         put(Param::arpout, {225, 29, 82, 24}, Style::Toggle, "MIDI OUT");
@@ -4536,8 +4580,9 @@ class LogisthEditor::Console : public Component,
         }
         g.setColour(green);
         if (skin == "ap-flexin") {
-            g.drawImageWithin(apLogo, 17, 8, 47, 58, RectanglePlacement::centred);
-            drawCaption(g, "AP always flexin'!", {85, 9, 130, 14}, 8.5f, muted);
+            g.setImageResamplingQuality(Graphics::highResamplingQuality);
+            g.drawImageWithin(apLogo, 17, 3, 96, 51, RectanglePlacement::centred);
+            drawCaption(g, apCaption, {10, 55, 110, 20}, 10.5f, ink, Justification::centred, true);
         } else {
             if (headerLogo)
                 headerLogo->drawWithin(g, {20, 10, 54, 54}, RectanglePlacement::centred, 1);
@@ -4666,7 +4711,9 @@ class LogisthEditor::Console : public Component,
                     StringArray::fromTokens(parameterSpecs[size_t(parameter)].choices, "|", "");
                 title = "SAMPLE / " + names[int(value(parameter))].toUpperCase();
             }
-            drawCaption(g, title, {540, 289, 390, 23}, 11, screenText);
+            const Rectangle<int> titleArea =
+                mode >= 2 ? Rectangle<int>(491, 289, 236, 23) : Rectangle<int>(540, 289, 295, 23);
+            drawCaption(g, title, titleArea, 11, screenText);
         } else if (rack == 8) {
             drawCaption(g, "TRIGGER", {414, 309, 140, 18}, 9, mint);
             drawCaption(g, "VOICING", {566, 309, 145, 18}, 9, mint);
@@ -4790,6 +4837,7 @@ class LogisthEditor::Console : public Component,
     Keys keyboard;
     PatternCanvas patternCanvas;
     logisth_ui::WaveView waveView;
+    std::array<std::unique_ptr<Control>, 2> sampleTrim;
     logisth_ui::ScopeView scopeView;
     logisth_ui::ImpulseView impulseView;
     logisth_ui::DynamicsView dynamicsView;
@@ -4813,7 +4861,9 @@ class LogisthEditor::Console : public Component,
     std::array<TextButton, 4> macroSelect, mutationLock;
     TextButton mutateButton, undoButton;
     int selectedMacro = 0, macroStamp = -1;
+    static constexpr const char *apCaption = "AP always flexin'!";
     ImageComponent aboutLogo;
+    Label aboutSkinName;
     BrandLogoView brandAboutLogo;
     std::unique_ptr<Drawable> headerLogo;
     Image apLogo = ImageCache::getFromMemory(BinaryData::apmusicgroupwhite_png,
@@ -4903,6 +4953,15 @@ void LogisthEditor::setUIScale(double percent) {
     console->displayScale(scalePercent);
     sizeDirty = true;
     timerCallback();
+}
+int LogisthEditor::getControlParameterIndex(Component &component) {
+    auto &state = static_cast<LogisthProcessor &>(processor).state;
+    for (auto *node = &component; node != nullptr && node != this;
+         node = node->getParentComponent())
+        if (auto id = node->getProperties()["hostParameterID"].toString(); id.isNotEmpty())
+            if (auto *parameter = state.getParameter(id))
+                return parameter->getParameterIndex();
+    return AudioProcessorEditor::getControlParameterIndex(component);
 }
 Image LogisthEditor::snapshotPage(int scenario) {
     console->setDarkTheme(scenario >= 4 && scenario != 7 && scenario != 13, false);

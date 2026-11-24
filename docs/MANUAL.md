@@ -1,9 +1,9 @@
-# logisth 0.9.8.3 — User Manual
+# logisth 1.0.0 — User Manual
 
 wavelogik logisth is a three-part polyphonic subtractive synthesizer for VST3, CLAP and standalone use.
 This manual describes logisth's controls, sound engines and preset workflow.
 
-This edition describes **v0.9.8.3**. Earlier downloads retain their corresponding
+This edition describes **v1.0.0**. Earlier downloads retain their corresponding
 interface and manuals.
 
 ## Contents
@@ -450,8 +450,9 @@ their mode. An invalid file keeps the previous source and mode. While dragging,
 the waveform highlights the destination. Loading and waveform-peak generation
 run in the background; long samples keep waveform zoom/pan responsive. It draws the actual stereo amplitude envelope,
 region markers, start/end and the most recent active voice's scanner, plus up to
-16 active grain positions. Click to change START; wheel zooms around the cursor;
-Shift-wheel pans. The display is a view of playback, not a sample editor.
+16 active grain positions. Use **START** and **END** above the waveform to drag or enter percentages. Drag a waveform handle to record just that endpoint or drag across the waveform to select a new range. The wheel zooms around the pointer and Shift-wheel pans.
+
+For automation, select the player in SAMPLE and touch its START or END field with the host in automation write mode. In the host parameter list, SOURCE 1–6 correspond to A1, A2, B1, B2, C1 and C2. Sampler START uses **Position**. Both granular models use **Trim start** for the lower playback boundary and keep **Position** available for the grain scanner. END uses **Sample end**. These controls also save with the preset. The labels sit above the moving playhead.
 
 Enable OSC ENVELOPE in ENV to give a slot an additional attack, decay, sustain
 and release. A part's shared envelope still limits its final output. New
@@ -1084,6 +1085,8 @@ experimental Graphs arp. Legacy, Pattern and the Granulizer remain available.
 Native release archives are published only after their platform builds and tests pass.
 See BUILD_INFO.json in each archive for source revision and validation results.
 
+
+During a long sequenced note, opening another instance can cause the host to suspend processing briefly. On a continuous playing timeline the first sampler or granular player resumes from its own cursor. A transport seek, stop or audio sample-rate change ends suspended voices. Sample selection, waveform zoom and editor visibility are independent for each instance.
 
 No sound: check the audio/MIDI device or DAW routing, oscillator Voices and
 Volume, filter input, envelope sustain, Mix levels and MAIN. Check SOLO and

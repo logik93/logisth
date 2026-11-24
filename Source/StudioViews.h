@@ -37,10 +37,11 @@ class WaveView : public Component, public FileDragAndDropTarget {
     double whereAt(float x) const {
         return std::clamp(offset + double(x) / getWidth() / zoom, 0., 1.);
     }
+    int engineMode() const {
+        return displayMode >= 0 ? displayMode : int(raw(p, "o" + String(slot + 1) + "engine"));
+    }
     String startId() const {
-        bool gran =
-            (displayMode >= 0 ? displayMode : int(raw(p, "o" + String(slot + 1) + "engine"))) == 3;
-        return "o" + String(slot + 1) + (gran ? "trimstart" : "position");
+        return logisth::parameterSpecs[size_t(startParameter(slot, engineMode()))].id;
     }
     String dragStartId() const {
         return editingTail ? "o" + String(slot + 1) + "tailstart" : startId();
@@ -49,8 +50,7 @@ class WaveView : public Component, public FileDragAndDropTarget {
         return "o" + String(slot + 1) + (editingTail ? "tailend" : "end");
     }
     bool sampler() const {
-        return (displayMode >= 0 ? displayMode : int(raw(p, "o" + String(slot + 1) + "engine"))) ==
-               2;
+        return engineMode() == 2;
     }
     void finishSelection() {
         if (startGesture)
@@ -69,11 +69,15 @@ class WaveView : public Component, public FileDragAndDropTarget {
             low = std::clamp(double(raw(p, startId())), 0., 1. - epsilon);
             high = std::clamp(double(raw(p, "o" + String(slot + 1) + "end")), low + epsilon, 1.);
         }
+        if (startGesture && !endGesture)
+            high = std::clamp(end, low + epsilon, high);
+        if (endGesture && !startGesture)
+            low = std::clamp(start, low, high - epsilon);
         start = std::clamp(start, low, high - epsilon);
         end = std::clamp(end, start + epsilon, high);
-        if (startGesture)
+        if (startGesture && float(start) != raw(p, dragStartId()))
             startGesture->setValueNotifyingHost(startGesture->convertTo0to1(float(start)));
-        if (endGesture)
+        if (endGesture && float(end) != raw(p, dragEndId()))
             endGesture->setValueNotifyingHost(endGesture->convertTo0to1(float(end)));
         repaint();
     }
@@ -96,8 +100,7 @@ class WaveView : public Component, public FileDragAndDropTarget {
         cachedRevision = source.revision;
     }
     bool wavetable() const {
-        return (displayMode >= 0 ? displayMode : int(raw(p, "o" + String(slot + 1) + "engine"))) ==
-               1;
+        return engineMode() == 1;
     }
     void seek(Point<float> at) {
         auto data = p.sourceData(slot);
@@ -257,6 +260,13 @@ class WaveView : public Component, public FileDragAndDropTarget {
     }
 
   public:
+    // The granular playback cursor may move inside its own trim range. Sampler
+    // shares its launch parameter with WT POS when the same player changes mode.
+    static logisth::Param startParameter(int player, int mode) {
+        using namespace logisth;
+        return Param(mode == 3 ? playerParamIndex(Param::o1trimstart, player, 1)
+                               : playerParamIndex(Param::o1position, player, 16));
+    }
     ~WaveView() override {
         finishSelection();
     }
@@ -295,6 +305,8 @@ class WaveView : public Component, public FileDragAndDropTarget {
         repaint();
     }
     void setMode(int mode) {
+        if (mode != displayMode)
+            finishSelection();
         displayMode = mode;
     }
     int selectedSlot() const {
@@ -302,8 +314,7 @@ class WaveView : public Component, public FileDragAndDropTarget {
     }
     void paint(Graphics &g) override {
         auto data = p.sourceData(slot);
-        if ((displayMode >= 0 ? displayMode : int(raw(p, "o" + String(slot + 1) + "engine"))) ==
-            0) {
+        if (engineMode() == 0) {
             paintClassic(g);
             return;
         }
@@ -316,10 +327,12 @@ class WaveView : public Component, public FileDragAndDropTarget {
         g.fillAll(colours.screen);
         g.setFont(font(10));
         g.setColour(colours.screenText);
+        const auto telemetry = p.playback[size_t(slot)].read();
+        const bool tracking = telemetry.active && telemetry.revision == data->revision;
         g.drawText(String::fromUTF8(data->name.c_str()) + "  /  " + String(data->sampleRate, 0) +
                        " Hz  /  " + String(data->samples[0].size() / data->sampleRate, 2) + " s",
-                   0, 0, getWidth(), 20, Justification::centredLeft);
-        if (p.playback[size_t(slot)].read().active)
+                   0, 0, getWidth() - (tracking ? 134 : 0), 20, Justification::centredLeft);
+        if (tracking)
             outputTrace(g, {float(getWidth() - 130), 1, 126, 18}, 256);
         auto xAt = [&](double position) { return float((position - offset) * zoom * getWidth()); };
         for (int ch = 0; ch < 2; ++ch) {
@@ -335,8 +348,7 @@ class WaveView : public Component, public FileDragAndDropTarget {
             g.setColour(colours.screenText);
             g.drawText(ch ? "R" : "L", 2, int(centre) - 30, 16, 14, Justification::centredLeft);
         }
-        const bool granular =
-            (displayMode >= 0 ? displayMode : int(raw(p, "o" + String(slot + 1) + "engine"))) == 3;
+        const bool granular = engineMode() == 3;
         int mode = int(raw(p, "o" + String(slot + 1) + "gtrans"));
         static const std::vector<int64_t> noMarkers;
         const auto &markers = !granular ? noMarkers : mode == 1 ? data->regions : data->transients;
@@ -344,23 +356,42 @@ class WaveView : public Component, public FileDragAndDropTarget {
         for (auto marker : markers) {
             float x = xAt(double(marker) / double(data->samples[0].size() - 1));
             if (x >= 0 && x < getWidth())
-                g.drawVerticalLine(int(x), 25, 176);
+                g.drawVerticalLine(int(x), 40, 176);
         }
         float start = raw(p, startId()), end = raw(p, "o" + String(slot + 1) + "end");
         g.setColour(colours.mint.withAlpha(.15f));
-        g.fillRect(Rectangle<float>(xAt(start), 25, std::max(1.f, xAt(end) - xAt(start)), 151)
+        g.fillRect(Rectangle<float>(xAt(start), 40, std::max(1.f, xAt(end) - xAt(start)), 136)
                        .getIntersection(Rectangle<float>(0, 25, float(getWidth()), 151)));
-        for (auto handle : {std::pair<float, const char *>{start, "START"}, {end, "END"}}) {
-            float x = xAt(handle.first);
-            if (x >= 0 && x <= getWidth()) {
-                g.setColour(colours.screenAccent);
-                g.drawVerticalLine(int(x), 25, 176);
-                g.fillRoundedRectangle(x - 3, 25, 6, 12, 2);
-                g.setFont(font(8));
-                g.drawText(handle.second, int(std::clamp(x - 23, 0.f, float(getWidth() - 46))), 25,
-                           46, 14, Justification::centred);
-            }
+        // Keep captions in a rail above every playback, grain and handle stroke.
+        // Place close endpoints side by side, including when a handle sits at an edge.
+        const float xs = xAt(start), xe = xAt(end);
+        const bool showStart = xs >= 0 && xs <= getWidth(), showEnd = xe >= 0 && xe <= getWidth();
+        const auto captionFont = font(9);
+        const int startWidth = GlyphArrangement::getStringWidthInt(captionFont, "START") + 4;
+        const int endWidth = GlyphArrangement::getStringWidthInt(captionFont, "END") + 4;
+        constexpr int gap = 2;
+        int left = jlimit(0, getWidth() - startWidth, roundToInt(xs) - startWidth / 2);
+        int right = jlimit(0, getWidth() - endWidth, roundToInt(xe) - endWidth / 2);
+        if (showStart && showEnd && right < left + startWidth + gap) {
+            left = jlimit(0, getWidth() - startWidth - endWidth - gap,
+                          (left + right - startWidth - gap) / 2);
+            right = left + startWidth + gap;
         }
+        auto mark = [&](float x, int labelX, int width, const String &name) {
+            const int pixel = jlimit(0, getWidth() - 1, roundToInt(x));
+            g.setColour(colours.screenAccent);
+            g.drawVerticalLine(pixel, 40, 176);
+            g.fillRoundedRectangle(float(jlimit(0, getWidth() - 6, pixel - 3)), 40, 6, 9, 2);
+            g.setColour(colours.screen);
+            g.fillRect(labelX, 26, width, 14);
+            g.setColour(colours.screenText);
+            g.setFont(captionFont);
+            g.drawText(name, labelX, 26, width, 14, Justification::centred);
+        };
+        if (showStart)
+            mark(xs, left, startWidth, "START");
+        if (showEnd)
+            mark(xe, right, endWidth, "END");
         if (sampler() && raw(p, "o" + String(slot + 1) + "tailon") > 0) {
             auto prefix = "o" + String(slot + 1);
             const float low = std::clamp(raw(p, prefix + "tailstart"), start, std::max(start, end));
@@ -385,20 +416,19 @@ class WaveView : public Component, public FileDragAndDropTarget {
                 ++index;
             }
         }
-        auto telemetry = p.playback[size_t(slot)].read();
         if (telemetry.revision == data->revision) {
             for (int i = 0; i < telemetry.grainCount; ++i) {
                 float x = xAt(telemetry.grains[size_t(i)]);
                 if (x >= 0 && x < getWidth()) {
                     g.setColour(colours.mint.withAlpha(.4f));
-                    g.drawVerticalLine(int(x), 27, 175);
+                    g.drawVerticalLine(int(x), 40, 175);
                 }
             }
             if (telemetry.active) {
                 float x = xAt(telemetry.position);
                 g.setColour(colours.screenText);
                 if (x >= 0 && x < getWidth())
-                    g.drawLine(x, 24, x, 177, 2);
+                    g.drawLine(x, 40, x, 177, 2);
             }
         }
         g.setColour(colours.mint.withAlpha(.65f));
@@ -419,7 +449,7 @@ class WaveView : public Component, public FileDragAndDropTarget {
     }
     void mouseDown(const MouseEvent &e) override {
         finishSelection();
-        if (e.position.y <= 24 || e.position.y >= 177)
+        if (engineMode() == 0 || e.position.y <= 24 || e.position.y >= 177)
             return;
         if (wavetable()) {
             seek(e.position);
@@ -435,21 +465,28 @@ class WaveView : public Component, public FileDragAndDropTarget {
             change(p, prefix + "tailon", 1);
             change(p, prefix + "loop", 0);
         }
-        startGesture = p.state.getParameter(dragStartId());
-        endGesture = p.state.getParameter(dragEndId());
-        startGesture->beginChangeGesture();
-        endGesture->beginChangeGesture();
+        selectionAnchor = position;
+        downX = e.position.x;
+        const double start = raw(p, dragStartId()), end = raw(p, dragEndId());
+        const double startDistance = std::abs(position - start),
+                     endDistance = std::abs(position - end);
+        selectionDrag =
+            e.mods.isRightButtonDown() || std::min(startDistance, endDistance) >= tolerance ? 3
+            : startDistance < endDistance                                                   ? 1
+                                                                                            : 2;
+        if (selectionDrag != 2) {
+            startGesture = p.state.getParameter(dragStartId());
+            startGesture->beginChangeGesture();
+        }
+        if (selectionDrag != 1) {
+            endGesture = p.state.getParameter(dragEndId());
+            endGesture->beginChangeGesture();
+        }
         if (e.mods.isRightButtonDown()) {
             selectRange(0, 1);
             finishSelection();
             return;
         }
-        selectionAnchor = whereAt(e.position.x);
-        downX = e.position.x;
-        double start = raw(p, dragStartId()), end = raw(p, dragEndId());
-        selectionDrag = std::abs(selectionAnchor - start) < tolerance ? 1
-                        : std::abs(selectionAnchor - end) < tolerance ? 2
-                                                                      : 3;
         if (selectionDrag == 3)
             selectRange(selectionAnchor, std::max(selectionAnchor, end));
     }
@@ -461,12 +498,10 @@ class WaveView : public Component, public FileDragAndDropTarget {
         if (!selectionDrag)
             return;
         double where = whereAt(e.position.x);
-        auto prefix = "o" + String(slot + 1);
         if (selectionDrag == 1)
-            selectRange(std::min(where, double(raw(p, dragEndId())) - 1e-7), raw(p, dragEndId()));
+            selectRange(where, raw(p, dragEndId()));
         else if (selectionDrag == 2)
-            selectRange(raw(p, dragStartId()),
-                        std::max(where, double(raw(p, dragStartId())) + 1e-7));
+            selectRange(raw(p, dragStartId()), where);
         else if (std::abs(e.position.x - downX) > 2)
             selectRange(std::min(selectionAnchor, where), std::max(selectionAnchor, where));
     }
@@ -474,7 +509,7 @@ class WaveView : public Component, public FileDragAndDropTarget {
         finishSelection();
     }
     void mouseDoubleClick(const MouseEvent &) override {
-        if (wavetable())
+        if (engineMode() < 2)
             return;
         finishSelection();
         auto prefix = "o" + String(slot + 1);
@@ -485,7 +520,7 @@ class WaveView : public Component, public FileDragAndDropTarget {
         repaint();
     }
     void mouseWheelMove(const MouseEvent &e, const MouseWheelDetails &wheel) override {
-        if (wheel.deltaY == 0)
+        if (engineMode() == 0 || wheel.deltaY == 0)
             return;
         if (wavetable()) {
             auto data = p.sourceData(slot);

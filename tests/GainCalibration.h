@@ -55,6 +55,7 @@ inline Reading measure(LogisthProcessor &p, double rate, std::initializer_list<i
                        float velocity = 1, int seconds = 2,
                        juce::AudioBuffer<float> *capture = nullptr, bool settled = true) {
     p.prepareToPlay(rate, 512);
+    p.reset(); // Each measurement starts a separate audition, including at the same sample rate.
     juce::AudioBuffer<float> block(2, 512);
     juce::MidiBuffer midi;
     for (int key : notes)

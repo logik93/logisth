@@ -1,14 +1,14 @@
-# logisth 0.9.8.3 — Technical Manual
+# logisth 1.0.0 — Technical Manual
 
 **wavelogik · Architecture, DSP and Engineering Reference**
 
-Document revision: 1.5 · Software baseline: 0.9.8.3 · State schema: 4
+Document revision: 2.0 · Software baseline: 1.0.0 · State schema: 4
 
-Implementation baseline: release tag `v0.9.8.3`. The technical identity manifest
+Implementation baseline: release tag `v1.0.0`. The technical identity manifest
 records the CMake/runtime source identity. Native BUILD_INFO records its tagged
 commit, tree fingerprints, binary hashes and manual identities.
 
-This reference describes the implementation of logisth 0.9.8.3. It is
+This reference describes the implementation of logisth 1.0.0. It is
 intended for sound designers, audio engineers, contributors and integrators.
 The [User Manual](MANUAL.md) describes operating the interface; this document
 explains how its controls affect processing, how data is stored and which
@@ -246,6 +246,12 @@ and finite samples. Imported amplitudes are bounded to [−8, 8].
 
 Implementation: [Sampler.h](../Source/Sampler.h), [SourceAssets.cpp](../Source/SourceAssets.cpp),
 [AssetLimits.h](../Source/AssetLimits.h).
+
+### Trim automation and instance lifetime
+
+The two Sample-page fields attach directly to the selected player's existing automation parameters. Sampler START uses `oNposition`, granular START uses `oNtrimstart` and both engines use `oNend`. The engine switch preserves the independent granular launch position. Each waveform endpoint owns its own host gesture. Captions occupy a rail above playback telemetry.
+
+The audio graph may negotiate a new maximum block size while a MIDI note is held. Preparation rebuilds rate-dependent DSP when the sample rate changes. VST3 maps processing suspension to a processor reset. A pending reset checks the transport sample counter on the next block and retains state only on continuous playback. MIDI note and pedal ownership is per processor and per channel. Sample decoding runs outside the asset lock. A per-player request counter rejects obsolete imports before publishing audio or switching an oscillator into Sampler. [Measurement method](REVIEW-v1.0.0.md)
 
 ## 6. Time stretching and the spectral adapter
 
@@ -925,15 +931,14 @@ locations for all three operating systems; whole bundles must remain intact.
 | Historical audio | Frozen mono A/B capture comparison |
 | Host parameters | Complete frozen 1055-definition comparison and appended controls |
 | Processor / UI | Real callback, state, bounds, control bindings, asset loading, IR drop, dynamics and allocation checks |
-| Native loading | Linux CLAP and VST3 binary smoke tests |
+| Native loading | VST3 multi-instance playback on all platforms and CLAP binary playback on Linux |
 | Memory diagnostics | Separate Windows AddressSanitizer build/test run |
 | Dependency identity | Vendored SHA-256 manifest and upstream source comparison |
 | Release contents | Architecture, source fingerprints, SHA-256, license/font/theme/manual presence |
 
-The native release requires 20 Linux suites, 18 Windows suites, 18 macOS suites
-and 18 suites in the separate Windows AddressSanitizer run, with no skipped or
-failed suites. The smaller non-Linux count reflects Linux-only binary smoke
-tests. It is not a count of assertions or a certification for every DAW. Rack adds all
+The native release requires 20 Linux suites, 19 Windows suites, 19 macOS suites
+and 19 suites in the separate Windows AddressSanitizer run, with no skipped or
+failed suites. Linux also hosts the CLAP binary. It is not a count of assertions or a certification for every DAW. Rack adds all
 40320 order permutations, three-rate comparison against frozen prior FX code,
 noncommuting signal fixtures and combined IR/Delay gaps. Processor integration
 adds real pointer/keyboard ordering, metadata, 32 notes and prepared streams,
@@ -1029,3 +1034,4 @@ the release tag matching a binary when investigating a specific implementation.
 | 1.3 | 0.9.8.1 | Direct glyph rendering, selectable AA/supersampling and edge weight, uniform scaling, portable PNG/JPEG/grid backgrounds, folder controls and themed context menus |
 | 1.4 | 0.9.8.2 | Collapsible modulation row with actual editor resize and persistent compact state; 20 embedded original backgrounds |
 | 1.5 | 0.9.8.3 | Optional 1–4-band LR24/TPT distortion, graphic crossovers/pre-post analysis, five appended controls, visible panel gradients and persistent grid/gradient amounts |
+| 2.0 | 1.0.0 | Sample trim automation, per-instance MIDI and asset ownership, VST3 transport continuity and binary-host regression |

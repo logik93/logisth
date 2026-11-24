@@ -15,6 +15,7 @@
 #include "Features097Tests.h"
 #include "Features0983Tests.h"
 #include "GainCalibration.h"
+#include "InstanceContinuityTests.h"
 #include "KickBenchmark.h"
 #include "OscillatorClipboardTests.h"
 #include "PluginEditor.h"
@@ -301,10 +302,18 @@ void checkHybridProcessor() {
     restored.finishLearn();
     check(restored.chordMap()->keys[62].count == 4 && restored.chordMap()->keys[62].notes[0] == 57,
           "MIDI learning captures chord");
+    set(restored, "arpon", 0);
+    set(restored, "chordon", 0);
+    midi.clear();
+    midi.addEvent(MidiMessage::noteOn(2, 57, .8f), 5);
+    restored.processBlock(audio, midi);
     set(restored, "arpout", 0);
     midi.clear();
     restored.processBlock(audio, midi);
-    check(!midi.isEmpty(), "output disable sends panic");
+    check(midi.getNumEvents() == 1 && (*midi.begin()).getMessage().isNoteOff() &&
+              (*midi.begin()).getMessage().getChannel() == 2 &&
+              (*midi.begin()).getMessage().getNoteNumber() == 57,
+          "output disable releases just the outstanding note");
     midi.clear();
     restored.processBlock(audio, midi);
     check(midi.isEmpty(), "MIDI output opt-out after panic");
@@ -990,6 +999,11 @@ int main(int argc, char **argv) {
             compact_layout_test::run();
             return 0;
         }
+        if (argc > 1 && juce::String(argv[1]) == "--continuity") {
+            instance_continuity_test::run(argc > 2 ? juce::File(juce::String::fromUTF8(argv[2]))
+                                                   : juce::File{});
+            return 0;
+        }
         if (argc > 2 && juce::String(argv[1]) == "--compact-report") {
             compact_layout_test::run(juce::File(juce::String::fromUTF8(argv[2])));
             return 0;
@@ -1111,6 +1125,7 @@ int main(int argc, char **argv) {
         appearance0981_test::run();
         compact_layout_test::run();
         features0983_test::run();
+        instance_continuity_test::run();
         factorybank_test::run();
         factorybank_test::search();
         processor_phase_test::run();

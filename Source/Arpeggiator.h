@@ -199,8 +199,8 @@ class Arpeggiator {
         if (enabled != p.enabled) {
             off(0, emit);
             for (int ch = 1; ch <= 16; ++ch) {
-                emit(MidiEvent{0, EventType::Controller, ch, 120, 0});
-                emit(MidiEvent{0, EventType::Controller, ch, 64, 0});
+                emit(MidiEvent{0, EventType::Controller, ch, 120, 0, true});
+                emit(MidiEvent{0, EventType::Controller, ch, 64, 0, true});
             }
             keys = {};
             sustain = {};
@@ -225,7 +225,7 @@ class Arpeggiator {
         untilStep = 0;
         step = position = 0;
         for (int ch = 1; ch <= 16; ++ch)
-            emit(MidiEvent{time, EventType::Controller, ch, 123, 0});
+            emit(MidiEvent{time, EventType::Controller, ch, 123, 0, true});
     }
     template <class Emit> void input(MidiEvent event, const ArpParams &p, Emit &&emit) {
         if (!p.enabled) {

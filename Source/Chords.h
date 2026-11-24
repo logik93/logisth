@@ -41,7 +41,7 @@ class ChordMapper {
             return;
         if (enabled != on) {
             for (int ch = 1; ch <= 16; ++ch)
-                emit(MidiEvent{e.time, EventType::Controller, ch, 123, 0});
+                emit(MidiEvent{e.time, EventType::Controller, ch, 123, 0, true});
             reset();
             enabled = on;
         }
