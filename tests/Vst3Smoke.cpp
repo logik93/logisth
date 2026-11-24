@@ -94,6 +94,7 @@ template <class Interface> struct Borrowed : Interface {
     }
 };
 struct Note : Borrowed<IEventList> {
+    bool releaseKey = false;
     int32 PLUGIN_API getEventCount() override {
         return 1;
     }
@@ -105,6 +106,12 @@ struct Note : Borrowed<IEventList> {
         event.noteOn.pitch = 60;
         event.noteOn.velocity = .8f;
         event.noteOn.noteId = -1;
+        if (releaseKey) {
+            event.type = Event::kNoteOffEvent;
+            event.noteOff = {};
+            event.noteOff.pitch = 60;
+            event.noteOff.noteId = -1;
+        }
         return kResultOk;
     }
     tresult PLUGIN_API addEvent(Event &) override {
@@ -140,9 +147,11 @@ struct Point : Borrowed<IParamValueQueue> {
 struct SourceMode : Borrowed<IParameterChanges> {
     std::array<Point, 5> points;
     explicit SourceMode(int model)
-        : points{Point("o1engine", model ? 1. : 2. / 3.), Point("o1loop", 1.),
-                 Point("o1gmodel", model == 2 ? 1. : 0.), Point("o1retrig", 1.),
-                 Point("o1spray", 0.)} {}
+        : points{Point("o1engine", model < 0 ? 0.
+                                   : model   ? 1.
+                                             : 2. / 3.),
+                 Point("o1loop", 1.), Point("o1gmodel", model == 2 ? 1. : 0.),
+                 Point("o1retrig", 1.), Point("o1spray", 0.)} {}
     int32 PLUGIN_API getParameterCount() override {
         return int32(points.size());
     }
@@ -154,6 +163,7 @@ struct SourceMode : Borrowed<IParameterChanges> {
     }
 };
 using Audio = std::array<std::array<float, 256>, 2>;
+enum class ClockReport { normal, missing, rebased, rounded };
 struct Player {
     IComponent *component = nullptr;
     IAudioProcessor *audio = nullptr;
@@ -182,7 +192,8 @@ struct Player {
         check(audio->setProcessing(false) == kResultOk && component->setActive(false) == kResultOk,
               "suspend VST3 playback");
     }
-    Audio render(bool note = false, SourceMode *mode = nullptr, bool playing = true) {
+    Audio render(bool note = false, SourceMode *mode = nullptr, bool playing = true,
+                 ClockReport clock = ClockReport::normal, bool releaseKey = false) {
         Audio result{};
         float *channels[]{result[0].data(), result[1].data()};
         AudioBusBuffers bus{};
@@ -190,15 +201,20 @@ struct Player {
         bus.channelBuffers32 = channels;
         ProcessContext transport{};
         transport.sampleRate = 48000;
-        transport.projectTimeSamples = cursor;
-        transport.state = playing ? ProcessContext::kPlaying : 0;
+        transport.projectTimeSamples =
+            clock == ClockReport::rebased ? 0 : cursor + (clock == ClockReport::rounded ? 1 : 0);
+        transport.projectTimeMusic = double(cursor) / 24000.;
+        transport.tempo = 120;
+        transport.state = ProcessContext::kProjectTimeMusicValid | ProcessContext::kTempoValid |
+                          (playing ? ProcessContext::kPlaying : 0);
         Note input;
+        input.releaseKey = releaseKey;
         ProcessData data;
         data.numSamples = 256;
         data.numOutputs = 1;
         data.outputs = &bus;
-        data.processContext = &transport;
-        data.inputEvents = note ? &input : nullptr;
+        data.processContext = clock == ClockReport::missing ? nullptr : &transport;
+        data.inputEvents = note || releaseKey ? &input : nullptr;
         data.inputParameterChanges = mode;
         check(audio->process(data) == kResultOk, "render VST3 audio");
         cursor += data.numSamples;
@@ -230,6 +246,12 @@ void continuity(IPluginFactory &factory, const TUID &cid, int model) {
         first.render();
         reference.render();
     }
+    for (auto report : {ClockReport::missing, ClockReport::missing, ClockReport::normal,
+                        ClockReport::rebased, ClockReport::normal, ClockReport::rounded}) {
+        auto expected = reference.render(), actual = first.render(false, nullptr, true, report);
+        check(peak(expected) > .00001f && actual == expected,
+              "held VST3 piano-roll note lost during missing/rebased transport report");
+    }
     first.suspend();
     {
         Player second(factory, cid);
@@ -237,10 +259,19 @@ void continuity(IPluginFactory &factory, const TUID &cid, int model) {
     }
     first.start(1024);
     for (int i = 0; i < 16; ++i) {
-        const auto expected = reference.render(), actual = first.render();
+        const auto report = i == 0 ? ClockReport::missing : ClockReport::normal;
+        const auto expected = reference.render(), actual = first.render(false, nullptr, true, report);
         check(peak(expected) > .00001f, "held reference voice is audible");
         check(actual == expected, "held VST3 note interrupted during same-rate graph restart");
     }
+    // Note Off must remain operative even in a context-free audio block.
+    check(first.render(false, nullptr, true, ClockReport::missing, true) ==
+              reference.render(false, nullptr, true, ClockReport::normal, true),
+          "note-off during clock gap");
+    for (int i = 0; i < 180; ++i)
+        check(first.render() == reference.render(), "release envelope diverged after clock gap");
+    check(peak(first.render()) < .00001f, "a real note-off releases the held key");
+    first.render(true);
     first.suspend();
     first.start(256);
     first.cursor += 48000;
@@ -267,14 +298,14 @@ int main(int argc, char **argv) {
                 std::strcmp(info.category, "Audio Module Class") == 0 &&
                 std::strcmp(info.name, "logisth") == 0) {
                 found = true;
-                for (int model = 0; model < 3; ++model)
+                for (int model = -1; model < 3; ++model)
                     continuity(*factory, info.cid, model);
             }
         }
         factory->release();
         check(found, "logisth VST3 instrument class");
-        std::cout << "PASS VST3 held sampler, cloud and granulizer notes across a second instance, "
-                     "graph restart, seek and stop\n";
+        std::cout << "PASS VST3 Classic, Sampler, Cloud and Granulizer held notes, clock gaps, "
+                     "sample-counter rebase, graph restart, note-off, seek and stop\n";
     } catch (const std::exception &error) {
         std::cerr << error.what() << '\n';
         return 1;

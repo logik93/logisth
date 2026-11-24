@@ -378,7 +378,8 @@ void LogisthProcessor::reset() {
     // The VST3 wrapper maps setProcessing(false) to reset(), including when a host
     // temporarily suspends a playing graph to insert an instrument. The next audio
     // block supplies the transport information needed to distinguish this from a stop.
-    if (wrapperType == wrapperType_VST3 && wasPlaying && expectedSample >= 0)
+    if (wrapperType == wrapperType_VST3 && wasPlaying &&
+        (expectedSample >= 0 || std::isfinite(expectedPpq)))
         pendingVstRestart = true;
     else
         resetDsp();
@@ -408,6 +409,7 @@ void LogisthProcessor::resetDsp() {
     masterSmooth = get(Param::master);
     wasPlaying = false;
     expectedSample = -1;
+    expectedPpq = std::numeric_limits<double>::quiet_NaN();
     peak = 0;
     channelPeaks[0] = 0;
     channelPeaks[1] = 0;
@@ -444,32 +446,47 @@ void LogisthProcessor::processBlock(AudioBuffer<float> &audio, MidiBuffer &midi)
     hostPpqValid = false;
     auto *head = getPlayHead();
     auto position = head ? head->getPosition() : Optional<AudioPlayHead::PositionInfo>{};
-    if (pendingVstRestart) {
-        pendingVstRestart = false;
-        if (!position || !position->getIsPlaying() ||
-            position->getTimeInSamples().orFallback(-1) != expectedSample)
-            resetDsp();
-    }
+    // In JUCE's VST3 wrapper a null ProcessContext produces a zeroed clock,
+    // including 0/0 seconds. A missing clock is not a transport stop.
+    if (position && wrapperType == wrapperType_VST3 &&
+        !std::isfinite(position->getTimeInSeconds().orFallback(0.0)))
+        position.reset();
+    const double framesPerBeat = preparedSampleRate * 60.0 / bpm;
     if (position) {
+        const auto sample = position->getTimeInSamples();
+        const auto ppq = position->getPpqPosition();
+        const bool haveSample = sample && expectedSample >= 0;
+        const bool haveBeat = ppq && std::isfinite(*ppq) && std::isfinite(expectedPpq);
+        const bool nextSample =
+            haveSample && std::abs(double(*sample) - double(expectedSample)) <= 1.;
+        const bool nextBeat = haveBeat && std::abs(*ppq - expectedPpq) * framesPerBeat <= 2.;
+        stop = wasPlaying && !position->getIsPlaying();
+        // A host may rebase its sample counter during a graph or window switch.
+        // Either reliable timeline can corroborate continuity through that change.
+        seek = wasPlaying && position->getIsPlaying() && (haveSample || haveBeat) && !nextSample &&
+               !nextBeat;
+        if (pendingVstRestart && (stop || seek))
+            resetDsp();
+        pendingVstRestart = false;
         clockAvailable = true;
-        if (auto ppq = position->getPpqPosition()) {
+        if (ppq) {
             hostPpq = *ppq;
             hostPpqValid = std::isfinite(hostPpq);
         }
         if (auto tempo = position->getBpm())
             if (std::isfinite(*tempo) && *tempo > 0)
                 bpm = jlimit(20., 400., *tempo);
-        stop = wasPlaying && !position->getIsPlaying();
-        if (auto samples = position->getTimeInSamples()) {
-            seek = wasPlaying && position->getIsPlaying() && expectedSample >= 0 &&
-                   *samples != expectedSample;
-            expectedSample = *samples + n;
-        } else
-            expectedSample = -1;
         wasPlaying = position->getIsPlaying();
-    } else {
-        expectedSample = -1;
-        wasPlaying = false;
+        expectedSample = sample ? *sample + n : -1;
+        expectedPpq = hostPpqValid ? hostPpq + n * bpm / (60. * preparedSampleRate)
+                                   : std::numeric_limits<double>::quiet_NaN();
+    } else if (wasPlaying) {
+        // The audio block and its MIDI offsets remain valid while timing metadata
+        // is absent. Advance the prediction and reconcile on the next valid block.
+        if (expectedSample >= 0)
+            expectedSample += n;
+        if (std::isfinite(expectedPpq))
+            expectedPpq += n / framesPerBeat;
     }
     keyboard.processNextMidiBuffer(midi, 0, n, true);
     const bool midiOnly = get(Param::midionly) > 0;

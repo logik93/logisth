@@ -287,5 +287,6 @@ class LogisthProcessor : public juce::AudioProcessor {
     double hostPpq = 0;
     bool hostPpqValid = false;
     juce::int64 expectedSample = -1;
+    double expectedPpq = std::numeric_limits<double>::quiet_NaN();
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(LogisthProcessor)
 };
