@@ -128,9 +128,10 @@ inline void run(const File &report = {}) {
     check(p->distortionOrder().slots == DistortionOrder{}.slots,
           "new instances start with distortion slots 1/2/3/4");
     const auto originalPoly = p->state.getParameter("polyphonyextra");
-    check(parameterCount == 1089 && originalPoly == p->getParameters()[1070] &&
-              p->state.getParameter("dist1on") == p->getParameters()[1071],
-          "all previous 1071 host slots remain intact; distortion controls are appended");
+    check(parameterCount == 1090 && originalPoly == p->getParameters()[1070] &&
+              p->state.getParameter("dist1on") == p->getParameters()[1071] &&
+              p->state.getParameter("bendinputrange") == p->getParameters()[1089],
+          "pitch bend input range follows the existing host parameters");
     auto showRack = [&](int index) {
         buttonIn(console->findChildWithID("rack." + String(index)))->onClick();
     };
@@ -331,7 +332,7 @@ inline void run(const File &report = {}) {
     Thread::sleep(55);
     Timer::callPendingTimersSynchronously();
     check(editor->validateLayout().isEmpty(),
-          "all 1089 parameters remain reachable after the additions");
+          "all parameters remain reachable after the additions");
     ui.reset();
     auto recreated = std::unique_ptr<AudioProcessorEditor>(p->createEditor());
     auto *newPanel = recreated->getChildComponent(0)->findChildWithID("settings.panel");

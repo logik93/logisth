@@ -592,6 +592,9 @@ class Engine {
         std::array<uint64_t, playerCount> pictureAges{};
         const float smoothing = float(1 - std::exp(-1 / (.01 * sr)));
         const double phaseSmoothing = 1 - std::exp(-1 / (.005 * sr));
+        std::array<float, 16> bendSemitones{};
+        for (int channel = 1; channel <= 16; ++channel)
+            bendSemitones[size_t(channel - 1)] = pitchBendCents(channel, p) / 100.f;
 
         for (int s = 0; s < count; ++s) {
             float out[2]{};
@@ -642,7 +645,6 @@ class Engine {
                     fxDrive = mods.get(Destination::DistortionAmount);
                     fxPhaser = mods.get(Destination::PhaserFrequency);
                 }
-                const float bendSemitones = pitchBendCents(v.channel, p) / 100.f;
                 float oscillators[partCount][2]{};
                 const auto previousSignals = v.modulationSignal;
                 v.modulationSignal = {};
@@ -684,7 +686,8 @@ class Engine {
                     if (n == 0 || (level <= 0 && !needed[size_t(osc)]))
                         continue;
                     oscillatorSamples += uint64_t(n);
-                    const float pitch = bendSemitones + mods.pair(Destination::PitchA, part) * 48;
+                    const float pitch = bendSemitones[size_t(v.channel - 1)] +
+                                        mods.pair(Destination::PitchA, part) * 48;
                     float targetPosition = clamp(op.position + mods.position(osc), 0, 1);
                     auto &position = v.sourcePosition[size_t(osc)];
                     position += smoothing * (targetPosition - position);

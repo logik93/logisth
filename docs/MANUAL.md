@@ -968,7 +968,8 @@ while Slide also permits glide between separate notes.
 
 **INPUT / st** sets the pitch bend range represented by full wheel travel
 from your DAW or MIDI controller. It defaults to ±2 semitones. Match it to
-the range used by your DAW when the host sends wheel position. **BEND / st**
+the range used by your DAW when the host sends wheel position. The setting
+is saved with the preset and DAW project. **BEND / st**
 limits the resulting pitch change in either direction. With BEND / st at 12,
 ±200 cents gives ±2 semitones and ±1200 cents gives ±1 octave. A limit of
 zero disables direct pitch bend. The on-screen BEND wheel shows the applied
@@ -1012,7 +1013,7 @@ or failed operations retain the previous directory. If a directory was removed,
 the chooser starts at its nearest existing parent. SETTINGS / FILES shows the
 current locations; this is independent of the sound preset.
 
-Presets contain all 1089 audio parameters, effect and distortion-slot order, routing, compressed audio for all six
+Presets contain all 1090 audio parameters, effect and distortion-slot order, routing, compressed audio for all six
 slots, the convolution impulse response, WAV regions, chord mappings, twelve named patterns, the preset comment and
 scope selection. Theme and editor size are separate user preferences and are
 retained when sounds change. The original sample files are unnecessary on recall. Saving uses a
@@ -1020,7 +1021,7 @@ temporary file and atomic replacement. Invalid files leave the current patch
 intact. State/preset files are limited to 1 GiB. These are logisth's own files;
 renaming another format to .logisth does not convert it.
 
-All 1089 parameters are available for host automation. The first 514 parameter
+All 1090 parameters are available for host automation. The first 514 parameter
 IDs and order from 0.4 are retained. Granulizer and global MIDI-only controls
 follow them; the former Graphs parameter block is removed. A/B/C views, rack pages,
 theme and scope source do not change the patch's audio settings. DAW state

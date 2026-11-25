@@ -641,6 +641,7 @@ void LogisthProcessor::processBlock(AudioBuffer<float> &audio, MidiBuffer &midi)
             engine.controller(event.channel, event.key, int(event.value), p);
             break;
         case EventType::PitchWheel:
+            // A negative key identifies the built-in wheel, which travels to the limit.
             engine.pitchWheel(event.channel, event.value, event.key < 0);
             lastPitchChannel = event.channel;
             break;

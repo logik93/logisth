@@ -54,7 +54,7 @@ a player is one source slot; a unison lane is one component inside a player.
 | Player engines | Classic, Wavetable, Sampler, Granular |
 | Note polyphony | 1–32 voices, default 16; mono/legato and portamento available |
 | Unison selection | 0–8 lanes per player; 0 disables the player |
-| Host parameter count | 1089; previous 1084 definitions retained, five multiband controls appended |
+| Host parameter count | 1090, including one appended pitch bend input range |
 | Modulators | Two modulation ADSRs, two LFOs, four miscellaneous source selectors, two destinations per modulator |
 | Performance macros | Four macros, four target assignments each |
 | Pattern memory | Twelve pattern slots; sequences up to 32 steps |

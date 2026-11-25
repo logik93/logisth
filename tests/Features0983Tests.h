@@ -163,7 +163,7 @@ inline void run(const File &report = {}) {
     write("credits");
     button(*console, "ui.settings").onClick();
     button(*console, "rack.1").onClick();
-    check(ui->validateLayout().isEmpty(), "all 1089 parameters remain reachable without overlaps");
+    check(ui->validateLayout().isEmpty(), "all parameters remain reachable without overlaps");
     selectChoice(*console, "distbandmode", 2);
     set(*p, "diston", 1);
     for (int count = 1; count <= 4; ++count) {

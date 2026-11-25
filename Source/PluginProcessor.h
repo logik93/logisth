@@ -168,8 +168,6 @@ class LogisthProcessor : public juce::AudioProcessor {
         }
     }
     std::atomic<float> pitchPosition{0}, wheelPosition{0};
-    std::atomic<float> uiPitchPosition{0};
-    int lastPitchChannel = 1;
     std::atomic<float> peak{0};
     std::array<std::atomic<float>, 2> channelPeaks{};
     std::atomic<int> voices{0};
@@ -269,6 +267,8 @@ class LogisthProcessor : public juce::AudioProcessor {
     std::array<std::array<float, 512>, logisth::playerCount> playerTraces{};
     std::array<float, 512> driveMod{}, phaserMod{}, partScopeA{}, partScopeB{}, partScopeC{};
     std::atomic<int> uiChanges{0};
+    std::atomic<float> uiPitchPosition{0};
+    int lastPitchChannel = 1;
     class PreparationThread final : public juce::Thread {
         LogisthProcessor &owner;
 
