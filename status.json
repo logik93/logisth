@@ -1,17 +1,17 @@
 {
   "tag": "v1.0.4",
-  "automation_commit": "fd09ee81857ac7cf362c8ece709d80a1d256ac9f",
-  "run_id": "45689444082",
-  "run_url": "https://github.com/logik93/logisth/actions/runs/45689444082",
+  "automation_commit": "012c81d20d1185585b47936b377abb75f290869e",
+  "run_id": "45693619179",
+  "run_url": "https://github.com/logik93/logisth/actions/runs/45693619179",
   "phase": "passed",
   "pipeline_phase": "passed",
   "stage": "",
-  "recorded_at": "2026-11-25T20:00:44.694797+00:00",
+  "recorded_at": "2026-11-25T20:25:23.551252+00:00",
   "platform": "windows-x86_64",
   "build": {
     "version": "1.0.4",
     "platform": "windows-x86_64",
-    "source_commit": "fd09ee81857ac7cf362c8ece709d80a1d256ac9f",
+    "source_commit": "012c81d20d1185585b47936b377abb75f290869e",
     "source_fingerprint": {
       "Source": "b666ac1e1ffc5860895a4382f5391d32bd35dc43",
       "CMakeLists.txt": "62d658b55a70dbe6b9dea777e402c20ea8f7ef86",
@@ -36,21 +36,21 @@
         "architectures": [
           "x86_64"
         ],
-        "sha256": "ded08634f8c2e577d02eeddcbf6c495c7904757ee43a65b7d8c7d23d9a518e94"
+        "sha256": "9742b34750ba0c1b93f909f069cf189ac81e3d88d6bfb029681e49e2bd27c3d5"
       },
       {
         "path": "CLAP/logisth.clap",
         "architectures": [
           "x86_64"
         ],
-        "sha256": "65ae81866cb1589a0980526e534502f09ce0c53aea9ef9f56456a05f5bb593a7"
+        "sha256": "033024ed3a2007ab1267088023a6ba33091fab5d0e3acb74e11db9da9ed077b8"
       },
       {
         "path": "Standalone/logisth.exe",
         "architectures": [
           "x86_64"
         ],
-        "sha256": "2e9f77fbcbaae536bd01a19eb06ed23620a79b8bde6eb7e767d0b9074819d310"
+        "sha256": "1a752188de1a669b8ccbe9fcdaf50cc35e67cea07199b0a609dd8720e5824346"
       }
     ],
     "formats": [
@@ -58,9 +58,9 @@
       "CLAP",
       "Standalone"
     ],
-    "run_url": "https://github.com/logik93/logisth/actions/runs/45689444082",
+    "run_url": "https://github.com/logik93/logisth/actions/runs/45693619179",
     "signing": "unsigned",
     "archive": "logisth-1.0.4-windows-x86_64.zip",
-    "archive_sha256": "9626e21388d163b238d7b2d4952dc99f6767d0a23d2f1f9fcd122c425626be66"
+    "archive_sha256": "7f1a1a33f9ffd34bd387b6285c6a09d3bcb42dd826c9bf7af5646a3fced72d99"
   }
 }
