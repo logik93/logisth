@@ -1,22 +1,22 @@
 # wavelogik.pl
 
-Strona promuje syntezator logisth. Zawiera polski opis instrumentu, angielski podręcznik użytkownika i dokumentację techniczną w HTML oraz PDF. Czcionki, grafiki i instrukcje są częścią paczki. Przyciski pobierania instrumentu prowadzą do wydania na GitHubie.
+The site introduces the logisth synthesizer and includes its user and technical manuals in English, in both HTML and PDF. The package includes all fonts, images and manuals. The instrument download links point to the GitHub release.
 
-## Wgranie na własny serwer
+## Deploy on your own server
 
-Pobierz [paczkę strony](wavelogik.pl.zip) i rozpakuj jej zawartość do katalogu witryny przypisanego do domeny `wavelogik.pl`. Plik `index.html` powinien znajdować się na głównym poziomie tego katalogu, obok `assets/`, `docs/`, `technical/`, `site.css` i `site.js`.
+Download the [website ZIP](wavelogik.pl.zip) and extract its contents to the document root for `wavelogik.pl`. Place `index.html` at the top level alongside `assets/`, `docs/`, `technical/`, `site.css` and `site.js`.
 
-Witryna działa jako statyczne pliki na Apache lub Nginx, również na serwerze z PHP. Jeżeli w katalogu jest już strona z `index.php`, wybierz osobny katalog dla tej witryny lub dostosuj kolejność plików startowych w ustawieniach hosta. Domena i certyfikat HTTPS wymagają konfiguracji na własnym hostingu.
+Serve the files directly from Apache or Nginx, including on a host that supports PHP. If the target directory already has an `index.php`, use a separate document root or configure your host to serve `index.html` first. Configure the domain and HTTPS certificate through your hosting setup.
 
-Wejdź na stronę główną, a następnie otwórz `docs/` i `technical/`. Z obu podręczników można pobrać lokalny PDF. Względne ścieżki pozwalają również sprawdzić witrynę w podkatalogu.
+Open the home page, then check `docs/` and `technical/`. Each manual links to its bundled PDF. The site uses relative paths, so you can also preview it in a subdirectory.
 
-## Aktualizowanie dokumentacji
+## Update the documentation
 
-Źródła angielskich podręczników oraz ich wydania PDF znajdują się w katalogu `docs/` repozytorium. Po aktualizacji PDF uruchom z katalogu głównego repozytorium poniższe polecenia. Do generowania dokumentacji potrzebne są Python 3 z Pillow i Pandoc.
+The English Markdown sources and PDFs live in the repository's `docs/` directory. After updating the PDFs, run these commands from the repository root. The HTML generator requires Python 3 with Pillow and Pandoc.
 
 ```sh
 python website/build_docs.py
 python website/package.py
 ```
 
-Skrypt pakujący zapisuje wszystkie pliki z `website/public/` w archiwum `website/wavelogik.pl.zip`. Przed nowym wydaniem zaktualizuj też numer wersji i adresy pobierania w `website/public/index.html`.
+The packaging script puts the contents of `website/public/` into `website/wavelogik.pl.zip`. When updating the instrument release, also update the version number and download links in `website/public/index.html`.
