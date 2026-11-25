@@ -1,0 +1,308 @@
+<!doctype html>
+<html lang="pl">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>logisth — syntezator polifoniczny | wavelogik</title>
+    <meta
+      name="description"
+      content="Poznaj logisth, otwarty instrument polifoniczny wavelogik. Sześć oscylatorów, cztery silniki, modulacja i efekty. Pobierz VST3, CLAP i Standalone."
+    />
+    <link rel="icon" href="assets/icon.svg" />
+    <link rel="stylesheet" href="site.css" />
+  </head>
+  <body>
+    <a class="skip" href="#main">Przejdź do treści</a>
+    <header class="top">
+      <div class="wrap nav">
+        <a class="brand" href="./" aria-label="wavelogik — strona główna"
+          ><img src="assets/logisth.svg" alt="" />wavelogik</a
+        >
+        <nav aria-label="Nawigacja główna">
+          <a href="#instrument">Instrument</a><a href="#signal">Tor sygnału</a
+          ><a href="#docs">Dokumentacja</a>
+        </nav>
+        <a class="get-small" href="#download"
+          >Pobierz <span aria-hidden="true" class="arrow up-right"></span></a
+        >
+      </div>
+    </header>
+    <main id="main">
+      <section class="hero">
+        <div class="wrap hero-inner">
+          <div class="hero-art" aria-hidden="true">
+            <img src="assets/spectrum.webp" alt="" fetchpriority="high" />
+          </div>
+          <div class="hero-copy">
+            <div class="overline"><i></i> SYNTEZATOR POLIFONICZNY</div>
+            <h1>logisth</h1>
+            <p>
+              Połącz oscylatory klasyczne, tablice falowe, sampling
+              i&nbsp;granulację w jednym instrumencie.
+            </p>
+            <div class="actions">
+              <a class="button primary" href="#download"
+                ><span aria-hidden="true" class="arrow down"></span> Pobierz logisth</a
+              ><a class="button ghost" href="#instrument"
+                >Poznaj instrument <span aria-hidden="true" class="arrow down-right"></span></a
+              >
+            </div>
+            <div class="formats">VST3 <b>·</b> CLAP <b>·</b> STANDALONE</div>
+          </div>
+        </div>
+      </section>
+      <div class="spec-strip">
+        <dl class="wrap specs">
+          <div>
+            <dt>Oscylatory</dt>
+            <dd>6</dd>
+          </div>
+          <div>
+            <dt>Partie</dt>
+            <dd>3 <small>A / B / C</small></dd>
+          </div>
+          <div>
+            <dt>Polifonia</dt>
+            <dd>32 <small>głosy</small></dd>
+          </div>
+          <div>
+            <dt>Unison detune</dt>
+            <dd>400 <small>ct</small></dd>
+          </div>
+        </dl>
+      </div>
+      <section class="section wrap" id="instrument">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">GENERATORY</p>
+            <h2>Wybierz silnik.</h2>
+          </div>
+          <p>
+            Każdy z sześciu oscylatorów ma własny tryb. Łącz różne źródła w
+            obrębie jednej partii.
+          </p>
+        </div>
+        <div class="engine-tabs" aria-label="Silniki oscylatorów">
+          <a href="#classic" data-engine="classic">Classic</a
+          ><a href="#wavetable" data-engine="wavetable">Wavetable</a
+          ><a href="#sampler" data-engine="sampler">Sampler</a
+          ><a href="#granular" data-engine="granular">Granular</a>
+        </div>
+        <div class="engine-list">
+          <article class="engine" id="classic">
+            <div class="shot">
+              <a
+                href="assets/classic.webp"
+                aria-label="Powiększ widok syntezy klasycznej"
+                ><img
+                  src="assets/classic.webp"
+                  loading="lazy"
+                  width="1240"
+                  height="860"
+                  alt="Interfejs logisth z oscylatorami Classic i regulatorami unison"
+              /></a>
+            </div>
+            <div class="engine-note">
+              <p class="eyebrow">SYNTEZA KLASYCZNA</p>
+              <h3>Classic</h3>
+              <p>
+                Zacznij od pojedynczej fali i dodaj głosy unison. Ustaw ich
+                rozstrojenie, udział w miksie i szerokość stereo.
+              </p>
+              <dl>
+                <div>
+                  <dt>Unison</dt>
+                  <dd>do 8 głosów</dd>
+                </div>
+                <div>
+                  <dt>Detune</dt>
+                  <dd>0–400 ct</dd>
+                </div>
+                <div>
+                  <dt>Modulacja</dt>
+                  <dd>FM / AM / PWM</dd>
+                </div>
+              </dl>
+            </div>
+          </article>
+          <article class="engine" id="wavetable">
+            <div class="shot">
+              <a
+                href="assets/wavetable.webp"
+                aria-label="Powiększ widok tablic falowych"
+                ><img
+                  src="assets/wavetable.webp"
+                  loading="lazy"
+                  width="1240"
+                  height="860"
+                  alt="Odtwarzacz Wavetable i widok klatek tablicy falowej"
+              /></a>
+            </div>
+            <div class="engine-note">
+              <p class="eyebrow">TABLICE FALOWE</p>
+              <h3>Wavetable</h3>
+              <p>
+                WT POS wybiera pojedynczy cykl z tablicy. Przypisz LFO do
+                wybranego odtwarzacza lub przesuwaj równocześnie pozycję całej
+                grupy.
+              </p>
+              <dl>
+                <div>
+                  <dt>Pozycja</dt>
+                  <dd>WT POS</dd>
+                </div>
+                <div>
+                  <dt>Cel LFO</dt>
+                  <dd>A1–C2 lub grupy</dd>
+                </div>
+              </dl>
+            </div>
+          </article>
+          <article class="engine" id="sampler">
+            <div class="shot">
+              <a href="assets/sampler.webp" aria-label="Powiększ widok samplera"
+                ><img
+                  src="assets/sampler.webp"
+                  loading="lazy"
+                  width="1240"
+                  height="860"
+                  alt="Sampler stereo ze znacznikami START i END"
+              /></a>
+            </div>
+            <div class="engine-note">
+              <p class="eyebrow">ODTWARZANIE PRÓBEK</p>
+              <h3>Sampler</h3>
+              <p>
+                Przeciągnij próbkę na podgląd, zaznacz fragment i automatyzuj
+                START oraz END. Loop Tail pozwala zachować atak dźwięku i
+                zapętlić jego ogon.
+              </p>
+              <dl>
+                <div>
+                  <dt>Import</dt>
+                  <dd>WAV / AIFF / FLAC</dd>
+                </div>
+                <div>
+                  <dt>Stretch</dt>
+                  <dd>m.in. Signalsmith Stretch</dd>
+                </div>
+              </dl>
+            </div>
+          </article>
+          <article class="engine" id="granular">
+            <div class="shot">
+              <a
+                href="assets/granular.webp"
+                aria-label="Powiększ widok granulacji"
+                ><img
+                  src="assets/granular.webp"
+                  loading="lazy"
+                  width="1240"
+                  height="860"
+                  alt="Oscylator granularny z widokiem materiału źródłowego"
+              /></a>
+            </div>
+            <div class="engine-note">
+              <p class="eyebrow">SYNTEZA GRANULARNA</p>
+              <h3>Granular</h3>
+              <p>
+                Zbuduj teksturę z krótkich ziaren próbki. Zmień ich długość,
+                rozproszenie i miejsce odczytu, obserwując aktywne ziarna na
+                przebiegu.
+              </p>
+              <dl>
+                <div>
+                  <dt>Modele</dt>
+                  <dd>Cloud / Granulizer</dd>
+                </div>
+                <div>
+                  <dt>Podgląd</dt>
+                  <dd>pozycja i aktywne ziarna</dd>
+                </div>
+              </dl>
+            </div>
+          </article>
+        </div>
+      </section>
+      <section class="signal" id="signal">
+        <div class="wrap">
+          <p class="eyebrow">KSZTAŁTOWANIE BRZMIENIA</p>
+          <h2>Tor sygnału.</h2>
+          <div class="signal-grid">
+            <article>
+              <span class="plot plot-mod" aria-hidden="true"></span>
+              <h3>Modulacja</h3>
+              <p>
+                Połącz obwiednie, LFO i kontrolery z parametrami partii A, B i
+                C. Przypisuj cele pojedynczym oscylatorom lub ich grupom.
+              </p>
+            </article>
+            <article>
+              <span class="plot plot-band" aria-hidden="true"></span>
+              <h3>Distortion wielopasmowy</h3>
+              <p>
+                Podziel sygnał na maksymalnie cztery pasma. Dobierz model, Drive
+                i Mix dla każdego pasma i obserwuj widmo przed oraz po obróbce.
+              </p>
+            </article>
+            <article>
+              <span class="plot plot-ir" aria-hidden="true"></span>
+              <h3>Przestrzeń stereo</h3>
+              <p>
+                Wybierz jeden z pięciu pogłosów algorytmicznych lub załaduj
+                własną odpowiedź impulsową. Preset może przechować stereo IR
+                razem z brzmieniem.
+              </p>
+            </article>
+          </div>
+        </div>
+      </section>
+      <section class="section wrap docs-download">
+        <div id="docs">
+          <p class="eyebrow">BIBLIOTEKA</p>
+          <h2>Dokumentacja.</h2>
+          <a class="rowlink" href="docs/"
+            ><span
+              ><strong>Podręcznik użytkownika</strong
+              ><small>Obsługa instrumentu · English</small></span
+            ><span aria-hidden="true" class="arrow up-right"></span></a
+          ><a class="rowlink" href="technical/"
+            ><span
+              ><strong>Dokumentacja techniczna</strong
+              ><small>Architektura, DSP i pomiary · English</small></span
+            ><span aria-hidden="true" class="arrow up-right"></span></a
+          >
+        </div>
+        <div id="download">
+          <p class="eyebrow">WYDANIE 1.0.2</p>
+          <h2>Pobierz logisth.</h2>
+          <p>Każda paczka zawiera VST3, CLAP i aplikację Standalone.</p>
+          <div class="downloads">
+            <a
+              href="https://github.com/logik93/logisth/releases/download/v1.0.2/logisth-1.0.2-windows-x86_64.zip"
+              >Windows <small>x64 · ZIP</small><span aria-hidden="true" class="arrow down"></span></a
+            ><a
+              href="https://github.com/logik93/logisth/releases/download/v1.0.2/logisth-1.0.2-linux-x86_64.tar.gz"
+              >Linux <small>x86_64 · TAR.GZ</small><span aria-hidden="true" class="arrow down"></span></a
+            ><a
+              href="https://github.com/logik93/logisth/releases/download/v1.0.2/logisth-1.0.2-macos-universal.zip"
+              >macOS <small>Universal · ZIP</small><span aria-hidden="true" class="arrow down"></span></a
+            >
+          </div>
+        </div>
+      </section>
+    </main>
+    <footer>
+      <div class="wrap foot">
+        <a class="brand" href="./"
+          ><img src="assets/logisth.svg" alt="" />wavelogik</a
+        ><span>wavelogik.pl</span
+        ><a href="https://github.com/logik93/logisth">GitHub</a
+        ><a href="https://github.com/logik93/logisth/releases/tag/v1.0.2"
+          >Informacje o wydaniu</a
+        >
+      </div>
+    </footer>
+    <script src="site.js" defer></script>
+  </body>
+</html>

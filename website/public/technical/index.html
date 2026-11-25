@@ -1,0 +1,759 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Technical manual — logisth 1.0.2 | wavelogik</title><link rel="icon" href="../assets/icon.svg"><link rel="stylesheet" href="../site.css"></head>
+<body class="reading"><a class="skip" href="#content">Skip to content</a><header class="top"><div class="wrap nav">
+<a class="brand" href="../"><img src="../assets/logisth.svg" alt="">wavelogik</a><nav aria-label="Documentation"><a href="../docs/">User manual</a><a href="../technical/">Technical manual</a></nav><a class="get-small" href="logisth-Technical-Manual-English.pdf" download>PDF <span aria-hidden="true" class="arrow down"></span></a></div></header>
+<main id="content"><div class="book-mast"><div class="wrap"><p class="eyebrow">LOGISTH / DOCUMENTATION</p><h1>Technical manual</h1><p class="formats">VERSION 1.0.2 · ENGLISH</p></div></div>
+<div class="book wrap"><details class="contents" open><summary>Contents</summary><nav aria-label="Chapters"><a href="#1-system-specification-and-signal-flow">1. System specification and signal flow</a><a href="#2-voice-allocation-and-envelopes">2. Voice allocation and envelopes</a><a href="#3-classic-oscillator-generation">3. Classic oscillator generation</a><a href="#4-wavetable-synthesis">4. Wavetable synthesis</a><a href="#5-sample-playback-and-interpolation">5. Sample playback and interpolation</a><a href="#6-time-stretching-and-the-spectral-adapter">6. Time stretching and the spectral adapter</a><a href="#7-granular-synthesis">7. Granular synthesis</a><a href="#8-fm-am-and-width-modulation">8. FM, AM and width modulation</a><a href="#9-modulation-matrix-and-performance-macros">9. Modulation matrix and performance macros</a><a href="#10-filters-routing-and-stereo">10. Filters, routing and stereo</a><a href="#11-chords-arpeggiator-and-midi">11. Chords, arpeggiator and MIDI</a><a href="#12-effect-rack-and-reverb">12. Effect rack and reverb</a><a href="#13-compressor-clipper-and-final-limiter">13. Compressor, clipper and final limiter</a><a href="#14-real-time-execution-and-memory-ownership">14. Real-time execution and memory ownership</a><a href="#15-presets-state-and-appearance-files">15. Presets, state and appearance files</a><a href="#16-open-source-components-and-licenses">16. Open-source components and licenses</a><a href="#17-build-validation-and-release-engineering">17. Build, validation and release engineering</a><a href="#18-measurements-limits-and-source-index">18. Measurements, limits and source index</a></nav></details><article><p><strong>wavelogik · Architecture, DSP and Engineering Reference</strong></p>
+<p>Document revision: 2.1 · Software baseline: 1.0.2 · State schema: 4</p>
+<p>Implementation baseline: release tag <code>v1.0.2</code>. The technical identity manifest records the CMake/runtime source identity. Native BUILD_INFO records its tagged commit, tree fingerprints, binary hashes and manual identities.</p>
+<p>This reference describes the implementation of logisth 1.0.2. It is intended for sound designers, audio engineers, contributors and integrators. The <a href="../docs/">User Manual</a> describes operating the interface; this document explains how its controls affect processing, how data is stored and which open-source components are used. Source paths and measurement reports provide the evidence for implementation-specific statements.</p>
+<p>Amplitude 1.0 corresponds to 0 dBFS sample peak. Frequencies are in Hz, times in seconds unless marked ms, pitch intervals in semitones or cents, and normalized positions in [0, 1]. Fs denotes the host sample rate. A voice is a played note; a player is one source slot; a unison lane is one component inside a player.</p>
+<h2 id="1-system-specification-and-signal-flow">1. System specification and signal flow</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr class="header">
+<th>Property</th>
+<th>Implementation</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Product / producer</td>
+<td>logisth / wavelogik</td>
+</tr>
+<tr class="even">
+<td>Implementation language</td>
+<td>C++17; CMake 3.22 or newer</td>
+</tr>
+<tr class="odd">
+<td>Host formats</td>
+<td>VST3, CLAP, Standalone</td>
+</tr>
+<tr class="even">
+<td>Audio buses</td>
+<td>No audio input; one stereo output</td>
+</tr>
+<tr class="odd">
+<td>Audio processing</td>
+<td>32-bit floating-point sample buffers; selected calculations/state use double precision</td>
+</tr>
+<tr class="even">
+<td>Parts / players</td>
+<td>Three parts A/B/C; two players per part: A1/A2, B1/B2, C1/C2</td>
+</tr>
+<tr class="odd">
+<td>Player engines</td>
+<td>Classic, Wavetable, Sampler, Granular</td>
+</tr>
+<tr class="even">
+<td>Note polyphony</td>
+<td>1–32 voices, default 16; mono/legato and portamento available</td>
+</tr>
+<tr class="odd">
+<td>Unison selection</td>
+<td>0–8 lanes per player; 0 disables the player</td>
+</tr>
+<tr class="even">
+<td>Host parameter count</td>
+<td>1089; previous 1084 definitions retained, five multiband controls appended</td>
+</tr>
+<tr class="odd">
+<td>Modulators</td>
+<td>Two modulation ADSRs, two LFOs, four miscellaneous source selectors, two destinations per modulator</td>
+</tr>
+<tr class="even">
+<td>Performance macros</td>
+<td>Four macros, four target assignments each</td>
+</tr>
+<tr class="odd">
+<td>Pattern memory</td>
+<td>Twelve pattern slots; sequences up to 32 steps</td>
+</tr>
+<tr class="even">
+<td>Sound library</td>
+<td>58 factory entries, including Init and 48 separately packaged authored presets</td>
+</tr>
+</tbody>
+</table></div>
+<p><img loading="lazy" src="../assets/manual/logisth-signal-flow.svg" alt="logisth processing architecture" /></p>
+<p>MIDI first passes through chord mapping and the arpeggiator. The processor renders audio up to each generated event offset before applying that event. Within each note, the six players form three source buses. Each part filter can select any combination of those buses. Its amp envelope, velocity and part mix scale the filtered signal. Solo determines which part contributions reach the common sum.</p>
+<p>The default stereo audio order is <strong>Distortion → Phaser → Chorus → Equalizer → Reverb → Delay → Compressor → Clipper → Main → Limiter → Output</strong>. The eight pre-Main stages are user-reorderable. Chords and Arpeggiator occupy a separate GENERATORS row; Sample and Morph remain editing/performance tools. A new editor opens Sample. Main and the final Limiter are fixed at the output.</p>
+<p>The order is a validated permutation of eight stage IDs, packed into one atomic 24-bit value. Each source callback uses one prepared effects state bank. A live change fades down for 5 ms, switches order at zero and fades up for 5 ms. Chunk boundaries also respect this transition. It does not run two parallel effect banks, allocate new DSP state or add reported host latency. The current order travels with presets and DAW state; absent legacy metadata selects the original sequence. Drag, Alt+Up/Down and the context menu share the same ordering API.</p>
+<p>Host buffers are processed in chunks of at most 512 frames, further divided at MIDI events. The chunk size is an internal work bound, not an extra block of reported latency. The output limiter and convolution adapter add no host latency. Envelope edge smoothing and spectral windowing have their own response times, described below. The instrument exposes one host program; its richer preset browser is maintained inside the plug-in.</p>
+<p>The host tail query reports a conservative 60 seconds, plus IR duration when Convolution is enabled. This is a host rendering allowance, not a promise that every patch produces a 60-second audible decay.</p>
+<p>Implementation: <a href="https://github.com/logik93/logisth/blob/v1.0.2/Source/PluginProcessor.cpp">PluginProcessor.cpp</a>, <a href="https://github.com/logik93/logisth/blob/v1.0.2/Source/PluginProcessor.h">PluginProcessor.h</a>, <a href="https://github.com/logik93/logisth/blob/v1.0.2/Source/Topology.h">Topology.h</a>.</p>
+<h2 id="2-voice-allocation-and-envelopes">2. Voice allocation and envelopes</h2>
+<p>The engine preallocates thirty-two voice records and defaults to a sixteen-note limit. Polyphonic allocation selects an inactive voice first and otherwise steals the oldest voice within the active limit. A voice contains phase, unison, noise, sample, filter and modulation state for all six players. The inner rendering loop visits only the configured voice range. The sixteen MIDI channels retain separate pitch wheel, mod wheel, pressure and sustain state. Mono legato uses the held-key history and portamento logic instead of allocating a new independent note for every key.</p>
+<p>Every part has its own amplitude ADSR. Every player also has an optional source ADSR. Two additional ADSRs are dedicated to modulation. Logical stages are piecewise linear: Attack rises to one, Decay falls to Sustain, Sustain holds its level, and Release descends from the current value. A zero-duration stage is traversed immediately. With A=D=S=0, the envelope enters silent sustain without emitting a one-sample peak. Mod Env 1 and 2 initialize with all values zero.</p>
+<p>Audio envelopes apply two approximately half-millisecond moving averages and a one-sample causal delay. Their positive triangular kernel has unity DC gain and a finite, approximately 1 ms settling tail. This softens zero-time amplitude edges without overshoot. Modulation envelopes retain their exact logical stage values. An amplitude envelope can remain active briefly after the logical release ends so its finite smoothing tail reaches exact silence.</p>
+<p>PHASE is a live cyclic offset, smoothed over approximately 5 ms using the shortest wrap-around direction. RETRIG controls note-start phase policy independently; turning PHASE continues to work with RETRIG off. INVERT reverses signal polarity. Changing source engine resets that player's playback state. Init is a plain saw starting patch with Main at 0.65 linear amplitude; at a settled Main value this corresponds to approximately −3.74 dB relative to unity.</p>
+<p>Implementation: <a href="https://github.com/logik93/logisth/blob/v1.0.2/Source/Envelope.h">Envelope.h</a>, <a href="https://github.com/logik93/logisth/blob/v1.0.2/Source/Engine.h">Engine.h</a>.</p>
+<h2 id="3-classic-oscillator-generation">3. Classic oscillator generation</h2>
+<p>Classic waves are generated mathematically at runtime. They are not recordings. The oscillator maintains a phase accumulator, wraps it into [0, 1), and evaluates the selected waveform. The phase increment is capped at 0.45 cycles/sample.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr class="header">
+<th>Wave</th>
+<th>Generation method</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Sine</td>
+<td>sin(2π phase)</td>
+</tr>
+<tr class="even">
+<td>Saw</td>
+<td>Linear ramp with a polynomial band-limited step correction, polyBLEP</td>
+</tr>
+<tr class="odd">
+<td>Pulse</td>
+<td>Two-level duty wave with polyBLEP corrections at both edges</td>
+</tr>
+<tr class="even">
+<td>Triangle</td>
+<td>Piecewise linear triangle</td>
+</tr>
+<tr class="odd">
+<td>White noise</td>
+<td>Bipolar xorshift32 pseudorandom sequence</td>
+</tr>
+<tr class="even">
+<td>Half / Quarter pulse</td>
+<td>Pulse duty scaled by one half / one quarter</td>
+</tr>
+<tr class="odd">
+<td>Tri-saw</td>
+<td>Equal blend of saw and triangle, with the saw discontinuity corrected</td>
+</tr>
+<tr class="even">
+<td>Pink noise</td>
+<td>White noise through a fixed multi-state recursive coloration network</td>
+</tr>
+<tr class="odd">
+<td>Brown noise</td>
+<td>Leaky integration of white noise</td>
+</tr>
+<tr class="even">
+<td>Organ</td>
+<td>Weighted sum of the fundamental, second and fourth harmonics</td>
+</tr>
+<tr class="odd">
+<td>Folded sine</td>
+<td>sin(3 sin(2π phase))</td>
+</tr>
+</tbody>
+</table></div>
+<p>PolyBLEP corrects selected discontinuities. This implementation does not apply global oversampling or guarantee alias-free output under arbitrary FM, phase distortion or high-frequency nonlinear processing. The noise generator uses repeatable internal seeds; noise playback is procedural rather than file based.</p>
+<p>For lane spread s in [−1, 1], tuning is:</p>
+<pre class="text"><code>frequency = 440 * 2^((note - 69 + bend + modulation + tuning + s*detune/100)/12)</code></pre>
+<p>The detune display spans 0–400 cents with 100 cents at its midpoint. The DSP sums three preserved host parameters: base 0–100, extension 0–100 and wide 0–200 cents. At 400 cents the two outer lanes are −400 and +400 cents from the tuned center. The total outer-to-outer interval is therefore 800 cents, not 400.</p>
+<p>BLEND scales the additional unison lanes while retaining a tuned center at zero. For an even lane count, a prepared extra center lane participates while needed for that blend; internal capacity is nine lanes although the selector ends at eight. Gain is normalized by the square root of the sum of squared lane weights. This controls energy across the blend rather than guaranteeing identical peaks for correlated phases. A player needed as an active FM/AM source can still render when its audible level is zero.</p>
+<p>Implementation: <a href="https://github.com/logik93/logisth/blob/v1.0.2/Source/Engine.h">Engine.h</a>, <a href="https://github.com/logik93/logisth/blob/v1.0.2/Source/Parameters.h">Parameters.h</a>.</p>
+<h2 id="4-wavetable-synthesis">4. Wavetable synthesis</h2>
+<p>Wavetable mode interprets audio as consecutive complete periodic cycles. A frame is one cycle, not an individual PCM sample. A 128-frame table with 2048 points per frame contains 262144 PCM points. WT POS chooses a frame; oscillator phase travels around that frame while note pitch determines its repetition rate.</p>
+<p>Frame sizes are powers of two from 128 to 4096 points. Import accepts an explicit frame size or reads a supported RIFF <code>clm </code> cycle-length hint. Without a hint, a valid power-of-two file of at most 2048 points becomes one frame; other files default to 2048 points/frame. Up to 256 frames are used. Complete frames beyond that cap and the incomplete trailing remainder are not added to the frame set; a file shorter than one selected frame is zero-padded into one frame.</p>
+<p>An original radix-2 FFT builds eleven harmonic-limited table levels off the audio thread. The DC bin is removed and progressively higher harmonics are discarded. Playback linearly interpolates points within the cycle and blends neighboring spectral levels according to phase increment. Tables use the first decoded audio channel and are played as a mono periodic source before unison/panning.</p>
+<p>Frame selection is explicitly discrete:</p>
+<pre class="text"><code>frame = round(clamp(WT_POS, 0, 1) * (frame_count - 1))</code></pre>
+<p>There is no interpolation between adjacent frames in this version. WT POS is smoothed over approximately 10 ms before selection, but movement can still produce discrete frame changes. Individual player destinations and A/B/C, A+B, A+C, B+C and A+B+C scopes allow independent or grouped position modulation. The display reports the selected frame position. WARP applies a sinusoidal phase offset; WIDTH applies the phase remapping described in section 8.</p>
+<p>Implementation: <a href="https://github.com/logik93/logisth/blob/v1.0.2/Source/SourceData.h">SourceData.h</a>, <a href="https://github.com/logik93/logisth/blob/v1.0.2/Source/SourceAssets.cpp">SourceAssets.cpp</a>, <a href="https://github.com/logik93/logisth/blob/v1.0.2/Source/Engine.h">Engine.h</a>.</p>
+<h2 id="5-sample-playback-and-interpolation">5. Sample playback and interpolation</h2>
+<p>Sampler mode reads decoded stereo floating-point PCM between normalized START and END points. Root key, note tuning, reverse, looping, source envelope and sample-rate conversion affect its read cursor. Mono imports are duplicated to both channels. File decoding, transient analysis and waveform peak generation run outside the audio callback. The interface accepts WAV, AIFF and FLAC.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr class="header">
+<th>Interpolation</th>
+<th>Method and cost</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Linear</td>
+<td>Two adjacent samples; lowest cost</td>
+</tr>
+<tr class="even">
+<td>Cubic</td>
+<td>Four-point cubic interpolation</td>
+</tr>
+<tr class="odd">
+<td>Sinc 16</td>
+<td>Sixteen-tap Blackman-windowed sinc</td>
+</tr>
+<tr class="even">
+<td>Sinc 32</td>
+<td>Thirty-two-tap Blackman-windowed sinc</td>
+</tr>
+</tbody>
+</table></div>
+<p>Sinc cutoff is reduced when playback speed exceeds unity. These kernels provide a quality/cost choice; their finite length is not an ideal reconstruction filter. Boundary reads respect the chosen selection and looping behavior.</p>
+<p>Whole-selection loops blend across a short end region, normally up to 5 ms and at most one quarter of the selection. <strong>Loop Tail</strong> first plays the complete selection once, then wraps between separate tail IN/OUT points. Its adjustable crossfade is bounded by one quarter of that loop. Tail bounds remain within the selection and are mapped for reverse playback. They are saved as parameters.</p>
+<p>There is no fixed duration cap. The combined imported PCM budget across six source slots is 512 MiB, counting stereo 32-bit PCM at eight bytes/frame. This is approximately 23.3 minutes of one stereo 48 kHz source if no other imported source occupies the budget. It excludes derived wavetable levels, peak caches, decoder temporaries and spectral workspaces, so total process memory can be considerably higher. Source files must be 8–96 kHz, contain at least two frames and finite samples. Imported amplitudes are bounded to [−8, 8].</p>
+<p>Implementation: <a href="https://github.com/logik93/logisth/blob/v1.0.2/Source/Sampler.h">Sampler.h</a>, <a href="https://github.com/logik93/logisth/blob/v1.0.2/Source/SourceAssets.cpp">SourceAssets.cpp</a>, <a href="https://github.com/logik93/logisth/blob/v1.0.2/Source/AssetLimits.h">AssetLimits.h</a>.</p>
+<h3 id="trim-automation-and-instance-lifetime">Trim automation and instance lifetime</h3>
+<p>The two Sample-page fields attach directly to the selected player's existing automation parameters. Sampler START uses <code>oNposition</code>, granular START uses <code>oNtrimstart</code> and both engines use <code>oNend</code>. The engine switch preserves the independent granular launch position. Each waveform endpoint owns its own host gesture. Captions occupy a rail above playback telemetry.</p>
+<p>The audio graph may negotiate a new maximum block size while a MIDI note is held. Preparation rebuilds rate-dependent DSP when the sample rate changes. VST3 maps processing suspension to a processor reset. The next valid transport report reconciles the expected sample and musical beat positions. During a gap in timing metadata, the engine keeps processing MIDI at each event offset and advances its timeline prediction. A valid stopped transport or discontinuity in all available clocks still releases suspended voices. MIDI note and pedal ownership is per processor and per channel. Sample decoding runs outside the asset lock. A per-player request counter rejects obsolete imports before publishing audio or switching an oscillator into Sampler. <a href="https://github.com/logik93/logisth/blob/v1.0.2/docs/REVIEW-v1.0.2.md">Measurement method</a></p>
+<h2 id="6-time-stretching-and-the-spectral-adapter">6. Time stretching and the spectral adapter</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr class="header">
+<th>Algorithm</th>
+<th>Processing behavior</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Off</td>
+<td>Ordinary pitched resampling; Rate changes playback speed</td>
+</tr>
+<tr class="even">
+<td>Tape</td>
+<td>Resampling with the time factor applied to cursor speed; time and pitch remain linked</td>
+</tr>
+<tr class="odd">
+<td>Granular</td>
+<td>Overlapping Hann-windowed sample segments</td>
+</tr>
+<tr class="even">
+<td>WSOLA</td>
+<td>Waveform-similarity overlap-add, aligning windows with a normalized correlation search</td>
+</tr>
+<tr class="odd">
+<td>Tonal</td>
+<td>WSOLA-family path with a longer automatic window, 65 ms</td>
+</tr>
+<tr class="even">
+<td>Transient</td>
+<td>WSOLA-family path with a shorter automatic window, 12 ms</td>
+</tr>
+<tr class="odd">
+<td>Kick</td>
+<td>Original attack/tail hybrid using direct attack playback and a Signalsmith-processed tail</td>
+</tr>
+<tr class="even">
+<td>Signalsmith Stretch</td>
+<td>Upstream spectral time/pitch processor through the prepared streaming adapter</td>
+</tr>
+</tbody>
+</table></div>
+<p>Granular/WSOLA use a 40 ms automatic window and twofold overlap unless another window/overlap is selected. WSOLA correlation examines 32 points, first searches coarsely within a bounded range and then refines around the best shift. Stereo channels share the chosen alignment. Tonal and Transient are settings of this implementation, not separate third-party libraries or guaranteed source-separation models. The overlapping sampler has sixteen fixed grain records per lane.</p>
+<p>The effective time factor is Time Factor divided by Rate, with internal safety bounds of 1/64–64. Rate spans 0.125–8 and Semitones spans −48–48. Rate, pitch, tonality and formant changes are smoothed over approximately 20 ms. Shared controls are applied only where the selected algorithm supports them:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr class="header">
+<th>Control</th>
+<th>Effect</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Rate</td>
+<td>Changes source traversal/time factor; Off and Tape retain linked resampling behavior</td>
+</tr>
+<tr class="even">
+<td>Semitones</td>
+<td>Additional pitch ratio 2^(semitones/12)</td>
+</tr>
+<tr class="odd">
+<td>Tonality Limit</td>
+<td>Passed to the spectral processor as Hz/Fs; zero selects its unrestricted/default behavior</td>
+</tr>
+<tr class="even">
+<td>Formant</td>
+<td>Spectral formant shift, −24–24 semitones</td>
+</tr>
+<tr class="odd">
+<td>Block (ms)</td>
+<td>Custom analysis/overlap window; zero selects the algorithm's automatic window</td>
+</tr>
+<tr class="even">
+<td>Overlap</td>
+<td>Auto or ratios 2–16; controls hop size relative to the window</td>
+</tr>
+</tbody>
+</table></div>
+<p>The Signalsmith adapter configures two channels and produces 64 output samples at a time, retaining a fractional input-count remainder. Automatic spectral window size is the first power of two at least 80 ms long; automatic hop size is window/8. A nonzero Block setting produces at least 32 window samples and a hop of at least one sample. Transpose factor is bounded internally to 1/256–256. Tonality and formant are passed directly to the upstream APIs after validation.</p>
+<p>At note start or source revision changes, the adapter resets/seeks the processor and offsets its input cursor using the upstream input/output latency values. This is sample-instrument alignment, not an advertised general-purpose zero-latency live input stretcher. Windowing and transient behavior remain algorithm dependent. Window, overlap, sample-rate and capacity changes require new prepared streams; they are not allocated in the audio callback.</p>
+<p>Kick retains a configurable direct attack of 0–100 ms, then crossfades over 8 ms into its pitched/stretched tail. When a matching prepared spectral stream becomes available, existing playback can crossfade to it over 20 ms. A bounded overlap-add path is available while preparation is pending. Kick is original adapter logic; the spectral tail processor is the unmodified Signalsmith dependency.</p>
+<p>Spectral banks have a separate 512 MiB estimated workspace budget. The estimate includes selected players, note capacity, unison capacity and two prepared lanes per cell. This bound does not mean all six players at maximum unison/polyphony can always use every window size. Unsupported memory configurations are rejected instead of allocating without a bound.</p>
+<p>Implementation: <a href="https://github.com/logik93/logisth/blob/v1.0.2/Source/Sampler.h">Sampler.h</a>, <a href="https://github.com/logik93/logisth/blob/v1.0.2/Source/Spectral.h">Spectral.h</a>, <a href="https://github.com/logik93/logisth/blob/v1.0.2/Source/SourceAssets.cpp">SourceAssets.cpp</a>.</p>
+<h2 id="7-granular-synthesis">7. Granular synthesis</h2>
+<p>The dedicated Granulizer uses sixty-four fixed grain records per player/unison lane. A grain has a source cursor, age, attack, hold and alternating stereo pan. Its envelope has linear attack and release around a flat hold. Spawn interval is Hold multiplied by Grain Spacing, bounded to at least one sample; grain attack does not add to this scheduling interval.</p>
+<p>Wave Spacing controls how far the scanner advances between launches. Negative values move backward. Freeze stops scanner advancement while existing/new grains continue playing. Randomness perturbs launch position within the selection. An internal sine LFO can modulate spacing; Sync relates scanner traversal to sample beats and host tempo. Reverse changes each grain's read direction.</p>
+<p>Key To can address pitch, start position, grain positions or region/transient indices. Region markers come from imported cue points. Automatic transient markers use a simple 64-sample peak-rise detector with a minimum 12 ms separation; this is not a learned onset classifier. Transient modes can snap launches to markers and substitute a dedicated hold duration.</p>
+<p>The output uses fixed overlap compensation derived from attack, hold and spawn interval. It avoids a continuously varying active-grain gain controller. If all records are occupied, a launch cannot create another grain. The older granular source path remains available through its model selection and has its own behavior; the dedicated model and sampler's Granular stretch mode are distinct. Waveform cursors and displayed grain markers are telemetry from the newest active voice, not a complete plot of every polyphonic grain.</p>
+<p>Implementation: <a href="https://github.com/logik93/logisth/blob/v1.0.2/Source/Granular.h">Granular.h</a>, <a href="https://github.com/logik93/logisth/blob/v1.0.2/Source/SourceData.h">SourceData.h</a>.</p>
+<h2 id="8-fm-am-and-width-modulation">8. FM, AM and width modulation</h2>
+<p>Every player has an internal sine modulator or can select another player as its FM/AM source. External source signals are bounded to [−1, 1] and read from the previous sample. This makes circular routes causal and avoids solving an instantaneous feedback loop. Dependency analysis keeps required muted sources running. Source level, source envelope and output panning do not simply act as the external modulator's gain: the modulation tap is taken from the player's weighted source signal before its audible output gain.</p>
+<p>The control labeled FM is implemented as phase modulation:</p>
+<pre class="text"><code>phase_offset_cycles = FM_index * modulator / (2*pi)
+AM_gain = 1 - AM_depth * (1 - clamp(modulator, -1, 1))/2</code></pre>
+<p>FM index spans 0–8. AM depth spans 0–1 and is unipolar amplitude modulation, not bipolar ring modulation. Internal ratio controls set the sine modulator rate relative to the carrier; when another player is selected, that source has its own tuning. Sample modes translate phase modulation into a read-position offset.</p>
+<p>WIDTH/PWM applies to every source type. Duty is bounded to 0.01–0.99. For periodic non-pulse waves and wavetable frames, phase is remapped in two linear segments:</p>
+<pre class="text"><code>phase &lt; width:  mapped_phase = 0.5 * phase / width
+otherwise:      mapped_phase = 0.5 + 0.5*(phase-width)/(1-width)</code></pre>
+<p>At width 0.5 this is the identity. Pulse waves move their actual duty edges. Noise uses a softened duty gate. Sampler/granular modes warp local 40 ms read windows. These are source-appropriate width effects rather than identical spectral operations. PWM adds a sine offset to width, optionally tempo synced. FM/AM/width targets can address a single player, a part or part combinations.</p>
+<p>Implementation: <a href="https://github.com/logik93/logisth/blob/v1.0.2/Source/PhaseWidth.h">PhaseWidth.h</a>, <a href="https://github.com/logik93/logisth/blob/v1.0.2/Source/Engine.h">Engine.h</a>.</p>
+<h2 id="9-modulation-matrix-and-performance-macros">9. Modulation matrix and performance macros</h2>
+<p>Two modulation envelopes and two LFOs each have two destination/amount routes. Four miscellaneous selectors provide two more routes each: sixteen matrix routes in total. Sources include velocity, key tracking, channel/poly pressure, mod wheel, pitch wheel, part amp envelopes, both modulation envelopes/LFOs, step velocity and unipolar/bipolar per-note random values.</p>
+<p>LFO shapes include sine, triangle, saw, ramp, square, quarter pulse, sample-and-hold, smooth random and positive sine/triangle variants. Free LFOs retain common clock phase between notes; other LFOs use voice-local state. Synced rates use musical divisions; free rates use Hz. LFO rate/gain feedback destinations use the previous sample's modulation values. Internal effective rate is bounded to 0.001–200 Hz.</p>
+<p>A route adds source multiplied by Amount/10. Targets then apply their own unit scaling and limits. For example, pitch uses 48 semitones per normalized unit, filter cutoff uses 120 semitones, and FM uses eight index units. Individual and group destinations add together. A+B affects only A and B; C and A+C/B+C/A+B+C are explicit scopes. WT POS is independently addressable for all six players.</p>
+<p>Effect modulation is monophonic: distortion amount and phaser frequency use the newest active voice's modulation value. It is not six independent effect racks. Four Morph macros each assign up to four From/To target ranges. Macro application maps normalized values through the destination's parameter skew; if multiple macro routes overwrite the same parameter, later evaluated assignments win. Mutate operates on eligible targets with category locks and one-step undo. Macro names, routes and locks are stored with the patch.</p>
+<p>Implementation: <a href="https://github.com/logik93/logisth/blob/v1.0.2/Source/Modulation.h">Modulation.h</a>, <a href="https://github.com/logik93/logisth/blob/v1.0.2/Source/Morph.h">Morph.h</a>, <a href="https://github.com/logik93/logisth/blob/v1.0.2/Source/PluginProcessor.cpp">PluginProcessor.cpp</a>.</p>
+<h2 id="10-filters-routing-and-stereo">10. Filters, routing and stereo</h2>
+<p>Each part selects A, B, A+B, None, C, A+C, B+C or A+B+C as its filter input. The three stereo filters are per note, not just one global effect on the completed mix. Each provides low-pass, high-pass, band-pass or bypass; the 24 dB selection cascades two two-pole stages, while 12 dB uses one.</p>
+<p>The filter is a topology-preserving state-variable design. Its frequency coefficient is tan(π cutoff/Fs). Drive scales input by 1+12*Drive and applies saturation; Warm chooses tanh instead of x/(1+abs(x)). State saturation also limits the high-resonance condition. The effective cutoff law is:</p>
+<pre class="text"><code>offset = global_cutoff + 120*matrix_cutoff + (note-60)*keytrack
+cutoff = clamp(local_cutoff * 2^(clamp(offset,-180,180)/12), 20, 0.43*Fs)
+resonance = clamp(local_resonance + global_resonance + matrix_resonance, 0, 1)</code></pre>
+<p>Global FILTER CONTROL therefore offsets all three local filters while retaining their relative settings. Cutoff is smoothed over approximately 10 ms.</p>
+<p>Unison Stereo spreads noncentral lane groups with separation 2w/(1+w²), where w is the 0–1 Stereo value. Full width sends left and right groups exclusively to their respective channels; a center lane stays centered. Pan shifts the complete group, so full Pan reaches the selected side. Equal-power gains are sqrt((1-pan)/2) and sqrt((1+pan)/2). The engine's final sqrt(2) calibration gives unity per channel for one centered full-scale mono source at unity output settings. No note-count-dependent automatic gain controller is applied.</p>
+<p>The sum scope displays L+R, not (L+R)/2. Part A/B/C traces are pre-effect part contributions with Main and live-order transition scaling; the sum is the final post-limiter stereo sum. Do not interpret part traces as isolated post-effect stems. The separate player scopes are pre-filter traces. Stereo measurements are in the report linked in section 18; width does not guarantee a fixed correlation for every source/phase.</p>
+<p>Implementation: <a href="https://github.com/logik93/logisth/blob/v1.0.2/Source/Engine.h">Engine.h</a>, <a href="https://github.com/logik93/logisth/blob/v1.0.2/Source/Stereo.h">Stereo.h</a>, <a href="https://github.com/logik93/logisth/blob/v1.0.2/Source/Gain.h">Gain.h</a>, <a href="https://github.com/logik93/logisth/blob/v1.0.2/Source/PluginProcessor.cpp">PluginProcessor.cpp</a>.</p>
+<h2 id="11-chords-arpeggiator-and-midi">11. Chords, arpeggiator and MIDI</h2>
+<p>Chord mapping contains 128 key assignments with up to eight output notes each. Overlapping held chords use note reference counts, so releasing one trigger does not stop a note still owned by another trigger. Built-in chord types and learned mappings can be edited and stored in the patch.</p>
+<p>The Legacy arpeggiator supplies ordered, alternating, random, played-order, step and chord behavior. Pattern uses independently sized Note, Octave, Velocity, Gate/Tie, Repeat and Chance lanes, each up to 32 steps. Repeats subdivide a step up to four times. Gate is relative to the resulting repeat interval. Chance uses the engine's repeatable pseudorandom generator. Swing alternates long/short step durations. Latch, sustain and transport changes affect retained notes; disable/reset paths emit the appropriate releases. Graphs mode is not exposed.</p>
+<p>With Sync, step duration follows tempo and division; otherwise it follows a time value. Host transport position informs stop/seek handling. Generated MIDI can be routed to the host. Actual availability of an instrument's MIDI output depends on host routing support. MIDI-only mode retains chord/arp/controller processing but skips synth audio and effect rendering. Switching modes clears existing voices/effect state so hidden audio voices do not accumulate.</p>
+<p>Fixed MIDI Velocity, off by default, forces Note On velocity to one for synthesis and generated MIDI. It is patch/instance state, not an appearance-only setting. Incoming MIDI is handled with sample offsets; parameter snapshots are collected per process call, so this does not assert sample-accurate host automation of every parameter.</p>
+<p>Implementation: <a href="https://github.com/logik93/logisth/blob/v1.0.2/Source/Chords.h">Chords.h</a>, <a href="https://github.com/logik93/logisth/blob/v1.0.2/Source/Arpeggiator.h">Arpeggiator.h</a>, <a href="https://github.com/logik93/logisth/blob/v1.0.2/Source/ArpTypes.h">ArpTypes.h</a>.</p>
+<h2 id="12-effect-rack-and-reverb">12. Effect rack and reverb</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr class="header">
+<th>Stage</th>
+<th>Implementation</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Distortion</td>
+<td>Four serial modules in Legacy, or 1–4 parallel bands with LR24 crossovers; tanh/folding/clipping/hold/quantization</td>
+</tr>
+<tr class="even">
+<td>Phaser</td>
+<td>Six all-pass stages per channel, LFO frequency sweep, feedback and width</td>
+</tr>
+<tr class="odd">
+<td>Chorus</td>
+<td>Fractional delay modulation with stereo phase offsets; optional dual lines and feedback</td>
+</tr>
+<tr class="even">
+<td>Legacy EQ</td>
+<td>Two corrected second-order shelving filters: bass and treble</td>
+</tr>
+<tr class="odd">
+<td>Graphic EQ</td>
+<td>Sixteen independent biquad slots with frequency, gain, Q, type and enable</td>
+</tr>
+<tr class="even">
+<td>Reverb</td>
+<td>Five original algorithmic models or prepared JUCE convolution</td>
+</tr>
+<tr class="odd">
+<td>Delay</td>
+<td>Stereo fractional delay, separate L/R times/divisions, feedback filtering, smear, ping-pong and width</td>
+</tr>
+</tbody>
+</table></div>
+<p>Distortion slot 1 retains the original Type/Drive/Mix and its modulation target. <code>dist1on</code> defaults on; the group master retains its existing bypass behavior. Three further slots each append On/Type/Drive/Mix, default disabled. DistortionOrder is a validated 8-bit permutation of four identities. Factory Init uses 1/2/3/4. Presets/projects save it as optional <code>distortionOrder</code> metadata; missing metadata uses the original order. Invalid metadata rejects the patch before publication. Each stage owns independent hold counters, stereo memory and smoothing. The selected order drives actual serial processing. Reordering uses the same 5 ms down/switch/5 ms up policy as the outer rack, without duplicate banks. Disabled or zero-Mix stages are skipped; all-disabled groups bypass without distortion work.</p>
+<p>Optional Multiband routing reuses those four module identities as parallel frequency bands. Five host parameters are appended after the preceding 1084: <code>distbandmode</code> (Legacy/Multiband, default Legacy), <code>distbands</code> (four choices, default four), and <code>distcross1/2/3</code> (20–20000 Hz, defaults 200/2000/8000 Hz). Legacy calls the original serial rack unchanged. A one-band parallel configuration has no split. Order maps the first N identities to ascending bands; the remaining modules are preserved in state but excluded from activity and rendering.</p>
+<p>Each split uses fourth-order Linkwitz–Riley low/high paths: two cascaded second-order Butterworth filters implemented with TPT state-variable integrators. Lower bands pass through second-order allpasses for all subsequent splits. This aligns phase at recombination: the summed linear signal has unity magnitude, with frequency-dependent phase rather than dry-signal identity. The filters add no fixed block/host latency. Stereo channels have separate state and identical coefficients. Cutoffs are bounded below 0.45 Fs and maintain 3% ascending spacing; nonfinite inputs use defaults. A 15 ms logarithmic smoother updates coefficients every 32 samples. TPT state preserves DC while coefficients move.</p>
+<p>Band enable and dry/filtered blend use approximately 10 ms smoothing; bypassed bands pass their clean frequency region. All-off settles to exact dry bypass. Mode, count, model and assignment changes use a 5 ms down/switch/reset/5 ms up transition. Only the active N band processors run. Inactive slots cannot wake Distortion. Its remaining transition is included in idle detection, and silence clears filter state. The original module-1 modulation target follows module 1, including reassignment to another band. This is host-rate nonlinear processing; no new oversampling or true multiband modulation matrix is claimed.</p>
+<p>A dedicated preallocated four-lane ring captures Distortion's actual pre/post position in the reorderable chain. Its analyzer reuses EqSpectrum and the shared SpectrumPlot drawing helper, with independent mode/tilt preferences. Capture is requested only for a visible Multiband graph with analysis enabled. FFT and plot response calculation stay on the GUI thread. Audio capture uses two fixed 512-frame member arrays, with no callback allocation or file access. See <a href="https://github.com/logik93/logisth/blob/v1.0.2/docs/MULTIBAND_REVIEW.md">MULTIBAND_REVIEW.md</a> for reconstruction and transition data.</p>
+<p>The EQ analyzer taps full-rate L/R immediately before and after its current position in the movable effects rack, including bypassed EQ. Four atomic ring lanes carry pre-L/pre-R/post-L/post-R. Audio only copies samples; a GUI-side 2048-point radix-2 FFT applies a periodic Hann window. One-sided amplitudes are normalized by the window sum (DC/Nyquist have no doubling). The trace averages L/R power before 10 log10, avoiding antiphase cancellation. A bin-centered full-scale stereo sine is 0 dBFS; doubling it gives +6.0206 dB. Attack/release smoothing is visual. Display tilt is <code>1.5 * choice * log2(f/1000)</code>, choice 0–4. It does not alter audio coefficients. Off or a hidden/closed EQ view disables capture and FFT work. The response curve remains available with the analyzer off.</p>
+<p>Graphic EQ types are Bell, Low shelf, High shelf, High-pass, Low-pass, Notch, Band-pass and All-pass. Frequency spans 20–20000 Hz, gain −18–18 dB and Q 0.1–20; coefficients additionally respect the host's Nyquist region. Ten slots start enabled and six are available to add. Gain/frequency/Q smoothing uses about 15 ms; type changes crossfade over about 20 ms. The graph evaluates the same coefficient model used by processing. Auto Gain estimates the largest boost over 96 log-spaced frequencies and compensates it; it is not a loudness meter or an LUFS normalization process.</p>
+<p>The algorithmic reverb family uses sixteen delay lines with an orthogonal Householder feedback transform, stereo injection/output signs, input diffusion, damping and DC control. Size changes line lengths; Decay derives feedback gains from a nominal 60 dB decay target. Decay spans 0.2–20 seconds. Character controls and nonlinear behavior can change the measured decay envelope.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr class="header">
+<th>Model</th>
+<th>Distinguishing processing</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Hall</td>
+<td>Longer feedback delays and subtle delay modulation</td>
+</tr>
+<tr class="even">
+<td>Room</td>
+<td>Shorter delays with explicit stereo early-reflection taps</td>
+</tr>
+<tr class="odd">
+<td>Spring</td>
+<td>Additional dispersive all-pass stages in the feedback paths</td>
+</tr>
+<tr class="even">
+<td>Vintage</td>
+<td>Modulated delays, restricted high-frequency response and feedback saturation</td>
+</tr>
+<tr class="odd">
+<td>Shimmer</td>
+<td>Windowed pitch-shifted feedback injection; pitch −12–24 semitones</td>
+</tr>
+<tr class="even">
+<td>Convolution</td>
+<td>Stereo partitioned FIR driven by an imported or factory impulse response</td>
+</tr>
+</tbody>
+</table></div>
+<p>These five characters share an original network design. Spring is a dispersive digital model, not a physical mechanical simulation. Reverb Dry/Wet uses an equal-power cosine/sine crossfade; Wet Gain supplies −24–24 dB. Model changes crossfade, running the old and new engines while required. Turning Reverb off clears its tail.</p>
+<p>Convolution uses JUCE <code>dsp::Convolution::NonUniform{256}</code>, prepared for stereo, 512-frame work chunks and zero added latency. Mono IRs are duplicated; stereo IRs apply left-to-left and right-to-right convolution, not four-channel true stereo cross-convolution. Trimming and JUCE's built-in normalization are disabled. The logisth Normalise option measures the actual prepared/resampled response and uses 1/sqrt(max(left_energy,right_energy)), capped at 1e6. It is energy normalization rather than peak normalization. Gain changes are smoothed.</p>
+<p>The stereo review decodes real WAV fixtures and compares the complete reverb stage against direct L/R FIR reference convolution: 48 cases combine three rates, mono/asymmetric-stereo IRs, independent/left-only/right-only/antiphase inputs and normalization on/off. Two further cases render the actual sampler through IR and Main. The recorded maximum sample error is approximately 1.04e-7; the guard threshold is 2e-5. C++ allocation guards cover audio processing. This validates lane mapping, polarity, shared normalization and default Width=1, Predelay=0; it is not an acoustic quality comparison for arbitrary recorded IRs.</p>
+<p>IR file rates span 8–192 kHz. The 32 MiB stereo PCM budget must fit both the source and its host-rate resampled length; convolution preparation accepts host rates 8–384 kHz. This bound excludes FFT partitions and other engine overhead. New prepared engines crossfade over about 100 ms. The waveform uses 512 cached min/max bins per channel. IR drag/drop imports asynchronously and its PCM is embedded in saved patches. The included chamber IR is generated by original project code rather than an external recording collection.</p>
+<p>Implementation: <a href="https://github.com/logik93/logisth/blob/v1.0.2/Source/Effects.h">Effects.h</a>, <a href="https://github.com/logik93/logisth/blob/v1.0.2/Source/Distortion.h">Distortion.h</a>, <a href="https://github.com/logik93/logisth/blob/v1.0.2/Source/EqSpectrum.h">EqSpectrum.h</a>, <a href="https://github.com/logik93/logisth/blob/v1.0.2/Source/Equalizer.h">Equalizer.h</a>, <a href="https://github.com/logik93/logisth/blob/v1.0.2/Source/Reverb.h">Reverb.h</a>, <a href="https://github.com/logik93/logisth/blob/v1.0.2/Source/ImpulseReverb.cpp">ImpulseReverb.cpp</a>.</p>
+<h2 id="13-compressor-clipper-and-final-limiter">13. Compressor, clipper and final limiter</h2>
+<p><strong>Modern compressor.</strong> The linked detector is max(abs(L),abs(R)). Reduction is computed in dB, smoothed with separate attack/release coefficients, converted to linear gain and applied equally to both channels. Threshold and ratio govern steady-state response; Knee spans 0–24 dB, Makeup −24–24 dB, and Mix supports parallel compression. For input level I, threshold T, ratio R and knee K:</p>
+<pre class="text"><code>x = I - T; slope = 1 - 1/R
+K = 0:          reduction = max(0,x) * slope
+x &lt;= -K/2:      reduction = 0
+x &gt;=  K/2:      reduction = x * slope
+otherwise:      reduction = slope * (x + K/2)^2 / (2*K)
+coefficient = exp(-1/(time_seconds*Fs))</code></pre>
+<p>The curve and its first derivative are continuous across the soft-knee joins. Legacy smooths the amplitude detector before calculating hard-knee reduction; its Knee control is inactive. States missing the new <code>compmode</code> parameter restore Legacy; newly initialized instances use Modern. The panel plots the transfer function and actual input/output waveform, peaks and reduction.</p>
+<p><strong>Clipper.</strong> Hard clips to ceiling amplitude C. Soft adds a quadratic transition with half-width w=C*Knee: below C−w the positive curve is linear; above C+w it is flat at C; between them it is a−(a−(C−w))²/(4w), with sign restored. Drive spans 0–24 dB, Ceiling −24–0 dBFS, Knee 0–1, and Mix 0–1. At partial Mix the dry component can exceed the clipper ceiling, so the clipper is not a final ceiling guarantee for parallel operation. Later rack stages and Main can also raise levels after the Clipper.</p>
+<p>Antialiased quality applies first-order antiderivative antialiasing, ADAA:</p>
+<pre class="text"><code>wet[n] = (F(x[n]) - F(x[n-1])) / (x[n] - x[n-1])</code></pre>
+<p>F is the analytic integral of the selected curve. A small-difference fallback evaluates the midpoint to avoid cancellation. This reduces certain aliases without an oversampling buffer. Wet has approximately half a sample of phase lag while dry remains the original signal; no host latency is reported. Direct quality remains available. Bypass and Mix=0 are exact bypass paths.</p>
+<p><strong>Limiter.</strong> The final limiter follows Main, so changing Main cannot bypass its ceiling. It links channels by their maximum absolute sample, applies immediate required gain reduction and exponential release, then clamps actual output samples to the ceiling. Drive spans 0–24 dB, Ceiling −24–0 dBFS and Release 5–2000 ms. It is a sample-peak limiter with no lookahead or intersample true-peak detector. It does not guarantee a ceiling after downstream sample-rate conversion or reconstruction. Hard instantaneous control can generate distortion; release and drive affect that tradeoff. The display shows reduction history and activity.</p>
+<p>Implementation: <a href="https://github.com/logik93/logisth/blob/v1.0.2/Source/Dynamics.h">Dynamics.h</a>, <a href="https://github.com/logik93/logisth/blob/v1.0.2/Source/DynamicsViews.h">DynamicsViews.h</a>.</p>
+<h2 id="14-real-time-execution-and-memory-ownership">14. Real-time execution and memory ownership</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr class="header">
+<th>Context</th>
+<th>Responsibilities</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Audio callback</td>
+<td>MIDI scheduling, prepared DSP, fixed-size scratch buffers, atomic telemetry publication</td>
+</tr>
+<tr class="even">
+<td>Import/preparation worker</td>
+<td>File decoding, tables/markers/peaks, sample and IR state work, spectral preparation</td>
+</tr>
+<tr class="odd">
+<td>UI/message thread</td>
+<td>Controls, rendering, dialogs, theme scanning and requesting work</td>
+</tr>
+<tr class="even">
+<td>Host state callbacks</td>
+<td>Bounded state serialization/restoration; do not call these heavy operations from a real-time audio loop</td>
+</tr>
+</tbody>
+</table></div>
+<p>Source PCM, table data and IR descriptions are immutable after publication. Prepared spectral/convolution engines are published through stable ownership structures. Retired source data and convolution engines remain alive while audio can reference them and are destroyed outside processing. Large voice resets copy a prepared heap record instead of constructing nested arrays on a small audio thread stack. An integration allocation guard covers actual processor callbacks. This is evidence for tested paths, not a guarantee about every host/wrapper call.</p>
+<p>CPU control includes direct bypass of a disabled effects rack and a quiet gate for enabled empty/tail-complete processing. The gate accounts for the sum of serial first-response times, including IR duration, pre-delay and Delay time, avoiding sleep before a combined late first echo in either order. Compressor recovery and effect LFO clocks advance while idle. Idle synth LFO phases and random-wrap ordering also continue.</p>
+<p>Active oscillator dependencies are resolved before rendering, including transitive FM/AM dependencies and smoothed nonzero depths. Unrelated muted players skip waveform work. Part C is activated only when required. MIDI-only mode bypasses all audio generation. Reverb configures selected/fading models; disabled EQ bands skip their active filter work. Not every enabled DSP block becomes cost-free just because its audible contribution is low.</p>
+<p>Meters/scopes use bounded rings and atomics. Only the selected dynamics page captures its waveform/activity trace. IR drawing reads cached peaks rather than scanning millions of samples every GUI frame. Actual CPU still scales with note polyphony, unison, interpolation kernels, spectral windows and active tails.</p>
+<p>Implementation: <a href="https://github.com/logik93/logisth/blob/v1.0.2/Source/Engine.h">Engine.h</a>, <a href="https://github.com/logik93/logisth/blob/v1.0.2/Source/Effects.h">Effects.h</a>, <a href="https://github.com/logik93/logisth/blob/v1.0.2/Source/Telemetry.h">Telemetry.h</a>, <a href="https://github.com/logik93/logisth/blob/v1.0.2/Source/SourceAssets.cpp">SourceAssets.cpp</a>.</p>
+<h2 id="15-presets-state-and-appearance-files">15. Presets, state and appearance files</h2>
+<p>The processor stores a JUCE ValueTree named <code>LogisthState</code>, serialized as JUCE binary XML. Current schema is 4. A <code>.logisth</code> preset uses the same bounded state model and contains parameter IDs/values, preset metadata, macro metadata, patterns, chord mappings and imported assets. It is not a WAV file or a ZIP archive. Preset writing uses a temporary file and replacement on success.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr class="header">
+<th>Item</th>
+<th>Storage / behavior</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Parameter values</td>
+<td><code>PARAM</code> children with stable <code>id</code> and numeric <code>value</code></td>
+</tr>
+<tr class="even">
+<td>Preset name / comment</td>
+<td><code>presetName</code> up to 128 characters on restore; editable <code>presetComment</code> up to 4096</td>
+</tr>
+<tr class="odd">
+<td>Source asset</td>
+<td><code>SOURCE</code> child with slot, regions and compressed stereo float PCM, source rate, frame size and name</td>
+</tr>
+<tr class="even">
+<td>Impulse response</td>
+<td><code>IMPULSE</code> child, format 1, compressed PCM/rate/channels/name</td>
+</tr>
+<tr class="odd">
+<td>Chords / patterns</td>
+<td><code>CHORDMAP</code>/<code>CHORD</code> data and stored <code>PATTERN</code> trees</td>
+</tr>
+<tr class="even">
+<td>Audio effect order</td>
+<td>Optional root <code>effectOrder</code>, eight 3-bit stage IDs packed into 24 bits; duplicates/unknown bits rejected</td>
+</tr>
+<tr class="odd">
+<td>Appearance</td>
+<td>Separate <code>appearance.json</code>, theme JSON files and per-instance draft state</td>
+</tr>
+</tbody>
+</table></div>
+<p>Factory source data can be reconstructed instead of embedding an identical factory blob. Imported samples and IRs travel with the patch, so loading a saved patch does not depend on the original file path. Decompression, size, finite-value and format checks precede asset publication. Total host/preset state is limited to 1 GiB, independently of the individual asset budgets.</p>
+<p>Asset compression/decompression uses JUCE's <code>GZIPCompressorOutputStream</code> and <code>GZIPDecompressorInputStream</code>; the stream is stored as binary data inside the ValueTree. Use the project's reader/writer for this payload rather than treating it as a standalone audio file.</p>
+<p>The 1055-entry v0.9.6.1 host contract freezes IDs, ordering, ranges, defaults, integer flags and choice lists. The full 1070-entry v0.9.6.2 contract is also frozen. Version 0.9.7 appends <code>polyphonyextra</code> (0–16, default 0). Effective POLY is the preserved 1–16 base plus this extension, bounded to 32. The editor presents one 1–32 numeric control and publishes gestures to the two host parameters. Composite numeric/menu attachments cache their incoming values instead of re-reading an APVTS raw adapter that may still contain the preceding event. This also prevents one-update-late detune and extended destination displays. Old automation and presets with zero extension retain their previous values. The subsequent thirteen distortion controls are appended after polyphonyextra; all 1071 earlier definitions remain intact. The next five multiband parameters are likewise appended, preserving all 1084 earlier indices and IDs. Spectral preparation, readiness and voice indexing use the same effective count. Restoration clamps values, handles non-finite numbers and rounds discrete controls. Missing fields use defined compatibility defaults; <code>compmode</code>, <code>arppattern</code> and granular model selections have explicit legacy fallbacks. The audible Init patch can differ from raw parameter declaration defaults because initialization loads the factory Init state.</p>
+<p>Default user presets live under the system user application-data directory in <code>logisth/Presets</code>; the browser supports a user-selected folder and search. Themes live in a configurable <code>logisth/themes</code> folder. Version-2 theme JSON specifies twelve colors, font family, background style and knob style. Files are scanned every two minutes, with a manual rescan option. Theme files above 64 KiB or with invalid fields are ignored; scanning is not recursive.</p>
+<p>Appearance stores the selected saved theme, last window dimensions and accepted 80–200% scale. The message-thread MODULATION disclosure hides the complete modulation row without touching parameter attachments or DSP state. Logical height changes from 860 to 640, the keyboard/footer shift up by 220, and the host editor receives an actual resize. The active aspect ratio and resize bounds are updated together. appearance.json stores modulationCollapsed alongside width, height and the exact typed scale; old preferences default to expanded. Twenty generated PNG originals are embedded in a separate artwork resource library. A selection decodes only that image on the message thread; the original compressed bytes are embedded in saved themes through the existing version-3 backgroundImage field. The palette, font and logos are independent of this choice. No image data is allocated or decoded on the audio thread. Unsaved edits survive editor close/reopen/minimization within the same instrument instance, but must be saved as a theme to survive destroying that instance. Sound presets do not replace theme, scale or window size. Font data is embedded in the plug-in for its bundled families; custom family names require an installed font or fall back on the destination system.</p>
+<p><code>UserSettings.h</code> stores font size (80–125%), style (theme/regular/bold/italic/ bold italic), glyph antialiasing, quality (Native/grayscale/2x/4x), edge weight (0.5–2), analyzer mode/tilt and successful chooser folders in <code>logisth/preferences.json</code>. Access is locked and restricted to GUI/ import threads; writes use a temporary file and replacement. Folder paths are excluded from sound presets. Removed paths resolve to an existing ancestor. Separate preset-open/save, shared six-player sample, IR and library paths survive instances. Failed imports/loads do not replace remembered directories.</p>
+<p>Font sizes are derived from stable base sizes to avoid cumulative scaling. <code>TextRendering.h</code> intercepts shaped glyph draws, including editable text, while forwarding vector operations directly to the original graphics context. The old full-console image cache and low-quality bitmap resampling are removed. The editor uses one uniform scale despite integer window-size rounding. These changes avoid second-stage text resampling, aspect distortion and stale transparent text.</p>
+<p>Native mode retains platform hinting at neutral weight. Grayscale uses a software outline mask; 2x/4x modes rasterise only glyph masks at that multiple of physical resolution, then average coverage to physical pixels. Default quality is 2x. Edge weight applies <code>coverage^(1/weight)</code> through a per-paint 256-entry lookup; weight is 0.5–2 (neutral 1). Off thresholds adjusted coverage to 0/255. Native with adjusted weight uses grayscale. Curves/knobs are unaffected. Shaped glyph positions and fallback typefaces are retained; glyphs without outlines use the native renderer. Synthetic italic slants outlines when an italic face is absent. Popups/tooltips use the same settings. Work stays on the GUI thread; dirty-region repaints continue through JUCE without a full-window backing image.</p>
+<p>Theme format 3 embeds optional original PNG/JPEG bytes as base64, plus image mix and panel opacity. Optional <code>gradientAmount</code> and <code>gridOpacity</code> are finite 0–1 values, default 0.75 in older files. Gradient composition affects the canvas, panel shells and central screen; grid opacity scales its line layer, with exact off at zero. Slider previews repaint existing controls without rebuilding layout or attachments. Input is bounded to 16 MiB / 4096 x 4096; image headers are checked before decoding. The selected image is decoded on palette/image changes, not in paint/audio callbacks. It is cropped to the canvas and composited under panels. Grid and non-flat panel transparency are effective within the panels; flat factory palettes retain opaque panels. JSON scan size accommodates the bounded base64 payload, and content stamps use compact hashes. Versions 1/2 remain readable. FILES directory selection is an application preference; library changes refresh the preset browser. Context popups bind the owning look-and-feel explicitly instead of using the application default.</p>
+<p>Physical glyph masks are coloured in software and drawn as small RGBA images. This avoids native alpha-clip bitmap brushes that can re-filter masks. Every vector primitive, including optional native fast paths for ellipses, rounded rectangles, strokes and thick lines, is forwarded explicitly to the original context. Default fallback implementations must not replace native geometry.</p>
+<p>The exact owner-provided SVG is embedded through BinaryData and tinted on palette changes. Standard headers use the smaller mark with no adjacent wordmark; the footer identifies manufacturer/product/instrument. AP bitmap bytes and logo geometry remain unchanged.</p>
+<p>Knob colors are prepared on palette/style changes for normal and screen contexts. Screen knobs use that screen's actual surface, including under Light. Cached needle colors target at least 4.5:1 relative-luminance contrast against both face gradient endpoints; enabled arcs/tracks target 3:1 against their surrounding surface. Extremely contradictory custom gradients can have no color meeting both endpoint targets; the fallback chooses the better black/white direction. Standard themes pass all tested contexts/styles. Primary screen plot accents are also prepared for at least 3:1 contrast on the screen surface. This is a component contrast check, not a certification of the entire interface. Rendering does not modify the supplied theme files.</p>
+<p>Implementation: <a href="https://github.com/logik93/logisth/blob/v1.0.2/Source/PresetLibrary.cpp">PresetLibrary.cpp</a>, <a href="https://github.com/logik93/logisth/blob/v1.0.2/Source/SourceAssets.cpp">SourceAssets.cpp</a>, <a href="https://github.com/logik93/logisth/blob/v1.0.2/Source/UserSettings.h">UserSettings.h</a>, <a href="https://github.com/logik93/logisth/blob/v1.0.2/Source/TextRendering.h">TextRendering.h</a>, <a href="https://github.com/logik93/logisth/blob/v1.0.2/docs/THEMES.md">THEMES.md</a>.</p>
+<h2 id="16-open-source-components-and-licenses">16. Open-source components and licenses</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr class="header">
+<th>Component</th>
+<th>Role</th>
+<th>License / provenance</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Original logisth code and documentation</td>
+<td>Synth engine, adapters, algorithms, UI and tools</td>
+<td>MIT; wavelogik</td>
+</tr>
+<tr class="even">
+<td>JUCE 8.0.6</td>
+<td>Host wrappers, UI, audio/file utilities and convolution</td>
+<td>AGPLv3 or commercial JUCE license; upstream module notices apply</td>
+</tr>
+<tr class="odd">
+<td>clap-juce-extensions</td>
+<td>CLAP wrapper integration</td>
+<td>MIT; commit pinned below</td>
+</tr>
+<tr class="even">
+<td>CLAP</td>
+<td>Plug-in ABI/headers used by the wrapper</td>
+<td>MIT; submodule revision selected by the pinned wrapper</td>
+</tr>
+<tr class="odd">
+<td>Signalsmith Stretch 1.3.2</td>
+<td>Spectral stretch/pitch engine, also used by Kick</td>
+<td>MIT; unmodified vendored headers</td>
+</tr>
+<tr class="even">
+<td>Signalsmith Linear 0.6.6</td>
+<td>FFT, STFT and supporting linear operations for Stretch</td>
+<td>MIT; unmodified vendored headers</td>
+</tr>
+<tr class="odd">
+<td>Open Sans Regular/Semibold</td>
+<td>Embedded interface/document font</td>
+<td>Apache-2.0</td>
+</tr>
+<tr class="even">
+<td>Ioskeley Mono Term Nerd Font Mono 2.2.0</td>
+<td>Embedded Regular/Bold theme fonts</td>
+<td>SIL OFL 1.1; upstream font notices retained</td>
+</tr>
+<tr class="odd">
+<td>VST3 SDK within the JUCE dependency</td>
+<td>VST3 wrapper interfaces</td>
+<td>Its bundled SDK license and notices remain applicable</td>
+</tr>
+</tbody>
+</table></div>
+<p>Pinned source revisions:</p>
+<pre class="text"><code>JUCE
+51a8a6d7aeae7326956d747737ccf1575e61e209
+clap-juce-extensions
+6bde108329ff9fc24404b79b8b397261a75cf6a8
+Signalsmith Stretch
+88061fd4eda56a2353c5d65c74aa3f4ccf76f9da
+Signalsmith Linear
+7bb1c8f36794d6980080ce817c91f8da8fe56a66</code></pre>
+<p>The portable Signalsmith implementation is used by the current project build; optional platform backend headers in the vendored tree do not mean those external backends are enabled or separately linked. The wavetable FFT, filters, granular/WSOLA paths, character reverbs, equalizers, dynamics, MIDI sequencing and Kick attack/tail adapter are original project implementations. JUCE supplies the convolution engine; logisth supplies its preparation, gain, state and UI adapter.</p>
+<p>Original-code MIT does not relicense JUCE, SDKs, fonts or other dependencies. Binary distribution must satisfy the selected dependency licensing route and retain the required notices. This document does not establish possession of a commercial JUCE license. Optional VST2 requires a separately obtained licensed SDK; it is disabled in public builds and is not bundled.</p>
+<p>The optional AP skin artwork was supplied for this project and has its own permission notice in the licenses directory. It is not a DSP dependency or a font package. Existing asset permissions are retained independently of source code licensing.</p>
+<p>Full texts and provenance: <a href="https://github.com/logik93/logisth/blob/v1.0.2/THIRD_PARTY_NOTICES.md">THIRD_PARTY_NOTICES.md</a>, <a href="https://github.com/logik93/logisth/blob/v1.0.2/licenses">licenses</a>, <a href="https://github.com/logik93/logisth/blob/v1.0.2/assets/fonts/ioskeley/NOTICE.md">font notices</a>, <a href="https://github.com/logik93/logisth/blob/v1.0.2/Source/vendor/signalsmith-stretch/UPSTREAM.json">UPSTREAM.json</a>.</p>
+<p>Upstream projects: <a href="https://github.com/juce-framework/JUCE">JUCE</a>, <a href="https://github.com/free-audio/clap-juce-extensions">CLAP wrapper</a>, <a href="https://github.com/free-audio/clap">CLAP</a>, <a href="https://github.com/Signalsmith-Audio/signalsmith-stretch">Signalsmith Stretch</a>, <a href="https://github.com/Signalsmith-Audio/linear">Signalsmith Linear</a>, <a href="https://github.com/ahatem/IoskeleyMono">Ioskeley Mono</a>.</p>
+<h2 id="17-build-validation-and-release-engineering">17. Build, validation and release engineering</h2>
+<p>An ordinary build requires Git, CMake 3.22+, a C++17 compiler, Python 3 and platform audio/window development libraries. CMake fetches pinned JUCE and CLAP wrapper sources. Header-only core DSP tests can be built without the plug-in framework:</p>
+<div class="sourceCode" id="cb9"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="fu">cmake</span> <span class="at">-S</span> . <span class="at">-B</span> build-core <span class="at">-DLOGISTH_PLUGINS</span><span class="op">=</span>OFF <span class="at">-DBUILD_TESTING</span><span class="op">=</span>ON</span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a><span class="fu">cmake</span> <span class="at">--build</span> build-core <span class="at">--parallel</span> 2</span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a><span class="ex">ctest</span> <span class="at">--test-dir</span> build-core <span class="at">--output-on-failure</span></span></code></pre></div>
+<p>For full native packaging use the checked-in script on the target operating system, after installing the dependencies listed in README and the workflow:</p>
+<div class="sourceCode" id="cb10"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python</span> scripts/build_native.py <span class="at">--platform</span> linux-x86_64 <span class="at">--output</span> native-out</span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a><span class="ex">python</span> <span class="at">-m</span> unittest discover <span class="at">-s</span> scripts/tests</span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a><span class="ex">python</span> scripts/audit_algorithms.py</span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a><span class="ex">python</span> scripts/verify_theme_assets.py</span></code></pre></div>
+<p>Use <code>windows-x86_64</code> on Windows or <code>macos-universal</code> on macOS. The macOS build sets arm64+x86_64 and deployment target 11.0; tests execute on the CI runner's native architecture, and every packaged Mach-O binary is checked for both slices. This does not claim separate native test execution on both architectures. Windows uses an x64 toolchain. Linux packages are x86_64; BUILD_INFO records the actual required glibc version. Windows is unsigned and macOS ad-hoc signed, not notarized. Public packages contain VST3, CLAP and Standalone. The standard Windows system folders are <code>C:\Program Files\Common Files\VST3</code> and <code>C:\Program Files\Common Files\CLAP</code>. The user manual lists system/user locations for all three operating systems; whole bundles must remain intact.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr class="header">
+<th>Validation area</th>
+<th>Evidence</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Core DSP</td>
+<td>Engine, modulation, arp, hybrid/sample, studio, reverb, stretch, Part C, tail loop, unison, EQ, stereo and dynamics suites</td>
+</tr>
+<tr class="even">
+<td>Historical audio</td>
+<td>Frozen mono A/B capture comparison</td>
+</tr>
+<tr class="odd">
+<td>Host parameters</td>
+<td>Complete frozen 1055-definition comparison and appended controls</td>
+</tr>
+<tr class="even">
+<td>Processor / UI</td>
+<td>Real callback, state, bounds, control bindings, asset loading, IR drop, dynamics and allocation checks</td>
+</tr>
+<tr class="odd">
+<td>Native loading</td>
+<td>VST3 multi-instance playback on all platforms and CLAP binary playback on Linux</td>
+</tr>
+<tr class="even">
+<td>Memory diagnostics</td>
+<td>Separate Windows AddressSanitizer build/test run</td>
+</tr>
+<tr class="odd">
+<td>Dependency identity</td>
+<td>Vendored SHA-256 manifest and upstream source comparison</td>
+</tr>
+<tr class="even">
+<td>Release contents</td>
+<td>Architecture, source fingerprints, SHA-256, license/font/theme/manual presence</td>
+</tr>
+</tbody>
+</table></div>
+<p>The native release requires 20 Linux suites, 19 Windows suites, 19 macOS suites and 19 suites in the separate Windows AddressSanitizer run, with no skipped or failed suites. Linux also hosts the CLAP binary. It is not a count of assertions or a certification for every DAW. Rack adds all 40320 order permutations, three-rate comparison against frozen prior FX code, noncommuting signal fixtures and combined IR/Delay gaps. Processor integration adds real pointer/keyboard ordering, metadata, 32 notes and prepared streams, allocation/ceiling checks, Sample startup, layout and 120 theme/context/style/trim renders with actual needle-pixel measurements.</p>
+<p>Release scripts package committed source and documentation, then build native artifacts from the release tag. BUILD_INFO records version, source commit/tree fingerprints, test totals, binary architectures and hashes. Windows/Linux publish first; only afterward does macOS build and append to the same release. Public downloads are checked against SHA256SUMS; published tags and existing binary assets are preserved. Dependency pins improve traceability but do not by themselves guarantee bit-for-bit identical builds across different toolchains. BUILD_INFO also records the technical manual's identities and checks them during artifact reuse, preventing a reused archive from silently retaining an older reference.</p>
+<p>This manual is maintained beside the source. <code>python scripts/build_manual.py</code> renders the user and technical PDFs using ReportLab. Every subsequent release must update the software baseline, review changed sections and regenerate both PDFs. Source/native packages include this Markdown/PDF pair; release packaging also publishes them as separate downloads. Documentation-only updates can be pushed without changing the already released audio binaries or version tag. The technical identity manifest hashes CMake/runtime sources and Markdown with canonical LF newlines, and hashes the PDF's exact binary bytes. It detects a stale generated reference while remaining portable across Git newline settings.</p>
+<p>Implementation: <a href="https://github.com/logik93/logisth/blob/v1.0.2/CMakeLists.txt">CMakeLists.txt</a>, <a href="https://github.com/logik93/logisth/blob/v1.0.2/scripts/build_native.py">build_native.py</a>, <a href="https://github.com/logik93/logisth/blob/v1.0.2/.github/workflows/build.yml">build workflow</a>, <a href="https://github.com/logik93/logisth/blob/v1.0.2/docs/DEVELOPMENT.md">DEVELOPMENT.md</a>.</p>
+<h2 id="18-measurements-limits-and-source-index">18. Measurements, limits and source index</h2>
+<p>Unity calibration uses one centered full-scale sine, unity player/part/Main levels, full velocity, filter bypass and effects off. It reaches 0 dBFS peak per output channel. Ordinary patches may be quieter or louder because of Main, velocity, envelopes, phase, filters, layering and effects. Default Main 0.65 is intentional; the limiter is optional rather than an unconditional output AGC.</p>
+<p>The v0.9.6.1 stereo report measured approximately 0.003 L/R correlation and −0.03 dB Side/Mid ratio for its specified eight-voice detuned saw fixture at full width. At zero width the tested mono source is exactly mono. These values are fixture-specific, and that report remains identified with its measurement version.</p>
+<p>The v0.9.7 CPU comparison against v0.9.6.2 used Linux x86_64, C++17 -O2, 48 kHz, 512-frame blocks and medians of seven rounds of 128 blocks. All six compared fixture checksums match. Examples include 280.366 to 228.784 microseconds/block for the zero-depth muted-source fixture, 553.337 to 486.484 for an active muted FM source and 261.679 to 224.368 for a note following idle with free LFOs. Idle/bypass rows are near the timing floor. These fixed cases isolate specific work; they are not a universal speedup or total DAW CPU claim.</p>
+<p>The documented ADAA fixture measures one folded harmonic approximately 6.64 dB lower than Direct. It does not describe all aliases or every signal. Compressor and clipper CSVs plot the same static functions used by the engine and UI. Factory bank validation renders 96 profiles for the 48 authored presets and records peaks/levels; it does not guarantee safe peaks under every future performance.</p>
+<p>Reproduce core curve data with the CMake <code>dynamics_calibration</code> executable and CPU fixtures with <code>cpu_calibration</code>. Additional gain/factory/kick exports are provided by <code>processor_tests</code>; see the linked reports for arguments and conditions.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr class="header">
+<th>Reference</th>
+<th>Contents</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><a href="https://github.com/logik93/logisth/blob/v1.0.2/docs/CALIBRATION.md">CALIBRATION.md</a></td>
+<td>Gain reference, conditions and exported audio</td>
+</tr>
+<tr class="even">
+<td><a href="https://github.com/logik93/logisth/blob/v1.0.2/docs/ANTICLICK.md">ANTICLICK.md</a></td>
+<td>Amplitude edge treatment and regression approach</td>
+</tr>
+<tr class="odd">
+<td><a href="https://github.com/logik93/logisth/blob/v1.0.2/docs/STEREO_REVERB_CALIBRATION.md">STEREO_REVERB_CALIBRATION.md</a></td>
+<td>Width and reverb before/after measurements</td>
+</tr>
+<tr class="even">
+<td><a href="https://github.com/logik93/logisth/blob/v1.0.2/docs/DYNAMICS_CPU.md">DYNAMICS_CPU.md</a></td>
+<td>Dynamics formulas, ADAA fixture and CPU method/raw CSV links</td>
+</tr>
+<tr class="odd">
+<td><a href="https://github.com/logik93/logisth/blob/v1.0.2/docs/PROJECT_REVIEW.md">PROJECT_REVIEW.md</a></td>
+<td>Algorithm identity and integration review</td>
+</tr>
+<tr class="even">
+<td><a href="https://github.com/logik93/logisth/blob/v1.0.2/docs/ALGORITHM_AUDIT.json">ALGORITHM_AUDIT.json</a></td>
+<td>Machine-readable dependency/conformance record</td>
+</tr>
+<tr class="odd">
+<td><a href="https://github.com/logik93/logisth/blob/v1.0.2/docs/FACTORY_PRESETS.md">FACTORY_PRESETS.md</a></td>
+<td>Authored bank categories and performance controls</td>
+</tr>
+<tr class="even">
+<td><a href="https://github.com/logik93/logisth/blob/v1.0.2/docs/INTERFACE.md">INTERFACE.md</a></td>
+<td>UI organization and layout conventions</td>
+</tr>
+<tr class="odd">
+<td><a href="https://github.com/logik93/logisth/blob/v1.0.2/docs/MULTIBAND_REVIEW.md">MULTIBAND_REVIEW.md</a></td>
+<td>LR24/TPT reconstruction, band isolation, Legacy parity, routing transitions and appearance evidence</td>
+</tr>
+<tr class="even">
+<td><a href="https://github.com/logik93/logisth/blob/v1.0.2/docs/GUI_DSP_REVIEW.md">GUI_DSP_REVIEW.md</a></td>
+<td>Working-tree distortion, spectrum, stereo, font/folder and logo evidence</td>
+</tr>
+<tr class="odd">
+<td><a href="https://github.com/logik93/logisth/blob/v1.0.2/docs/RACK_REVIEW.md">RACK_REVIEW.md</a></td>
+<td>Ordered DSP, 32-note capacity, host refresh and ten-theme contrast evidence</td>
+</tr>
+<tr class="even">
+<td><a href="https://github.com/logik93/logisth/blob/v1.0.2/Source">Source</a></td>
+<td>Runtime implementation and vendored headers</td>
+</tr>
+<tr class="odd">
+<td><a href="https://github.com/logik93/logisth/blob/v1.0.2/tests">tests</a></td>
+<td>Core, processor, allocation and binary checks</td>
+</tr>
+<tr class="even">
+<td><a href="https://github.com/logik93/logisth/blob/v1.0.2/scripts">scripts</a></td>
+<td>Audit, documentation, packaging, publishing and verification</td>
+</tr>
+</tbody>
+</table></div>
+<p>Practical boundaries are explicit: discrete WT frames; finite interpolation and anti-aliasing methods; bounded grains/workspaces; a stereo output without audio input; no exposed Graphs arp; no intersample true-peak limiter; host-dependent MIDI output routing; and no claim of exhaustive host/hardware coverage. Inspect the release tag matching a binary when investigating a specific implementation.</p>
+<h3 id="documentation-history">Documentation history</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr class="header">
+<th>Revision</th>
+<th>Software baseline</th>
+<th>Change</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>1.0</td>
+<td>0.9.6.2</td>
+<td>First consolidated engineering reference; architecture, algorithms, dependencies, state and release evidence</td>
+</tr>
+<tr class="even">
+<td>1.1</td>
+<td>0.9.7</td>
+<td>Reorderable FX, saved order and live fade, 32-note capacity/default 16, additive host control, serial idle horizons, contrast-aware skins and expanded validation</td>
+</tr>
+<tr class="odd">
+<td>1.2</td>
+<td>0.9.8</td>
+<td>Four-stage distortion, pre/post stereo-power FFT, categorized settings, glyph AA/size/style, persistent dialogs, exact SVG branding and real-WAV stereo checks</td>
+</tr>
+<tr class="even">
+<td>1.3</td>
+<td>0.9.8.1</td>
+<td>Direct glyph rendering, selectable AA/supersampling and edge weight, uniform scaling, portable PNG/JPEG/grid backgrounds, folder controls and themed context menus</td>
+</tr>
+<tr class="odd">
+<td>1.4</td>
+<td>0.9.8.2</td>
+<td>Collapsible modulation row with actual editor resize and persistent compact state; 20 embedded original backgrounds</td>
+</tr>
+<tr class="even">
+<td>1.5</td>
+<td>0.9.8.3</td>
+<td>Optional 1–4-band LR24/TPT distortion, graphic crossovers/pre-post analysis, five appended controls, visible panel gradients and persistent grid/gradient amounts</td>
+</tr>
+<tr class="odd">
+<td>2.0</td>
+<td>1.0.1</td>
+<td>Sample trim automation, per-instance MIDI and asset ownership, VST3 transport continuity and binary-host regression</td>
+</tr>
+<tr class="even">
+<td>2.1</td>
+<td>1.0.2</td>
+<td>MIDI continuity through gaps in host transport metadata and sample clock rebasing</td>
+</tr>
+</tbody>
+</table></div>
+</article></div></main>
+<footer><div class="wrap foot"><a class="brand" href="../"><img src="../assets/logisth.svg" alt="">wavelogik</a><span>wavelogik.pl</span><a href="#content">Back to top</a></div></footer><script src="../site.js" defer></script></body></html>

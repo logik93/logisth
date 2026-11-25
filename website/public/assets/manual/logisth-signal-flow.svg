@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE svg
+  PUBLIC '-//W3C//DTD SVG 1.0//EN'
+  'http://www.w3.org/TR/2001/REC-SVG-20010904/DTD/svg10.dtd'>
+<svg width="511.27559055118115" height="305.89137896224514" preserveAspectRatio="xMinYMin meet" viewBox="0 0 511 305" xmlns="http://www.w3.org/2000/svg" version="1.0" fill-rule="evenodd" xmlns:xlink="http://www.w3.org/1999/xlink">
+	<title>...</title>
+	<desc>...</desc>
+	<clipPath id="clip">
+		<rect x="0" y="0" width="511.27559055118115" height="305.89137896224514"/>
+	</clipPath>
+	<g id="group" transform="scale(1,-1) translate(0,-305)" style="clip-path: url(#clip)">
+		<g transform=" matrix(1.092469,0,0,1.092469,0,0)">
+			<rect x="0" y="231" width="142" height="43" rx="5" ry="0" style="stroke: rgb(70%,78%,84%); stroke-linecap: butt; stroke-width: 0.7; fill: rgb(93%,96%,98%); fill-rule: evenodd;"/>
+			<text x="35.09912109375" y="257" style="font-family: OpenSans-Bold; font-size: 8.5px;fill: rgb(9%,21%,32%); stroke:none;" transform="translate(0,514) scale(1,-1)">MIDI / KEYBOARD</text>
+			<text x="24.5498046875" y="242" style="font-family: OpenSans; font-size: 7px;fill: rgb(9%,21%,32%); stroke:none;" transform="translate(0,484) scale(1,-1)">notes, controllers, host clock</text>
+			<rect x="163" y="231" width="142" height="43" rx="5" ry="0" style="stroke: rgb(70%,78%,84%); stroke-linecap: butt; stroke-width: 0.7; fill: rgb(93%,96%,98%); fill-rule: evenodd;"/>
+			<text x="216.597412109375" y="257" style="font-family: OpenSans-Bold; font-size: 8.5px;fill: rgb(9%,21%,32%); stroke:none;" transform="translate(0,514) scale(1,-1)">CHORDS</text>
+			<text x="182.376708984375" y="242" style="font-family: OpenSans; font-size: 7px;fill: rgb(9%,21%,32%); stroke:none;" transform="translate(0,484) scale(1,-1)">key mapping / reference counts</text>
+			<rect x="326" y="231" width="142" height="43" rx="5" ry="0" style="stroke: rgb(70%,78%,84%); stroke-linecap: butt; stroke-width: 0.7; fill: rgb(93%,96%,98%); fill-rule: evenodd;"/>
+			<text x="367.7418212890625" y="257" style="font-family: OpenSans-Bold; font-size: 8.5px;fill: rgb(9%,21%,32%); stroke:none;" transform="translate(0,514) scale(1,-1)">ARPEGGIATOR</text>
+			<text x="349.317626953125" y="242" style="font-family: OpenSans; font-size: 7px;fill: rgb(9%,21%,32%); stroke:none;" transform="translate(0,484) scale(1,-1)">Legacy / Pattern; MIDI output</text>
+			<path d="M 142,252 L 163,252 Z" style="stroke: rgb(3%,49%,63%); stroke-linecap: butt; stroke-width: 1;"/>
+			<polygon points="163 252, 158 249, 158 255" style="stroke: rgb(3%,49%,63%); stroke-linecap: butt; stroke-width: 1; fill: rgb(3%,49%,63%); fill-rule: evenodd;"/>
+			<path d="M 305,252 L 326,252 Z" style="stroke: rgb(3%,49%,63%); stroke-linecap: butt; stroke-width: 1;"/>
+			<polygon points="326 252, 321 249, 321 255" style="stroke: rgb(3%,49%,63%); stroke-linecap: butt; stroke-width: 1; fill: rgb(3%,49%,63%); fill-rule: evenodd;"/>
+			<path d="M 397,231 L 397,208 Z" style="stroke: rgb(3%,49%,63%); stroke-linecap: butt; stroke-width: 1;"/>
+			<polygon points="397 208, 394 213, 400 213" style="stroke: rgb(3%,49%,63%); stroke-linecap: butt; stroke-width: 1; fill: rgb(3%,49%,63%); fill-rule: evenodd;"/>
+			<rect x="0" y="157" width="468" height="43" rx="5" ry="0" style="stroke: rgb(70%,78%,84%); stroke-linecap: butt; stroke-width: 0.7; fill: rgb(93%,96%,98%); fill-rule: evenodd;"/>
+			<text x="120.02197265624999" y="183" style="font-family: OpenSans-Bold; font-size: 8.5px;fill: rgb(9%,21%,32%); stroke:none;" transform="translate(0,366) scale(1,-1)">PER-NOTE SYNTHESIS: A1/A2, B1/B2, C1/C2 (1-32 NOTES)</text>
+			<text x="117.2353515625" y="168" style="font-family: OpenSans; font-size: 7px;fill: rgb(9%,21%,32%); stroke:none;" transform="translate(0,336) scale(1,-1)">Classic / Wavetable / Sampler / Granular; envelopes, LFOs, FM/AM/PWM</text>
+			<path d="M 397,208 L 397,200 Z" style="stroke: rgb(3%,49%,63%); stroke-linecap: butt; stroke-width: 1;"/>
+			<path d="M 234,157 L 234,141 Z" style="stroke: rgb(3%,49%,63%); stroke-linecap: butt; stroke-width: 1;"/>
+			<polygon points="234 141, 231 146, 237 146" style="stroke: rgb(3%,49%,63%); stroke-linecap: butt; stroke-width: 1; fill: rgb(3%,49%,63%); fill-rule: evenodd;"/>
+			<rect x="0" y="96" width="468" height="43" rx="5" ry="0" style="stroke: rgb(70%,78%,84%); stroke-linecap: butt; stroke-width: 0.7; fill: rgb(93%,96%,98%); fill-rule: evenodd;"/>
+			<text x="116.64770507812499" y="122" style="font-family: OpenSans-Bold; font-size: 8.5px;fill: rgb(9%,21%,32%); stroke:none;" transform="translate(0,244) scale(1,-1)">ROUTING -&gt; FILTER A/B/C -&gt; AMP / VELOCITY / MIX -&gt; SUM</text>
+			<text x="112.762939453125" y="107" style="font-family: OpenSans; font-size: 7px;fill: rgb(9%,21%,32%); stroke:none;" transform="translate(0,214) scale(1,-1)">select source-bus combinations; per-note stereo filters and part envelopes</text>
+			<path d="M 234,96 L 234,80 Z" style="stroke: rgb(3%,49%,63%); stroke-linecap: butt; stroke-width: 1;"/>
+			<polygon points="234 80, 231 85, 237 85" style="stroke: rgb(3%,49%,63%); stroke-linecap: butt; stroke-width: 1; fill: rgb(3%,49%,63%); fill-rule: evenodd;"/>
+			<rect x="0" y="35" width="468" height="43" rx="5" ry="0" style="stroke: rgb(70%,78%,84%); stroke-linecap: butt; stroke-width: 0.7; fill: rgb(93%,96%,98%); fill-rule: evenodd;"/>
+			<text x="104.2255859375" y="61" style="font-family: OpenSans-Bold; font-size: 8.5px;fill: rgb(9%,21%,32%); stroke:none;" transform="translate(0,122) scale(1,-1)">REORDERABLE AUDIO FX (DEFAULT SEQUENCE SHOWN IN TEXT)</text>
+			<text x="116.1689453125" y="46" style="font-family: OpenSans; font-size: 7px;fill: rgb(9%,21%,32%); stroke:none;" transform="translate(0,92) scale(1,-1)">Distortion / Phaser / Chorus / EQ / Reverb / Delay / Compressor / Clipper</text>
+			<path d="M 234,35 L 234,20 Z" style="stroke: rgb(3%,49%,63%); stroke-linecap: butt; stroke-width: 1;"/>
+			<polygon points="234 20, 231 25, 237 25" style="stroke: rgb(3%,49%,63%); stroke-linecap: butt; stroke-width: 1; fill: rgb(3%,49%,63%); fill-rule: evenodd;"/>
+			<text x="133.220703125" y="5" style="font-family: OpenSans-Bold; font-size: 8px;fill: rgb(9%,21%,32%); stroke:none;" transform="translate(0,10) scale(1,-1)">MAIN -&gt; LIMITER (FIXED OUTPUT) -&gt; STEREO OUTPUT</text>
+		</g>
+	</g>
+</svg>
