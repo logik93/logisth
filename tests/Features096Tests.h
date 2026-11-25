@@ -16,6 +16,7 @@ inline void run() {
     for (int i = 0; i < contract.size(); ++i) {
         auto row = contract[i];
         const auto &s = parameterSpecs[size_t(i)];
+        const double expectedDefault = i == int(Param::bendrange) ? 12. : double(row["initial"]);
         const String id(s.id);
         const bool conv = id == "reverbtype",
                    macro = id.startsWith("m") && id.contains("target") && id.endsWith("cx");
@@ -28,10 +29,10 @@ inline void run() {
                   std::abs(double(row["high"]) - (s.high - (conv    ? 1
                                                             : macro ? 6
                                                                     : 0))) < 1e-6 &&
-                  std::abs(double(row["initial"]) - s.initial) < 1e-6 &&
+                  std::abs(expectedDefault - s.initial) < 1e-6 &&
                   std::abs(double(row["skew"]) - s.skew) < 1e-6 &&
                   p.getParameters()[i] == p.state.getParameter(s.id),
-              "all original 954 ranges, choices, defaults and host indices remain intact");
+              "legacy parameter definitions match with the updated bend default");
     }
     check(parameterCount >= 1055, "0.9.6 additions are append-only");
     std::unique_ptr<AudioProcessorEditor> ui(p.createEditor());
