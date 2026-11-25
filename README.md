@@ -9,6 +9,13 @@ independent synthesis engine.
 
 ![logisth dark interface](docs/images/logisth-dark.png)
 
+## In development
+
+The **Bend** and **Mod** performance wheels are automatable. **BEND / st**
+sets a range of 0–24 semitones and defaults to 12. MIDI Pitch Bend Sensitivity
+lets hosts such as FL Studio supply a channel-specific range. See [the
+performance wheel controls](docs/MANUAL.md#8-mixer-and-performance).
+
 ## New in 1.0.4
 
 Set **INPUT / st** to the pitch bend range used by your DAW or controller

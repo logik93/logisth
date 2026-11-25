@@ -128,10 +128,25 @@ inline void run(const File &report = {}) {
     check(p->distortionOrder().slots == DistortionOrder{}.slots,
           "new instances start with distortion slots 1/2/3/4");
     const auto originalPoly = p->state.getParameter("polyphonyextra");
-    check(parameterCount == 1090 && originalPoly == p->getParameters()[1070] &&
+    auto *bend = p->state.getParameter("bendwheel");
+    auto *mod = p->state.getParameter("modwheel");
+    check(parameterCount == 1091 && originalPoly == p->getParameters()[1070] &&
               p->state.getParameter("dist1on") == p->getParameters()[1071] &&
-              p->state.getParameter("bendinputrange") == p->getParameters()[1089],
-          "pitch bend input range follows the existing host parameters");
+              bend == p->getParameters()[1089] && mod == p->getParameters()[1090],
+          "performance wheels follow the existing host parameters");
+    auto *bendSlider = dynamic_cast<Slider *>(console->findChildWithID("wheel.bendwheel"));
+    auto *modSlider = dynamic_cast<Slider *>(console->findChildWithID("wheel.modwheel"));
+    check(bendSlider && modSlider && bend->isAutomatable() && mod->isAutomatable() &&
+              editor->getControlParameterIndex(*bendSlider) == bend->getParameterIndex() &&
+              editor->getControlParameterIndex(*modSlider) == mod->getParameterIndex() &&
+              bendSlider->getMinimum() == -10 && bendSlider->getMaximum() == 10,
+          "wheel controls are discoverable by DAW automation");
+    bendSlider->setValue(5, sendNotificationSync);
+    modSlider->setValue(.5, sendNotificationSync);
+    check(std::abs(bend->getValue() - .75f) < 1e-6f && std::abs(mod->getValue() - .5f) < 1e-6f,
+          "wheel gestures publish plugin parameter changes");
+    bendSlider->stoppedDragging();
+    check(bend->getValue() == .5f, "Bend springs back to the host parameter midpoint");
     auto showRack = [&](int index) {
         buttonIn(console->findChildWithID("rack." + String(index)))->onClick();
     };

@@ -43,8 +43,7 @@ struct Params {
     std::array<Routes, 2> envelopeRoutes{};
     std::array<LfoParams, 2> lfo{};
     std::array<Misc, 4> misc{};
-    float filterCutoff = 0, filterResonance = 0, keytrack = 0, portamento = 0, bendRange = 2;
-    float bendInputRange = 2;
+    float filterCutoff = 0, filterResonance = 0, keytrack = 0, portamento = 0, bendRange = 12;
     double bpm = 120;
     int polyphony = defaultPolyphony, solo = 0, portaMode = 0;
     bool fixedVelocity = false;
@@ -127,7 +126,13 @@ class Engine {
     }
     std::array<PlaybackPicture, playerCount> pictures{};
     std::array<float, 16> bend{}, wheel{}, pressure{};
-    std::array<bool, 16> localBend{};
+    std::array<bool, 16> midiBend{};
+    // Negative values mean the host has not sent a pitch bend sensitivity.
+    std::array<float, 16> midiBendRange = [] {
+        std::array<float, 16> ranges{};
+        ranges.fill(-1.f);
+        return ranges;
+    }();
     std::array<bool, 16> sustain{};
     struct Key {
         int note = -1, channel = 1;
@@ -298,7 +303,7 @@ class Engine {
         for (auto &voice : voices)
             clearVoice(voice);
         bend = {};
-        localBend = {};
+        midiBend = {};
         wheel = {};
         pressure = {};
         sustain = {};
@@ -446,17 +451,33 @@ class Engine {
                     releaseVoice(v, p);
             }
     }
-    void pitchWheel(int channel, float normalized, bool local = false) {
-        if (channel >= 1 && channel <= 16) {
+    // Plug-in controls address every channel. Incoming MIDI addresses its own channel.
+    void pitchWheel(int channel, float normalized) {
+        if (channel == 0) {
+            bend.fill(clamp(normalized, -1, 1));
+            midiBend.fill(false);
+        } else if (channel >= 1 && channel <= 16) {
             bend[size_t(channel - 1)] = clamp(normalized, -1, 1);
-            localBend[size_t(channel - 1)] = local;
+            midiBend[size_t(channel - 1)] = true;
         }
     }
-    float pitchBendCents(int channel, const Params &p) const {
+    void setMidiPitchBendRange(int channel, float semitones) {
+        midiBendRange[size_t(channel - 1)] = semitones;
+    }
+    float pitchBendSemitones(int channel, const Params &p) const {
         const auto index = size_t(channel - 1);
-        const float limit = p.bendRange * 100.f;
-        const float input = localBend[index] ? limit : p.bendInputRange * 100.f;
-        return clamp(bend[index] * input, -limit, limit);
+        if (midiBend[index] && midiBendRange[index] >= 0)
+            return clamp(bend[index] * midiBendRange[index], -p.bendRange, p.bendRange);
+        return bend[index] * p.bendRange;
+    }
+    void modWheel(int channel, float normalized) {
+        if (channel == 0)
+            wheel.fill(normalized);
+        else
+            wheel[size_t(channel - 1)] = normalized;
+    }
+    float modWheelPosition(int channel) const {
+        return wheel[size_t(channel - 1)];
     }
     void aftertouch(int channel, int note, float value) {
         if (channel < 1 || channel > 16)
@@ -473,7 +494,7 @@ class Engine {
             return;
         const auto ch = size_t(channel - 1);
         if (cc == 1)
-            wheel[ch] = value / 127.f;
+            modWheel(channel, value / 127.f);
         if (cc == 64) {
             sustain[ch] = value >= 64;
             if (!sustain[ch])
@@ -495,7 +516,7 @@ class Engine {
         }
         if (cc == 121) {
             wheel[ch] = bend[ch] = pressure[ch] = 0;
-            localBend[ch] = false;
+            midiBend[ch] = false;
             sustain[ch] = false;
             for (auto &v : voices)
                 if (v.channel == channel && v.sustained)
@@ -594,7 +615,7 @@ class Engine {
         const double phaseSmoothing = 1 - std::exp(-1 / (.005 * sr));
         std::array<float, 16> bendSemitones{};
         for (int channel = 1; channel <= 16; ++channel)
-            bendSemitones[size_t(channel - 1)] = pitchBendCents(channel, p) / 100.f;
+            bendSemitones[size_t(channel - 1)] = pitchBendSemitones(channel, p);
 
         for (int s = 0; s < count; ++s) {
             float out[2]{};

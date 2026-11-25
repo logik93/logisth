@@ -327,16 +327,11 @@ void liveMidiContinuity(IPluginFactory &factory, const TUID &cid, int model, Clo
           "live MIDI note-off ends the held note");
 }
 
-struct BendChanges : Borrowed<IParameterChanges> {
-    std::array<Point, 6> points;
-    int count;
-    BendChanges(ParamID wheel, double position, int inputRange, int limit)
-        : points{Point(wheel, position), Point("bendrange", limit / 24.),
-                 Point("o1wave", 0.), Point("o2level", 0.), Point("p1amps", 1.),
-                 Point("bendinputrange", (inputRange - 1) / 95.)},
-          count(inputRange ? 6 : 5) {}
+template <size_t N> struct WheelChanges : Borrowed<IParameterChanges> {
+    std::array<Point, N> points;
+    explicit WheelChanges(std::array<Point, N> data) : points(data) {}
     int32 PLUGIN_API getParameterCount() override {
-        return count;
+        return int32(points.size());
     }
     IParamValueQueue *PLUGIN_API getParameterData(int32 i) override {
         return &points.at(size_t(i));
@@ -365,15 +360,38 @@ void pitchBend(IPluginFactory &factory, const TUID &cid) {
               componentLink->connect(controllerLink) == kResultOk,
           "connect VST3 component and edit controller");
     IMidiMapping *mapping = nullptr;
-    ParamID wheel{};
     check(controller->queryInterface(IMidiMapping_iid, reinterpret_cast<void **>(&mapping)) ==
-              kResultOk &&
-              mapping->getMidiControllerAssignment(0, 0, kPitchBend, wheel) == kResultOk,
-          "VST3 MIDI channel 1 maps pitch bend");
+              kResultOk,
+          "VST3 offers MIDI mapping");
+    auto midiId = [&](CtrlNumber number) {
+        ParamID id{};
+        check(mapping->getMidiControllerAssignment(0, 0, number, id) == kResultOk,
+              "VST3 MIDI channel 1 controller mapping");
+        return id;
+    };
+    const auto wheel = midiId(kPitchBend);
+    const auto modulation = midiId(1);
+    const auto rpnMsb = midiId(101);
+    const auto rpnLsb = midiId(100);
+    const auto dataEntry = midiId(6);
     mapping->release();
-    auto measure = [&](double position, int inputRange, int limit, int cents, bool note = false) {
-        BendChanges changes(wheel, position, inputRange, limit);
-        player.render(note, &changes);
+
+    const auto bend = Point("bendwheel", 0.).id;
+    const auto mod = Point("modwheel", 0.).id;
+    int automatableWheels = 0;
+    for (int32 i = 0; i < controller->getParameterCount(); ++i) {
+        ParameterInfo info{};
+        if (controller->getParameterInfo(i, info) == kResultOk &&
+            (info.id == bend || info.id == mod) && (info.flags & ParameterInfo::kCanAutomate))
+            ++automatableWheels;
+    }
+    check(automatableWheels == 2, "Bend and Mod are automatable VST3 parameters");
+
+    WheelChanges sound{std::array{Point("o1wave", 0.), Point("o2level", 0.), Point("p1amps", 1.)}};
+    player.render(true, &sound);
+    auto measure = [&](ParamID id, double position, int cents) {
+        WheelChanges changes{std::array{Point(id, position)}};
+        player.render(false, &changes);
         for (int block = 0; block < 64; ++block)
             player.render();
         int sampleIndex = 0, crossings = 0;
@@ -399,17 +417,34 @@ void pitchBend(IPluginFactory &factory, const TUID &cid) {
         check(std::abs(1200. * std::log2(actual / expected)) < 1.,
               "VST3 measured pitch bend within one cent");
     };
-    measure(.5, 0, 12, 0, true);
-    measure(1., 0, 12, 200);
-    measure(0., 0, 12, -200);
-    measure(1., 12, 12, 1200);
-    measure(0., 12, 12, -1200);
-    measure(1., 24, 12, 1200);
-    measure(0., 24, 12, -1200);
-    measure(1., 24, 0, 0);
-    measure((8192. + 1365.) / 16384., 12, 12, 200);
-    measure((8192. - 1365.) / 16384., 12, 12, -200);
-    measure(.5, 12, 12, 0);
+    measure(wheel, .5, 0);
+    measure(wheel, 1., 1200);
+    measure(wheel, 0., -1200);
+
+    // A host such as FL Studio can send MIDI Pitch Bend Sensitivity before its wheel data.
+    WheelChanges rpn{std::array{Point(rpnMsb, 0.), Point(rpnLsb, 0.),
+                                Point(dataEntry, 2. / 128.)}};
+    player.render(false, &rpn);
+    measure(wheel, 1., 200);
+    measure(wheel, 0., -200);
+    measure(bend, .75, 600);
+    measure(bend, .25, -600);
+    measure(bend, .5, 0);
+
+    WheelChanges range{std::array{Point("bendrange", 1.)}};
+    player.render(false, &range);
+    measure(bend, 1., 2400);
+    measure(bend, 0., -2400);
+    measure(bend, .5, 0);
+
+    // Route Mod Wheel to Pitch A to measure the result of host automation and MIDI CC1.
+    WheelChanges route{std::array{Point("misc1source", 4. / 14.), Point("misc1dest1", 4. / 58.),
+                                  Point("misc1amt1", .5 + (2. / 4.8) / 20.)}};
+    player.render(false, &route);
+    measure(mod, .5, 100);
+    measure(mod, 0., 0);
+    measure(modulation, 1., 200);
+    measure(modulation, 0., 0);
 
     componentLink->disconnect(controllerLink);
     controllerLink->disconnect(componentLink);

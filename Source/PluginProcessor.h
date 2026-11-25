@@ -158,16 +158,14 @@ class LogisthProcessor : public juce::AudioProcessor {
     }
     juce::AudioProcessorValueTreeState state;
     juce::MidiKeyboardState keyboard;
-    void setUiWheel(bool pitch, float value) {
-        if (pitch) {
-            uiPitchPosition = value;
-            uiChanges.fetch_or(1);
-        } else {
-            wheelPosition = value;
-            uiChanges.fetch_or(2);
-        }
+    float displayedBend() const {
+        const float value = get(logisth::Param::bendwheel);
+        return value == lastBendParameter.load() ? pitchPosition.load() * 10.f : value;
     }
-    std::atomic<float> pitchPosition{0}, wheelPosition{0};
+    float displayedMod() const {
+        const float value = get(logisth::Param::modwheel);
+        return value == lastModParameter.load() ? wheelPosition.load() : value;
+    }
     std::atomic<float> peak{0};
     std::array<std::atomic<float>, 2> channelPeaks{};
     std::atomic<int> voices{0};
@@ -267,8 +265,10 @@ class LogisthProcessor : public juce::AudioProcessor {
     std::array<std::array<float, 512>, logisth::playerCount> playerTraces{};
     std::array<float, 512> driveMod{}, phaserMod{}, partScopeA{}, partScopeB{}, partScopeC{};
     std::atomic<int> uiChanges{0};
-    std::atomic<float> uiPitchPosition{0};
-    int lastPitchChannel = 1;
+    juce::MidiRPNDetector midiRpn;
+    std::atomic<float> lastBendParameter{0}, lastModParameter{0};
+    std::atomic<float> pitchPosition{0}, wheelPosition{0};
+    int lastPitchChannel = 1, lastModChannel = 1;
     class PreparationThread final : public juce::Thread {
         LogisthProcessor &owner;
 

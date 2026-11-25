@@ -32,31 +32,47 @@ void check(bool ok, const char *message) {
     if (!ok)
         throw std::runtime_error(message);
 }
-void checkPitchBendIndicator() {
+void checkPerformanceWheels() {
     using namespace juce;
     auto p = std::make_unique<LogisthProcessor>();
+    check(p->state.getRawParameterValue("bendrange")->load() == 12, "Bend / st defaults to 12");
+    check(p->state.getParameter("bendinputrange") == nullptr, "obsolete bend input control removed");
     p->prepareToPlay(48000, 64);
-    gain_test::set(*p, "bendrange", 12);
     AudioBuffer<float> audio(2, 64);
     MidiBuffer midi;
     auto process = [&](float expected) {
         p->processBlock(audio, midi);
         midi.clear();
-        check(std::abs(p->pitchPosition.load() - expected) < 1e-6f,
-              "pitch indicator reports applied bend relative to BEND / st");
+        check(std::abs(p->displayedBend() - expected) < 1e-5f,
+              "Bend wheel shows the applied shift on its -10 to +10 scale");
     };
     midi.addEvent(MidiMessage::pitchWheel(2, 16383), 0);
-    process(1.f / 6.f);
+    process(10);
     midi.addEvent(MidiMessage::pitchWheel(2, 0), 0);
-    process(-1.f / 6.f);
-    gain_test::set(*p, "bendinputrange", 24);
-    process(-1.f);
+    process(-10);
+    midi = MidiRPNGenerator::generate(2, 0, (2 << 7) | 50, false, true);
+    process(-10.f * 2.5f / 12.f);
+    midi.addEvent(MidiMessage::pitchWheel(3, 16383), 19);
+    process(10); // The range message belongs to channel 2.
+    gain_test::set(*p, "bendrange", 1);
+    midi.addEvent(MidiMessage::pitchWheel(2, 0), 7);
+    process(-10);
     gain_test::set(*p, "bendrange", 0);
     process(0);
     gain_test::set(*p, "bendrange", 12);
-    p->setUiWheel(true, .5f);
-    process(.5f);
-    p->setUiWheel(true, 0);
+    gain_test::set(*p, "bendwheel", 5);
+    gain_test::set(*p, "modwheel", .6f);
+    process(5);
+    check(std::abs(p->displayedMod() - .6f) < 1e-6f, "automated Mod is continuous");
+    midi.addEvent(MidiMessage::controllerEvent(2, 1, 127), 32);
+    process(5);
+    check(p->displayedMod() == 1, "MIDI CC1 updates the Mod indicator");
+    check(std::abs(p->state.getRawParameterValue("modwheel")->load() - .6f) < 1e-6f,
+          "MIDI CC1 does not write host automation");
+    midi.addEvent(MidiMessage::controllerEvent(2, 121, 0), 0);
+    process(5);
+    check(p->displayedMod() == 0, "reset controllers clears the Mod indicator");
+    gain_test::set(*p, "bendwheel", 0);
     process(0);
 }
 
@@ -1157,7 +1173,7 @@ int main(int argc, char **argv) {
         factorybank_test::run();
         factorybank_test::search();
         processor_phase_test::run();
-        checkPitchBendIndicator();
+        checkPerformanceWheels();
         checkEnvelopeMidiEdges();
         gain_test::run(true);
         checkEffects();

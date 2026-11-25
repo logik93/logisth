@@ -19,11 +19,12 @@ inline void run(const juce::File &report = {}) {
     for (int i = 0; i < contract.size(); ++i) {
         const auto row = contract[i];
         const auto &s = parameterSpecs[size_t(i)];
+        const double expectedDefault = i == int(Param::bendrange) ? 12. : double(row["initial"]);
         check(row["id"].toString() == s.id && int(row["index"]) == i &&
                   row["choices"].toString() == s.choices &&
                   std::abs(double(row["low"]) - s.low) < 1e-6 &&
                   std::abs(double(row["high"]) - s.high) < 1e-6 &&
-                  std::abs(double(row["initial"]) - s.initial) < 1e-6 &&
+                  std::abs(expectedDefault - s.initial) < 1e-6 &&
                   std::abs(double(row["skew"]) - s.skew) < 1e-6 &&
                   bool(row["integer"]) == s.integer &&
                   p.getParameters()[i] == p.state.getParameter(s.id),

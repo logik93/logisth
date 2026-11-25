@@ -2,13 +2,13 @@
 
 **wavelogik · Architecture, DSP and Engineering Reference**
 
-Document revision: 2.3 · Software baseline: 1.0.4 · State schema: 4
+Document revision: 2.4 · Software baseline: 1.0.4 · State schema: 4
 
-Implementation baseline: release tag `v1.0.4`. The technical identity manifest
+Implementation baseline: development checkout after `v1.0.4`. The technical identity manifest
 records the CMake/runtime source identity. Native BUILD_INFO records its tagged
 commit, tree fingerprints, binary hashes and manual identities.
 
-This reference describes the implementation of logisth 1.0.4. It is
+This reference describes the current development implementation of logisth. It is
 intended for sound designers, audio engineers, contributors and integrators.
 The [User Manual](MANUAL.md) describes operating the interface; this document
 explains how its controls affect processing, how data is stored and which
@@ -54,7 +54,7 @@ a player is one source slot; a unison lane is one component inside a player.
 | Player engines | Classic, Wavetable, Sampler, Granular |
 | Note polyphony | 1–32 voices, default 16; mono/legato and portamento available |
 | Unison selection | 0–8 lanes per player; 0 disables the player |
-| Host parameter count | 1090, including one appended pitch bend input range |
+| Host parameter count | 1091, including the Bend and Mod automation controls |
 | Modulators | Two modulation ADSRs, two LFOs, four miscellaneous source selectors, two destinations per modulator |
 | Performance macros | Four macros, four target assignments each |
 | Pattern memory | Twelve pattern slots; sequences up to 32 steps |
@@ -107,12 +107,18 @@ pressure and sustain state. Mono legato uses the held-key history and portamento
 logic instead of allocating a new independent note for every key.
 
 MIDI pitch bend is centered at 8192 and normalized with 8192 steps below
-center and 8191 above. Full travel represents ±100 times INPUT / st in cents
-(default ±200 cents). The engine clamps the result to ±100 times BEND / st
-before applying it to oscillator pitch. The built-in wheel uses BEND / st
-for its full travel. The display tracks the most recent channel's applied
-bend divided by the limit, and displays center when the limit is zero. The
-appended bendinputrange parameter defaults to 2 in older saved states.
+center and 8191 above. Full travel uses BEND / st (0–24 semitones, default
+12). MIDI RPN 0,0 sets a channel's explicit sensitivity in semitones and
+optional cents. The engine scales that channel's MIDI wheel by the supplied
+range and clamps the resulting pitch shift to BEND / st. The indicator tracks
+the most recent wheel channel's applied shift and centers when BEND / st is 0.
+
+The two new host parameters are `bendwheel` (−10 to +10) and `modwheel`
+(0 to 1). Changes to them apply globally at the processing block boundary,
+while received MIDI wheel events apply to their own channels at their event
+offsets. MIDI updates the visible indicators without writing back to host
+automation. Existing saved Bend / st values are restored and the former
+`bendinputrange` entry is ignored.
 
 Every part has its own amplitude ADSR. Every player also has an optional source
 ADSR. Two additional ADSRs are dedicated to modulation. Logical stages are
@@ -1048,3 +1054,4 @@ the release tag matching a binary when investigating a specific implementation.
 | 2.1 | 1.0.2 | MIDI continuity through gaps in host transport metadata and sample clock rebasing |
 | 2.2 | 1.0.3 | Realtime VST3 graph restarts with live MIDI or unavailable transport, and offline reset coverage |
 | 2.3 | 1.0.4 | MIDI pitch bend input range, output limit and VST3 frequency measurement |
+| 2.4 | Development after 1.0.4 | Host-automatable performance wheels and MIDI Pitch Bend Sensitivity |

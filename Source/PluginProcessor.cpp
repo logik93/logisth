@@ -175,7 +175,6 @@ Params LogisthProcessor::snapshot() const {
     p.portamento = get(Param::portamento);
     p.portaMode = int(get(Param::portamode));
     p.bendRange = get(Param::bendrange);
-    p.bendInputRange = get(Param::bendinputrange);
     p.polyphony = effectivePolyphony();
     p.monoLegato = get(Param::monolegato) > 0;
     p.sync = get(Param::sync) > 0;
@@ -389,6 +388,9 @@ void LogisthProcessor::resetDsp() {
     pendingVstRestart = false;
     releaseOutputNotes = true;
     engine.reset();
+    lastBendParameter = lastModParameter = 0.f;
+    pitchPosition = wheelPosition = 0.f;
+    lastPitchChannel = lastModChannel = 1;
     scope.clear();
     eqSpectrum.clear();
     distortionSpectrum.clear();
@@ -592,7 +594,7 @@ void LogisthProcessor::processBlock(AudioBuffer<float> &audio, MidiBuffer &midi)
         for (int ch = 1; ch <= 16; ++ch)
             outputChannels[size_t(ch - 1)].release(generatedMidi, ch, 0);
     midiWasEnabled = output;
-    auto emit = [&](MidiEvent event) {
+    auto emit = [&](MidiEvent event, bool globalWheel = false) {
         if (p.fixedVelocity && event.type == EventType::NoteOn)
             event.value = 1;
         if (output && event.time < n) {
@@ -612,7 +614,7 @@ void LogisthProcessor::processBlock(AudioBuffer<float> &audio, MidiBuffer &midi)
                 if (event.key == 120 || event.key == 123)
                     sent.keys.reset();
                 generatedMidi.addEvent(
-                    MidiMessage::controllerEvent(event.channel, event.key, int(event.value)),
+                    MidiMessage::controllerEvent(event.channel, event.key, roundToInt(event.value)),
                     event.time);
             } else if (event.type == EventType::PitchWheel) {
                 const auto steps = event.value > 0 ? 8191.f : 8192.f;
@@ -638,11 +640,26 @@ void LogisthProcessor::processBlock(AudioBuffer<float> &audio, MidiBuffer &midi)
             engine.noteOff(event.key, event.channel, p);
             break;
         case EventType::Controller:
-            engine.controller(event.channel, event.key, int(event.value), p);
+            if (event.key == 1) {
+                engine.modWheel(globalWheel ? 0 : event.channel, event.value / 127.f);
+                lastModChannel = event.channel;
+            } else {
+                engine.controller(event.channel, event.key, int(event.value), p);
+                if (event.key == 121) {
+                    midiRpn.tryParse(event.channel, 101, 127);
+                    midiRpn.tryParse(event.channel, 100, 127);
+                } else if (auto rpn = midiRpn.tryParse(event.channel, event.key, int(event.value));
+                           rpn && !rpn->isNRPN && rpn->parameterNumber == 0) {
+                    const float semitones = rpn->is14BitValue
+                                                ? (rpn->value >> 7) +
+                                                      std::min(99, rpn->value & 127) * .01f
+                                                : float(rpn->value);
+                    engine.setMidiPitchBendRange(event.channel, semitones);
+                }
+            }
             break;
         case EventType::PitchWheel:
-            // A negative key identifies the built-in wheel, which travels to the limit.
-            engine.pitchWheel(event.channel, event.value, event.key < 0);
+            engine.pitchWheel(globalWheel ? 0 : event.channel, event.value);
             lastPitchChannel = event.channel;
             break;
         case EventType::Aftertouch:
@@ -660,16 +677,21 @@ void LogisthProcessor::processBlock(AudioBuffer<float> &audio, MidiBuffer &midi)
         chordMapper.reset();
     }
     chordsWereEnabled = chordEnabled;
-    int changes = uiChanges.exchange(0);
-    if (changes & 4) {
+    if (uiChanges.exchange(0) & 4) {
         arp.stop(0, emit);
         chordMapper.reset();
     }
+    const float bendParameter = get(Param::bendwheel);
+    if (bendParameter != lastBendParameter.load()) {
+        lastBendParameter = bendParameter;
+        emit(MidiEvent{0, EventType::PitchWheel, 1, 0, bendParameter / 10.f}, true);
+    }
+    const float modParameter = get(Param::modwheel);
+    if (modParameter != lastModParameter.load()) {
+        lastModParameter = modParameter;
+        emit(MidiEvent{0, EventType::Controller, 1, 1, modParameter * 127.f}, true);
+    }
     auto mapped = [&](MidiEvent event) { arp.input(event, ap, emit); };
-    if (changes & 1)
-        arp.input(MidiEvent{0, EventType::PitchWheel, 1, -1, uiPitchPosition.load()}, ap, emit);
-    if (changes & 2)
-        arp.input(MidiEvent{0, EventType::Controller, 1, 1, wheelPosition.load() * 127}, ap, emit);
     for (const auto metadata : midi) {
         int offset = jlimit(scheduled, n, metadata.samplePosition);
         arp.advance(scheduled, offset, ap, emit);
@@ -707,8 +729,6 @@ void LogisthProcessor::processBlock(AudioBuffer<float> &audio, MidiBuffer &midi)
                 generatedMidi.addEvent(m, offset);
             continue;
         }
-        if (event.type == EventType::Controller && event.key == 1)
-            wheelPosition = event.value / 127.f;
         const int learn = learnTarget.load();
         if (learn >= 0 && (event.type == EventType::NoteOn || event.type == EventType::NoteOff)) {
             if (event.type == EventType::NoteOn)
@@ -720,8 +740,9 @@ void LogisthProcessor::processBlock(AudioBuffer<float> &audio, MidiBuffer &midi)
     arp.advance(scheduled, n, ap, emit);
     renderTo(n);
     pitchPosition = p.bendRange > 0
-                        ? engine.pitchBendCents(lastPitchChannel, p) / (100.f * p.bendRange)
+                        ? engine.pitchBendSemitones(lastPitchChannel, p) / p.bendRange
                         : 0.f;
+    wheelPosition = engine.modWheelPosition(lastModChannel);
     effectSamples = fxWork;
     scope.commit();
     for (auto &trace : playerScopes)

@@ -3,8 +3,8 @@
 wavelogik logisth is a three-part polyphonic subtractive synthesizer for VST3, CLAP and standalone use.
 This manual describes logisth's controls, sound engines and preset workflow.
 
-This edition describes **v1.0.4**. Earlier downloads retain their corresponding
-interface and manuals.
+This edition describes the development checkout, including the performance
+wheel changes after **v1.0.4**. Published downloads include their corresponding manuals.
 
 ## Contents
 
@@ -966,16 +966,25 @@ to the previous held note when the newest one is released. POLY is disabled in
 mono mode. GLIDE sets portamento time; Normal mode glides for overlapping notes,
 while Slide also permits glide between separate notes.
 
-**INPUT / st** sets the pitch bend range represented by full wheel travel
-from your DAW or MIDI controller. It defaults to ±2 semitones. Match it to
-the range used by your DAW when the host sends wheel position. The setting
-is saved with the preset and DAW project. **BEND / st**
-limits the resulting pitch change in either direction. With BEND / st at 12,
-±200 cents gives ±2 semitones and ±1200 cents gives ±1 octave. A limit of
-zero disables direct pitch bend. The on-screen BEND wheel shows the applied
-bend as a fraction of the limit. Dragging it uses the full limit and it springs
-back to the centre on release. MOD remains where you set it. Route Mod Wheel
-through a Misc block to hear its effect. The keyboard covers five octaves.
+**BEND / st** sets the maximum shift in either direction, from 0 to 24
+semitones. New instances default to 12. **BEND** travels from −10 to +10,
+with 0 at the center. At 12 semitones, +5 raises pitch by six semitones and
++10 raises it by an octave. The wheel shows the applied bend relative to
+BEND / st and springs back to center after a mouse drag.
+
+For standard MIDI pitch bend, full travel uses BEND / st. A host can send
+MIDI Pitch Bend Sensitivity to specify the range for its MIDI channel. Its
+requested shift is still capped at BEND / st. In FL Studio, enable **Send pitch
+bend range** in the wrapper's MIDI settings to use the range sent by the host.
+You can also set the channel's **RANGE** and logisth's **BEND / st** to the same
+value when using the FL Studio channel **PITCH** control. [FL Studio wrapper
+settings](https://www.image-line.com/fl-studio-learning-content/fl-studio-online-manual/html/plugins/wrapper.htm)
+
+To automate the plug-in controls directly, select **PERFORMANCE / Bend** or
+**PERFORMANCE / Mod** from the host's parameter list. In FL Studio, open
+**Browse parameters** or use **Tools → Last tweaked** after moving the wheel.
+MOD stays where you set it and accepts MIDI CC1. Route Mod Wheel through a Misc
+block to hear its effect. [FL Studio automation menu](https://www.image-line.com/fl-studio-learning-content/fl-studio-online-manual/html/menu_tools.htm)
 
 ## 9. Presets, automation and project recall
 
@@ -1013,7 +1022,7 @@ or failed operations retain the previous directory. If a directory was removed,
 the chooser starts at its nearest existing parent. SETTINGS / FILES shows the
 current locations; this is independent of the sound preset.
 
-Presets contain all 1090 audio parameters, effect and distortion-slot order, routing, compressed audio for all six
+Presets contain all 1091 audio parameters, effect and distortion-slot order, routing, compressed audio for all six
 slots, the convolution impulse response, WAV regions, chord mappings, twelve named patterns, the preset comment and
 scope selection. Theme and editor size are separate user preferences and are
 retained when sounds change. The original sample files are unnecessary on recall. Saving uses a
@@ -1021,7 +1030,7 @@ temporary file and atomic replacement. Invalid files leave the current patch
 intact. State/preset files are limited to 1 GiB. These are logisth's own files;
 renaming another format to .logisth does not convert it.
 
-All 1090 parameters are available for host automation. The first 514 parameter
+All 1091 parameters are available for host automation. The first 514 parameter
 IDs and order from 0.4 are retained. Granulizer and global MIDI-only controls
 follow them; the former Graphs parameter block is removed. A/B/C views, rack pages,
 theme and scope source do not change the patch's audio settings. DAW state

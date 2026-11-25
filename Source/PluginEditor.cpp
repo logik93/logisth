@@ -1626,23 +1626,22 @@ class LogisthEditor::Console : public Component,
         keyboard.setOctaveForMiddleC(4);
         keyboard.setKeyWidth(24);
         addAndMakeVisible(keyboard);
-        for (auto *wheel : {&pitch, &mod}) {
+        for (auto *wheel : std::array<Slider *, 2>{&pitch, &mod}) {
             wheel->setSliderStyle(Slider::LinearVertical);
             wheel->setTextBoxStyle(Slider::NoTextBox, false, 0, 0);
             wheel->getProperties().set("trim", true);
             addAndMakeVisible(wheel);
         }
-        pitch.setRange(-1, 1, .001);
-        pitch.setValue(0);
-        mod.setRange(0, 1, .001);
-        pitch.setTooltip("Pitch bend relative to the BEND / st limit");
+        pitch.setTooltip("Pitch bend from -10 to +10. BEND / st sets the range in semitones.");
         mod.setTooltip("Modulation wheel");
-        pitch.onValueChange = [this] { processor.setUiWheel(true, float(pitch.getValue())); };
-        pitch.onDragEnd = [this] {
-            pitch.setValue(0, dontSendNotification);
-            processor.setUiWheel(true, 0);
+        auto attachWheel = [this](Slider &slider, const char *id) {
+            slider.setComponentID("wheel." + String(id));
+            slider.getProperties().set("hostParameterID", id);
+            return std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(
+                processor.state, id, slider);
         };
-        mod.onValueChange = [this] { processor.setUiWheel(false, float(mod.getValue())); };
+        pitchAttachment = attachWheel(pitch, "bendwheel");
+        modAttachment = attachWheel(mod, "modwheel");
         settings.setComponentID("ui.settings");
         settings.setButtonText("SETTINGS");
         settings.setTooltip("Display, text, theme, MIDI, file folders and About logisth");
@@ -2532,6 +2531,8 @@ class LogisthEditor::Console : public Component,
             inspect();
         }
         visited.insert(size_t(Param::fixedvelocity)); // Settings uses a dedicated attached button.
+        visited.insert(size_t(Param::bendwheel)); // Performance uses the attached wheels.
+        visited.insert(size_t(Param::modwheel));
         for (size_t i = 0; i < controls.size(); ++i)
             if (!visited.count(i))
                 error = "Unreachable: " + String(parameterSpecs[i].id);
@@ -4379,7 +4380,6 @@ class LogisthEditor::Console : public Component,
         put(Param::monolegato, {1004, 779 - lowerOffset, 94, 21}, Style::Toggle, "MONO / LEGATO");
         put(Param::portamode, {1108, 779 - lowerOffset, 104, 21}, Style::Menu);
         put(Param::bendrange, {1004, 809 - lowerOffset, 48, 28}, Style::Number, "BEND / st");
-        put(Param::bendinputrange, {1060, 809 - lowerOffset, 60, 28}, Style::Number, "INPUT / st");
         put(Param::portamento, {1126, 813 - lowerOffset, 76, 24}, Style::Number);
         parts[0].repaint();
         parts[1].repaint();
@@ -4535,9 +4535,9 @@ class LogisthEditor::Console : public Component,
                 value(Param(playerParamIndex(Param::o1engine, i, 16))) <= 1);
         controls[size_t(Param::polyphony)]->enable(value(Param::monolegato) == 0);
         if (!pitch.isMouseButtonDown())
-            pitch.setValue(processor.pitchPosition.load(), dontSendNotification);
+            pitch.setValue(processor.displayedBend(), dontSendNotification);
         if (!mod.isMouseButtonDown())
-            mod.setValue(processor.wheelPosition.load(), dontSendNotification);
+            mod.setValue(processor.displayedMod(), dontSendNotification);
         if (rack == 0) {
             repaint(414, 350, 520, 165);
             patternCanvas.repaint();
@@ -4877,7 +4877,11 @@ class LogisthEditor::Console : public Component,
     std::unique_ptr<FileChooser> presetChooser;
     Array<File> userPresets;
     int presetRevision = -1;
-    Slider pitch, mod;
+    struct BendWheel final : Slider {
+        void stoppedDragging() override { setValue(0, sendNotificationSync); }
+    } pitch;
+    Slider mod;
+    std::unique_ptr<AudioProcessorValueTreeState::SliderAttachment> pitchAttachment, modAttachment;
     TooltipWindow tooltips;
     String readout, lastStatus;
     std::array<uint64_t, playerCount> displayedRevisions{};

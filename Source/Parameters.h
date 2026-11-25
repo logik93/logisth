@@ -1095,7 +1095,8 @@ enum class Param : size_t {
     distcross1,
     distcross2,
     distcross3,
-    bendinputrange,
+    bendwheel,
+    modwheel,
     Count
 };
 constexpr size_t parameterCount = size_t(Param::Count);
@@ -1202,7 +1203,7 @@ inline const std::array<ParameterSpec, parameterCount> parameterSpecs{{
     {"monolegato", "Mono legato", 0, "PERFORMANCE", 0, 1, 0, 1, "Off|On", false},
     {"portamento", "Portamento / s", 0, "PERFORMANCE", 0, 4, 0, 0.4f, "", false},
     {"portamode", "Portamento mode", 0, "PERFORMANCE", 0, 1, 0, 1, "Normal|Slide", false},
-    {"bendrange", "Bend / st", 0, "PERFORMANCE", 0, 24, 2, 1, "", true},
+    {"bendrange", "Bend / st", 0, "PERFORMANCE", 0, 24, 12, 1, "", true},
     {"sync", "Host sync", 0, "PERFORMANCE", 0, 1, 1, 1, "Off|On", false},
     {"solo", "Solo", 0, "PERFORMANCE", 0, 2, 0, 1, "Off|Part A|Part B", false},
     {"env1a", "Attack / s", 1, "MOD ENV 1", 0, 8, 0, 0.3f, "", false},
@@ -2828,7 +2829,8 @@ inline const std::array<ParameterSpec, parameterCount> parameterSpecs{{
     {"distcross1", "Crossover 1 / Hz", 3, "DISTORTION", 20, 20000, 200, .3f, "", false},
     {"distcross2", "Crossover 2 / Hz", 3, "DISTORTION", 20, 20000, 2000, .3f, "", false},
     {"distcross3", "Crossover 3 / Hz", 3, "DISTORTION", 20, 20000, 8000, .3f, "", false},
-    {"bendinputrange", "Bend input / st", 0, "PERFORMANCE", 1, 96, 2, 1, "", true},
+    {"bendwheel", "Bend", 0, "PERFORMANCE", -10, 10, 0, 1, "", false},
+    {"modwheel", "Mod", 0, "PERFORMANCE", 0, 1, 0, 1, "", false},
 }};
 
 inline constexpr size_t legacyParameterCount = 736;
