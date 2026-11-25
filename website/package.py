@@ -1,4 +1,4 @@
-"""Package the web root for deployment on a static or PHP host."""
+"""Package the web root for deployment on a PHP host."""
 from pathlib import Path
 from zipfile import ZIP_DEFLATED, ZipFile, ZipInfo
 

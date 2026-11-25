@@ -1,3 +1,22 @@
+<?php
+
+declare(strict_types=1);
+
+require __DIR__ . '/release.php';
+
+use function Wavelogik\fetchRelease;
+use function Wavelogik\latestRelease;
+use const Wavelogik\RELEASES_URL;
+
+$cacheDirectory = getenv('WAVELOGIK_CACHE_DIR') ?: sys_get_temp_dir() . '/wavelogik-' . hash('sha256', __DIR__);
+$release = latestRelease($cacheDirectory, fetchRelease(...));
+$releaseUrl = $release['url'] ?? RELEASES_URL . '/latest';
+
+function escapeHtml(string $value): string
+{
+    return htmlspecialchars($value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+}
+?>
 <!doctype html>
 <html lang="en">
   <head>
@@ -274,20 +293,29 @@
           >
         </div>
         <div id="download">
-          <p class="eyebrow">RELEASE 1.0.3</p>
+          <?php if ($release !== null): ?>
+            <p class="eyebrow">RELEASE <?= escapeHtml($release['version']) ?></p>
+          <?php endif; ?>
           <h2>Download logisth</h2>
           <p>Each package includes VST3, CLAP and the standalone app.</p>
           <div class="downloads">
-            <a
-              href="https://github.com/logik93/logisth/releases/download/v1.0.3/logisth-1.0.3-windows-x86_64.zip"
-              >Windows <small>x64 · ZIP</small><span aria-hidden="true" class="arrow down"></span></a
-            ><a
-              href="https://github.com/logik93/logisth/releases/download/v1.0.3/logisth-1.0.3-linux-x86_64.tar.gz"
-              >Linux <small>x86_64 · TAR.GZ</small><span aria-hidden="true" class="arrow down"></span></a
-            ><a
-              href="https://github.com/logik93/logisth/releases/download/v1.0.3/logisth-1.0.3-macos-universal.zip"
-              >macOS <small>Universal · ZIP</small><span aria-hidden="true" class="arrow down"></span></a
-            >
+            <?php if ($release === null): ?>
+              <a href="<?= escapeHtml($releaseUrl) ?>">View the latest release on GitHub</a>
+            <?php else: ?>
+              <?php foreach ($release['downloads'] as $platform => $package): ?>
+                <?php if ($package['url'] !== null): ?>
+                  <a href="<?= escapeHtml($package['url']) ?>">
+                    <?= escapeHtml($platform) ?>
+                    <small><?= escapeHtml($package['format']) ?></small>
+                    <span aria-hidden="true" class="arrow down"></span>
+                  </a>
+                <?php else: ?>
+                  <div class="download-unavailable">
+                    <?= escapeHtml($platform) ?> <small>Package pending</small>
+                  </div>
+                <?php endif; ?>
+              <?php endforeach; ?>
+            <?php endif; ?>
           </div>
         </div>
       </section>
@@ -298,7 +326,7 @@
           ><img src="assets/logisth.svg" alt="" />wavelogik</a
         ><span>wavelogik.pl</span
         ><a href="https://github.com/logik93/logisth">GitHub</a
-        ><a href="https://github.com/logik93/logisth/releases/tag/v1.0.3"
+        ><a href="<?= escapeHtml($releaseUrl) ?>"
           >Release notes</a
         >
       </div>

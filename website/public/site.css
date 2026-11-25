@@ -465,7 +465,8 @@ h2 {
   margin-bottom: 22px;
 }
 .rowlink,
-.downloads a {
+.downloads a,
+.download-unavailable {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -481,13 +482,17 @@ h2 {
 .downloads {
   margin-top: 15px;
 }
-.downloads a {
+.downloads a,
+.download-unavailable {
   padding: 9px 0;
   font-weight: 600;
 }
 .downloads small {
   margin-left: auto;
   font: 11px var(--mono);
+  color: var(--muted);
+}
+.download-unavailable {
   color: var(--muted);
 }
 .downloads .arrow,
@@ -801,6 +806,23 @@ footer {
   }
   .book article h3 {
     font-size: 20px;
+  }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .hero-art img {
+    animation: spectrum-enter 900ms ease-out both;
+  }
+  .engine-tabs a,
+  .button,
+  .rowlink,
+  .downloads a {
+    transition: background-color 180ms ease, border-color 180ms ease, color 180ms ease;
+  }
+}
+@keyframes spectrum-enter {
+  from {
+    opacity: 0.45;
+    transform: translateY(8px) scale(0.98);
   }
 }
 @media (prefers-reduced-motion: reduce) {
