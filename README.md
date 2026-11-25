@@ -1,4 +1,4 @@
-# logisth 1.0.2
+# logisth 1.0.3
 
 **wavelogik logisth — a three-part polyphonic subtractive synthesizer with a compact single-window console.**
 VST3, CLAP and Standalone for Windows, macOS and Linux. Built with JUCE and an
@@ -8,6 +8,13 @@ independent synthesis engine.
 [Technical Manual PDF](docs/logisth-Technical-Manual-English.pdf)
 
 ![logisth dark interface](docs/images/logisth-dark.png)
+
+## New in 1.0.3
+
+Held MIDI notes survive a same-rate VST3 graph restart when the transport is
+stopped or timing data has been absent since the note began. This covers live
+playing while adding another instrument. Note-offs, transport stops and seeks
+still take effect, and offline bounces start with cleared voices. [Release notes](docs/RELEASE-v1.0.3.md) · [VST3 verification](docs/REVIEW-v1.0.3.md)
 
 ## New in 1.0.2
 

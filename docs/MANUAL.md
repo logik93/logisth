@@ -1,9 +1,9 @@
-# logisth 1.0.2 — User Manual
+# logisth 1.0.3 — User Manual
 
 wavelogik logisth is a three-part polyphonic subtractive synthesizer for VST3, CLAP and standalone use.
 This manual describes logisth's controls, sound engines and preset workflow.
 
-This edition describes **v1.0.2**. Earlier downloads retain their corresponding
+This edition describes **v1.0.3**. Earlier downloads retain their corresponding
 interface and manuals.
 
 ## Contents
@@ -1086,7 +1086,7 @@ Native release archives are published only after their platform builds and tests
 See BUILD_INFO.json in each archive for source revision and validation results.
 
 
-During a long sequenced note, opening another instance can cause the host to suspend processing briefly. On a continuous playing timeline the first sampler or granular player resumes from its own cursor. A temporary gap in host timing data during a window switch keeps the current note sounding. Incoming note-offs still take effect at their scheduled sample offsets. A transport seek, stop or audio sample-rate change ends suspended voices. Sample selection, waveform zoom and editor visibility are independent for each instance.
+Adding another instrument can briefly suspend processing. On a same-rate VST3 restart, held notes keep their playback position during an ongoing sequence, live MIDI with the transport stopped, or a gap in host timing data. The instrument processes incoming note-offs at their scheduled sample offsets. A reported transport stop or seek during playback releases the voices. Changing the sample rate or starting an offline bounce clears DSP state. Sample selection, waveform zoom and editor visibility belong to each instance.
 
 No sound: check the audio/MIDI device or DAW routing, oscillator Voices and
 Volume, filter input, envelope sustain, Mix levels and MAIN. Check SOLO and

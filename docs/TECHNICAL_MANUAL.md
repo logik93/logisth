@@ -1,14 +1,14 @@
-# logisth 1.0.2 — Technical Manual
+# logisth 1.0.3 — Technical Manual
 
 **wavelogik · Architecture, DSP and Engineering Reference**
 
-Document revision: 2.1 · Software baseline: 1.0.2 · State schema: 4
+Document revision: 2.2 · Software baseline: 1.0.3 · State schema: 4
 
-Implementation baseline: release tag `v1.0.2`. The technical identity manifest
+Implementation baseline: release tag `v1.0.3`. The technical identity manifest
 records the CMake/runtime source identity. Native BUILD_INFO records its tagged
 commit, tree fingerprints, binary hashes and manual identities.
 
-This reference describes the implementation of logisth 1.0.2. It is
+This reference describes the implementation of logisth 1.0.3. It is
 intended for sound designers, audio engineers, contributors and integrators.
 The [User Manual](MANUAL.md) describes operating the interface; this document
 explains how its controls affect processing, how data is stored and which
@@ -251,7 +251,9 @@ Implementation: [Sampler.h](../Source/Sampler.h), [SourceAssets.cpp](../Source/S
 
 The two Sample-page fields attach directly to the selected player's existing automation parameters. Sampler START uses `oNposition`, granular START uses `oNtrimstart` and both engines use `oNend`. The engine switch preserves the independent granular launch position. Each waveform endpoint owns its own host gesture. Captions occupy a rail above playback telemetry.
 
-The audio graph may negotiate a new maximum block size while a MIDI note is held. Preparation rebuilds rate-dependent DSP when the sample rate changes. VST3 maps processing suspension to a processor reset. The next valid transport report reconciles the expected sample and musical beat positions. During a gap in timing metadata, the engine keeps processing MIDI at each event offset and advances its timeline prediction. A valid stopped transport or discontinuity in all available clocks still releases suspended voices. MIDI note and pedal ownership is per processor and per channel. Sample decoding runs outside the asset lock. A per-player request counter rejects obsolete imports before publishing audio or switching an oscillator into Sampler. [Measurement method](REVIEW-v1.0.2.md)
+The audio graph may negotiate a new maximum block size while a MIDI note is held. Preparation rebuilds rate-dependent DSP when the sample rate changes. The VST3 wrapper maps a processing suspension to a processor reset. For a prepared realtime instance, the processor defers that reset. A transition from playing to stopped or a discontinuity in all comparable clocks clears suspended voices. MIDI notes begun without a transport report, or played live while the transport stays stopped, retain their voice state. Audio and incoming events keep their sample offsets during gaps in timing metadata. Offline resets are immediate, and a pending realtime restart clears DSP before an offline bounce renders audio.
+
+MIDI note and pedal ownership is per processor and per channel. Sample decoding runs outside the asset lock. A per-player request counter rejects obsolete imports before publishing audio or switching an oscillator into Sampler. [Measurement method](REVIEW-v1.0.3.md)
 
 ## 6. Time stretching and the spectral adapter
 
@@ -1036,3 +1038,4 @@ the release tag matching a binary when investigating a specific implementation.
 | 1.5 | 0.9.8.3 | Optional 1–4-band LR24/TPT distortion, graphic crossovers/pre-post analysis, five appended controls, visible panel gradients and persistent grid/gradient amounts |
 | 2.0 | 1.0.1 | Sample trim automation, per-instance MIDI and asset ownership, VST3 transport continuity and binary-host regression |
 | 2.1 | 1.0.2 | MIDI continuity through gaps in host transport metadata and sample clock rebasing |
+| 2.2 | 1.0.3 | Realtime VST3 graph restarts with live MIDI or unavailable transport, and offline reset coverage |

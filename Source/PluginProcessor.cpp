@@ -376,10 +376,10 @@ void LogisthProcessor::prepareToPlay(double sampleRate, int blockSize) {
 }
 void LogisthProcessor::reset() {
     // The VST3 wrapper maps setProcessing(false) to reset(), including when a host
-    // temporarily suspends a playing graph to insert an instrument. The next audio
-    // block supplies the transport information needed to distinguish this from a stop.
-    if (wrapperType == wrapperType_VST3 && wasPlaying &&
-        (expectedSample >= 0 || std::isfinite(expectedPpq)))
+    // temporarily suspends the graph to insert an instrument. Live MIDI can keep
+    // a key down while the transport is stopped or unavailable. Wait for a stop
+    // or seek on the reported timeline, and keep processing incoming note-offs.
+    if (wrapperType == wrapperType_VST3 && preparedSampleRate > 0 && !isNonRealtime())
         pendingVstRestart = true;
     else
         resetDsp();
@@ -431,6 +431,9 @@ void LogisthProcessor::processBlock(AudioBuffer<float> &audio, MidiBuffer &midi)
     const int n = audio.getNumSamples();
     if (n <= 0 || audio.getNumChannels() < 2)
         return;
+    // A same-rate reconfiguration can switch from live playback to export.
+    if (pendingVstRestart && isNonRealtime())
+        resetDsp();
     struct AssetReadScope {
         std::atomic<int> &count;
         AssetReadScope(std::atomic<int> &c) : count(c) {

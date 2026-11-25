@@ -182,4 +182,4 @@ a multiband-review ZIP. Never regenerate or replace already published releases.
 
 ## Sample automation and host lifecycle
 
-Run `processor_tests --continuity /absolute/report/path` to compare long stereo notes with an uninterrupted reference and inspect the trim-handle close-up. The same fixtures run inside the processor suite. The `vst3_binary` CTest loads the compiled module and exercises actual processing suspension, missing timing reports, rebased sample positions, note-offs, stops and seeks. Linux also exercises the CLAP activation path. [Fixture design and measured results](REVIEW-v1.0.2.md)
+Run `processor_tests --continuity /absolute/report/path` to compare long stereo notes with an uninterrupted reference and inspect the trim-handle close-up. The same fixtures run inside the processor suite. The `vst3_binary` CTest loads the compiled module and exercises processing suspension during sequenced playback, live MIDI while stopped, entire sessions without transport reports, and offline bounces. It verifies incoming note-offs, transport stops and seeks. Linux also exercises the CLAP activation path. [Fixture design and measured results](REVIEW-v1.0.3.md)

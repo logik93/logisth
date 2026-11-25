@@ -111,6 +111,7 @@ struct Note : Borrowed<IEventList> {
             event.noteOff = {};
             event.noteOff.pitch = 60;
             event.noteOff.noteId = -1;
+            event.sampleOffset = 37;
         }
         return kResultOk;
     }
@@ -168,6 +169,7 @@ struct Player {
     IComponent *component = nullptr;
     IAudioProcessor *audio = nullptr;
     int64 cursor = 0;
+    int32 processingMode = kRealtime;
     Player(IPluginFactory &factory, const TUID &cid) {
         check(factory.createInstance(cid, IComponent_iid, reinterpret_cast<void **>(&component)) ==
                       kResultOk &&
@@ -181,8 +183,9 @@ struct Player {
               "VST3 audio and event buses");
         start(256);
     }
-    void start(int block) {
-        ProcessSetup setup{kRealtime, kSample32, block, 48000.};
+    void start(int block, int32 processMode = kRealtime) {
+        processingMode = processMode;
+        ProcessSetup setup{processMode, kSample32, block, 48000.};
         check(audio->setupProcessing(setup) == kResultOk &&
                   component->setActive(true) == kResultOk &&
                   audio->setProcessing(true) == kResultOk,
@@ -210,6 +213,7 @@ struct Player {
         Note input;
         input.releaseKey = releaseKey;
         ProcessData data;
+        data.processMode = processingMode;
         data.numSamples = 256;
         data.numOutputs = 1;
         data.outputs = &bus;
@@ -281,6 +285,59 @@ void continuity(IPluginFactory &factory, const TUID &cid, int model) {
     first.start(256);
     check(peak(first.render(false, nullptr, false)) == 0, "stopped VST3 transport clears the note");
 }
+
+void liveMidiContinuity(IPluginFactory &factory, const TUID &cid, int model, ClockReport report) {
+    SourceMode mode(model);
+    Player first(factory, cid), reference(factory, cid);
+    first.render(true, &mode, false, report);
+    reference.render(true, &mode, false, report);
+    for (int i = 0; i < 8; ++i) {
+        first.render(false, nullptr, false, report);
+        reference.render(false, nullptr, false, report);
+    }
+
+    // The DAW can rebuild the graph for a second instrument without sending a
+    // transport transition. The original key has been down since the first block.
+    first.suspend();
+    {
+        Player second(factory, cid);
+        second.render(true, &mode, false, report);
+        first.start(1024);
+        const auto expected = reference.render(false, nullptr, false, report);
+        const auto actual = first.render(false, nullptr, false, report);
+        check(peak(expected) > .00001f && actual == expected,
+              report == ClockReport::missing ? "restart cut a note started without transport"
+                                             : "restart cut a live note with stopped transport");
+        second.render(false, nullptr, false, report, true);
+    }
+    check(first.render(false, nullptr, false, report) ==
+              reference.render(false, nullptr, false, report),
+          "another instance's note-off or destruction affected the held note");
+    for (int block = 0; block < 180; ++block) {
+        const bool releaseKey = block == 0;
+        check(first.render(false, nullptr, false, report, releaseKey) ==
+                  reference.render(false, nullptr, false, report, releaseKey),
+              "live note-off or release envelope diverged after graph restart");
+    }
+    check(peak(first.render(false, nullptr, false, report)) < .00001f,
+          "live MIDI note-off ends the held note");
+}
+
+void offlineRestart(IPluginFactory &factory, const TUID &cid) {
+    Player player(factory, cid);
+    check(peak(player.render(true, nullptr, false, ClockReport::missing)) > .00001f,
+          "realtime note audible before offline render");
+    player.suspend();
+    player.start(256, kOffline);
+    check(peak(player.render(false, nullptr, false, ClockReport::missing)) == 0,
+          "offline render inherited a realtime voice");
+    check(peak(player.render(true, nullptr, false, ClockReport::missing)) > .00001f,
+          "offline render accepts MIDI");
+    player.suspend();
+    player.start(256, kOffline);
+    check(peak(player.render(false, nullptr, false, ClockReport::missing)) == 0,
+          "offline render inherited a voice from the previous render");
+}
 } // namespace
 int main(int argc, char **argv) {
     try {
@@ -298,14 +355,19 @@ int main(int argc, char **argv) {
                 std::strcmp(info.category, "Audio Module Class") == 0 &&
                 std::strcmp(info.name, "logisth") == 0) {
                 found = true;
-                for (int model = -1; model < 3; ++model)
+                for (int model = -1; model < 3; ++model) {
                     continuity(*factory, info.cid, model);
+                    liveMidiContinuity(*factory, info.cid, model, ClockReport::missing);
+                    liveMidiContinuity(*factory, info.cid, model, ClockReport::normal);
+                }
+                offlineRestart(*factory, info.cid);
             }
         }
         factory->release();
         check(found, "logisth VST3 instrument class");
-        std::cout << "PASS VST3 Classic, Sampler, Cloud and Granulizer held notes, clock gaps, "
-                     "sample-counter rebase, graph restart, note-off, seek and stop\n";
+        std::cout << "PASS VST3 Classic, Sampler, Cloud and Granulizer through realtime graph "
+                     "restarts with playing, stopped and missing transport; note-off, seek, stop "
+                     "and offline reset\n";
     } catch (const std::exception &error) {
         std::cerr << error.what() << '\n';
         return 1;
