@@ -160,7 +160,7 @@ class LogisthProcessor : public juce::AudioProcessor {
     juce::MidiKeyboardState keyboard;
     void setUiWheel(bool pitch, float value) {
         if (pitch) {
-            pitchPosition = value;
+            uiPitchPosition = value;
             uiChanges.fetch_or(1);
         } else {
             wheelPosition = value;
@@ -168,6 +168,8 @@ class LogisthProcessor : public juce::AudioProcessor {
         }
     }
     std::atomic<float> pitchPosition{0}, wheelPosition{0};
+    std::atomic<float> uiPitchPosition{0};
+    int lastPitchChannel = 1;
     std::atomic<float> peak{0};
     std::array<std::atomic<float>, 2> channelPeaks{};
     std::atomic<int> voices{0};

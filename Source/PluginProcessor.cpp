@@ -175,6 +175,7 @@ Params LogisthProcessor::snapshot() const {
     p.portamento = get(Param::portamento);
     p.portaMode = int(get(Param::portamode));
     p.bendRange = get(Param::bendrange);
+    p.bendInputRange = get(Param::bendinputrange);
     p.polyphony = effectivePolyphony();
     p.monoLegato = get(Param::monolegato) > 0;
     p.sync = get(Param::sync) > 0;
@@ -613,12 +614,12 @@ void LogisthProcessor::processBlock(AudioBuffer<float> &audio, MidiBuffer &midi)
                 generatedMidi.addEvent(
                     MidiMessage::controllerEvent(event.channel, event.key, int(event.value)),
                     event.time);
-            } else if (event.type == EventType::PitchWheel)
-                generatedMidi.addEvent(
-                    MidiMessage::pitchWheel(event.channel,
-                                            jlimit(0, 16383, int(event.value * 8192 + 8192))),
-                    event.time);
-            else if (event.type == EventType::Aftertouch)
+            } else if (event.type == EventType::PitchWheel) {
+                const auto steps = event.value > 0 ? 8191.f : 8192.f;
+                const int position = jlimit(0, 16383, 8192 + roundToInt(event.value * steps));
+                generatedMidi.addEvent(MidiMessage::pitchWheel(event.channel, position),
+                                       event.time);
+            } else if (event.type == EventType::Aftertouch)
                 generatedMidi.addEvent(
                     event.key < 0
                         ? MidiMessage::channelPressureChange(event.channel, int(event.value * 127))
@@ -640,7 +641,8 @@ void LogisthProcessor::processBlock(AudioBuffer<float> &audio, MidiBuffer &midi)
             engine.controller(event.channel, event.key, int(event.value), p);
             break;
         case EventType::PitchWheel:
-            engine.pitchWheel(event.channel, event.value);
+            engine.pitchWheel(event.channel, event.value, event.key < 0);
+            lastPitchChannel = event.channel;
             break;
         case EventType::Aftertouch:
             engine.aftertouch(event.channel, event.key, event.value);
@@ -664,7 +666,7 @@ void LogisthProcessor::processBlock(AudioBuffer<float> &audio, MidiBuffer &midi)
     }
     auto mapped = [&](MidiEvent event) { arp.input(event, ap, emit); };
     if (changes & 1)
-        arp.input(MidiEvent{0, EventType::PitchWheel, 1, 0, pitchPosition.load()}, ap, emit);
+        arp.input(MidiEvent{0, EventType::PitchWheel, 1, -1, uiPitchPosition.load()}, ap, emit);
     if (changes & 2)
         arp.input(MidiEvent{0, EventType::Controller, 1, 1, wheelPosition.load() * 127}, ap, emit);
     for (const auto metadata : midi) {
@@ -688,7 +690,9 @@ void LogisthProcessor::processBlock(AudioBuffer<float> &audio, MidiBuffer &midi)
             event.value = float(m.getControllerValue());
         } else if (m.isPitchWheel()) {
             event.type = EventType::PitchWheel;
-            event.value = (m.getPitchWheelValue() - 8192) / 8192.f;
+            event.key = 0;
+            const int position = m.getPitchWheelValue() - 8192;
+            event.value = position / (position > 0 ? 8191.f : 8192.f);
         } else if (m.isAftertouch()) {
             event.type = EventType::Aftertouch;
             event.key = m.getNoteNumber();
@@ -702,8 +706,6 @@ void LogisthProcessor::processBlock(AudioBuffer<float> &audio, MidiBuffer &midi)
                 generatedMidi.addEvent(m, offset);
             continue;
         }
-        if (event.type == EventType::PitchWheel)
-            pitchPosition = event.value;
         if (event.type == EventType::Controller && event.key == 1)
             wheelPosition = event.value / 127.f;
         const int learn = learnTarget.load();
@@ -716,6 +718,9 @@ void LogisthProcessor::processBlock(AudioBuffer<float> &audio, MidiBuffer &midi)
     }
     arp.advance(scheduled, n, ap, emit);
     renderTo(n);
+    pitchPosition = p.bendRange > 0
+                        ? engine.pitchBendCents(lastPitchChannel, p) / (100.f * p.bendRange)
+                        : 0.f;
     effectSamples = fxWork;
     scope.commit();
     for (auto &trace : playerScopes)

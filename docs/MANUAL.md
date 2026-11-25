@@ -1,9 +1,9 @@
-# logisth 1.0.3 — User Manual
+# logisth 1.0.4 — User Manual
 
 wavelogik logisth is a three-part polyphonic subtractive synthesizer for VST3, CLAP and standalone use.
 This manual describes logisth's controls, sound engines and preset workflow.
 
-This edition describes **v1.0.3**. Earlier downloads retain their corresponding
+This edition describes **v1.0.4**. Earlier downloads retain their corresponding
 interface and manuals.
 
 ## Contents
@@ -966,10 +966,15 @@ to the previous held note when the newest one is released. POLY is disabled in
 mono mode. GLIDE sets portamento time; Normal mode glides for overlapping notes,
 while Slide also permits glide between separate notes.
 
-BEND / st sets pitch-wheel range in semitones. The on-screen BEND wheel springs
-back to the centre after dragging. MOD remains where you set it. Route Mod Wheel
-through a Misc block to hear its effect. MIDI pitch bend and modulation messages
-also update these controls. The keyboard covers five octaves.
+**INPUT / st** sets the pitch bend range represented by full wheel travel
+from your DAW or MIDI controller. It defaults to ±2 semitones. Match it to
+the range used by your DAW when the host sends wheel position. **BEND / st**
+limits the resulting pitch change in either direction. With BEND / st at 12,
+±200 cents gives ±2 semitones and ±1200 cents gives ±1 octave. A limit of
+zero disables direct pitch bend. The on-screen BEND wheel shows the applied
+bend as a fraction of the limit. Dragging it uses the full limit and it springs
+back to the centre on release. MOD remains where you set it. Route Mod Wheel
+through a Misc block to hear its effect. The keyboard covers five octaves.
 
 ## 9. Presets, automation and project recall
 

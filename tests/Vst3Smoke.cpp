@@ -8,6 +8,9 @@
 #include <iostream>
 #include <pluginterfaces/vst/ivstaudioprocessor.h>
 #include <pluginterfaces/vst/ivstevents.h>
+#include <pluginterfaces/vst/ivsteditcontroller.h>
+#include <pluginterfaces/vst/ivstmidicontrollers.h>
+#include <pluginterfaces/vst/ivstmessage.h>
 #include <pluginterfaces/vst/ivstparameterchanges.h>
 #include <pluginterfaces/vst/ivstprocesscontext.h>
 #include <stdexcept>
@@ -128,6 +131,7 @@ struct Point : Borrowed<IParamValueQueue> {
             id = 31 * id + uint32(*key++);
         id &= 0x7fffffff;
     }
+    Point(ParamID parameter, double v) : id(parameter), value(v) {}
     ParamID PLUGIN_API getParameterId() override {
         return id;
     }
@@ -195,7 +199,7 @@ struct Player {
         check(audio->setProcessing(false) == kResultOk && component->setActive(false) == kResultOk,
               "suspend VST3 playback");
     }
-    Audio render(bool note = false, SourceMode *mode = nullptr, bool playing = true,
+    Audio render(bool note = false, IParameterChanges *parameters = nullptr, bool playing = true,
                  ClockReport clock = ClockReport::normal, bool releaseKey = false) {
         Audio result{};
         float *channels[]{result[0].data(), result[1].data()};
@@ -219,7 +223,7 @@ struct Player {
         data.outputs = &bus;
         data.processContext = clock == ClockReport::missing ? nullptr : &transport;
         data.inputEvents = note || releaseKey ? &input : nullptr;
-        data.inputParameterChanges = mode;
+        data.inputParameterChanges = parameters;
         check(audio->process(data) == kResultOk, "render VST3 audio");
         cursor += data.numSamples;
         return result;
@@ -323,6 +327,98 @@ void liveMidiContinuity(IPluginFactory &factory, const TUID &cid, int model, Clo
           "live MIDI note-off ends the held note");
 }
 
+struct BendChanges : Borrowed<IParameterChanges> {
+    std::array<Point, 6> points;
+    int count;
+    BendChanges(ParamID wheel, double position, int inputRange, int limit)
+        : points{Point(wheel, position), Point("bendrange", limit / 24.),
+                 Point("o1wave", 0.), Point("o2level", 0.), Point("p1amps", 1.),
+                 Point("bendinputrange", (inputRange - 1) / 95.)},
+          count(inputRange ? 6 : 5) {}
+    int32 PLUGIN_API getParameterCount() override {
+        return count;
+    }
+    IParamValueQueue *PLUGIN_API getParameterData(int32 i) override {
+        return &points.at(size_t(i));
+    }
+    IParamValueQueue *PLUGIN_API addParameterData(const ParamID &, int32 &) override {
+        return nullptr;
+    }
+};
+
+void pitchBend(IPluginFactory &factory, const TUID &cid) {
+    Player player(factory, cid);
+    TUID controllerId{};
+    IEditController *controller = nullptr;
+    check(player.component->getControllerClassId(controllerId) == kResultOk &&
+              factory.createInstance(controllerId, IEditController_iid,
+                                     reinterpret_cast<void **>(&controller)) == kResultOk &&
+              controller->initialize(nullptr) == kResultOk,
+          "create VST3 edit controller");
+    IConnectionPoint *componentLink = nullptr, *controllerLink = nullptr;
+    check(player.component->queryInterface(IConnectionPoint_iid,
+                                           reinterpret_cast<void **>(&componentLink)) ==
+                  kResultOk &&
+              controller->queryInterface(IConnectionPoint_iid,
+                                         reinterpret_cast<void **>(&controllerLink)) == kResultOk &&
+              controllerLink->connect(componentLink) == kResultOk &&
+              componentLink->connect(controllerLink) == kResultOk,
+          "connect VST3 component and edit controller");
+    IMidiMapping *mapping = nullptr;
+    ParamID wheel{};
+    check(controller->queryInterface(IMidiMapping_iid, reinterpret_cast<void **>(&mapping)) ==
+              kResultOk &&
+              mapping->getMidiControllerAssignment(0, 0, kPitchBend, wheel) == kResultOk,
+          "VST3 MIDI channel 1 maps pitch bend");
+    mapping->release();
+    auto measure = [&](double position, int inputRange, int limit, int cents, bool note = false) {
+        BendChanges changes(wheel, position, inputRange, limit);
+        player.render(note, &changes);
+        for (int block = 0; block < 64; ++block)
+            player.render();
+        int sampleIndex = 0, crossings = 0;
+        float previous = 0;
+        double first = 0, last = 0;
+        for (int block = 0; block < 128; ++block) {
+            const auto audio = player.render();
+            for (float sample : audio[0]) {
+                if (sampleIndex > 0 && previous <= 0 && sample > 0) {
+                    last = sampleIndex - 1. - previous / (sample - previous);
+                    if (crossings++ == 0)
+                        first = last;
+                }
+                previous = sample;
+                ++sampleIndex;
+            }
+        }
+        check(crossings > 2, "audible periodic VST3 bend output");
+        const double actual = 48000. * (crossings - 1) / (last - first);
+        const double expected = 440. * std::exp2((-9. + cents / 100.) / 12.);
+        std::cout << "VST3 pitch bend " << cents << " cents: " << actual
+                  << " Hz (expected " << expected << " Hz)\n";
+        check(std::abs(1200. * std::log2(actual / expected)) < 1.,
+              "VST3 measured pitch bend within one cent");
+    };
+    measure(.5, 0, 12, 0, true);
+    measure(1., 0, 12, 200);
+    measure(0., 0, 12, -200);
+    measure(1., 12, 12, 1200);
+    measure(0., 12, 12, -1200);
+    measure(1., 24, 12, 1200);
+    measure(0., 24, 12, -1200);
+    measure(1., 24, 0, 0);
+    measure((8192. + 1365.) / 16384., 12, 12, 200);
+    measure((8192. - 1365.) / 16384., 12, 12, -200);
+    measure(.5, 12, 12, 0);
+
+    componentLink->disconnect(controllerLink);
+    controllerLink->disconnect(componentLink);
+    componentLink->release();
+    controllerLink->release();
+    controller->terminate();
+    controller->release();
+}
+
 void offlineRestart(IPluginFactory &factory, const TUID &cid) {
     Player player(factory, cid);
     check(peak(player.render(true, nullptr, false, ClockReport::missing)) > .00001f,
@@ -361,6 +457,7 @@ int main(int argc, char **argv) {
                     liveMidiContinuity(*factory, info.cid, model, ClockReport::normal);
                 }
                 offlineRestart(*factory, info.cid);
+                pitchBend(*factory, info.cid);
             }
         }
         factory->release();

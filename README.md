@@ -1,4 +1,4 @@
-# logisth 1.0.3
+# logisth 1.0.4
 
 **wavelogik logisth — a three-part polyphonic subtractive synthesizer with a compact single-window console.**
 VST3, CLAP and Standalone for Windows, macOS and Linux. Built with JUCE and an
@@ -8,6 +8,14 @@ independent synthesis engine.
 [Technical Manual PDF](docs/logisth-Technical-Manual-English.pdf)
 
 ![logisth dark interface](docs/images/logisth-dark.png)
+
+## New in 1.0.4
+
+Set **INPUT / st** to the pitch bend range used by your DAW or controller
+(default ±2 semitones). **BEND / st** caps the resulting shift. For example,
+with a 12-semitone limit, a 200-cent bend moves two semitones and a 1200-cent
+bend moves one octave in either direction. The wheel shows the actual bend
+relative to the limit. [Release notes](docs/RELEASE-v1.0.4.md)
 
 ## New in 1.0.3
 

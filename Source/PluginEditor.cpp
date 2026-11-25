@@ -1635,10 +1635,13 @@ class LogisthEditor::Console : public Component,
         pitch.setRange(-1, 1, .001);
         pitch.setValue(0);
         mod.setRange(0, 1, .001);
-        pitch.setTooltip("Pitch bend");
+        pitch.setTooltip("Pitch bend relative to the BEND / st limit");
         mod.setTooltip("Modulation wheel");
         pitch.onValueChange = [this] { processor.setUiWheel(true, float(pitch.getValue())); };
-        pitch.onDragEnd = [this] { pitch.setValue(0); };
+        pitch.onDragEnd = [this] {
+            pitch.setValue(0, dontSendNotification);
+            processor.setUiWheel(true, 0);
+        };
         mod.onValueChange = [this] { processor.setUiWheel(false, float(mod.getValue())); };
         settings.setComponentID("ui.settings");
         settings.setButtonText("SETTINGS");
@@ -4376,6 +4379,7 @@ class LogisthEditor::Console : public Component,
         put(Param::monolegato, {1004, 779 - lowerOffset, 94, 21}, Style::Toggle, "MONO / LEGATO");
         put(Param::portamode, {1108, 779 - lowerOffset, 104, 21}, Style::Menu);
         put(Param::bendrange, {1004, 809 - lowerOffset, 48, 28}, Style::Number, "BEND / st");
+        put(Param::bendinputrange, {1060, 809 - lowerOffset, 60, 28}, Style::Number, "INPUT / st");
         put(Param::portamento, {1126, 813 - lowerOffset, 76, 24}, Style::Number);
         parts[0].repaint();
         parts[1].repaint();

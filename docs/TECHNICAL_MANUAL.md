@@ -1,14 +1,14 @@
-# logisth 1.0.3 — Technical Manual
+# logisth 1.0.4 — Technical Manual
 
 **wavelogik · Architecture, DSP and Engineering Reference**
 
-Document revision: 2.2 · Software baseline: 1.0.3 · State schema: 4
+Document revision: 2.3 · Software baseline: 1.0.4 · State schema: 4
 
-Implementation baseline: release tag `v1.0.3`. The technical identity manifest
+Implementation baseline: release tag `v1.0.4`. The technical identity manifest
 records the CMake/runtime source identity. Native BUILD_INFO records its tagged
 commit, tree fingerprints, binary hashes and manual identities.
 
-This reference describes the implementation of logisth 1.0.3. It is
+This reference describes the implementation of logisth 1.0.4. It is
 intended for sound designers, audio engineers, contributors and integrators.
 The [User Manual](MANUAL.md) describes operating the interface; this document
 explains how its controls affect processing, how data is stored and which
@@ -105,6 +105,14 @@ for all six players. The inner rendering loop visits only the configured voice r
 MIDI channels retain separate pitch wheel, mod wheel,
 pressure and sustain state. Mono legato uses the held-key history and portamento
 logic instead of allocating a new independent note for every key.
+
+MIDI pitch bend is centered at 8192 and normalized with 8192 steps below
+center and 8191 above. Full travel represents ±100 times INPUT / st in cents
+(default ±200 cents). The engine clamps the result to ±100 times BEND / st
+before applying it to oscillator pitch. The built-in wheel uses BEND / st
+for its full travel. The display tracks the most recent channel's applied
+bend divided by the limit, and displays center when the limit is zero. The
+appended bendinputrange parameter defaults to 2 in older saved states.
 
 Every part has its own amplitude ADSR. Every player also has an optional source
 ADSR. Two additional ADSRs are dedicated to modulation. Logical stages are
@@ -1039,3 +1047,4 @@ the release tag matching a binary when investigating a specific implementation.
 | 2.0 | 1.0.1 | Sample trim automation, per-instance MIDI and asset ownership, VST3 transport continuity and binary-host regression |
 | 2.1 | 1.0.2 | MIDI continuity through gaps in host transport metadata and sample clock rebasing |
 | 2.2 | 1.0.3 | Realtime VST3 graph restarts with live MIDI or unavailable transport, and offline reset coverage |
+| 2.3 | 1.0.4 | MIDI pitch bend input range, output limit and VST3 frequency measurement |

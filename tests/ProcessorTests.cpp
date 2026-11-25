@@ -32,6 +32,34 @@ void check(bool ok, const char *message) {
     if (!ok)
         throw std::runtime_error(message);
 }
+void checkPitchBendIndicator() {
+    using namespace juce;
+    auto p = std::make_unique<LogisthProcessor>();
+    p->prepareToPlay(48000, 64);
+    gain_test::set(*p, "bendrange", 12);
+    AudioBuffer<float> audio(2, 64);
+    MidiBuffer midi;
+    auto process = [&](float expected) {
+        p->processBlock(audio, midi);
+        midi.clear();
+        check(std::abs(p->pitchPosition.load() - expected) < 1e-6f,
+              "pitch indicator reports applied bend relative to BEND / st");
+    };
+    midi.addEvent(MidiMessage::pitchWheel(2, 16383), 0);
+    process(1.f / 6.f);
+    midi.addEvent(MidiMessage::pitchWheel(2, 0), 0);
+    process(-1.f / 6.f);
+    gain_test::set(*p, "bendinputrange", 24);
+    process(-1.f);
+    gain_test::set(*p, "bendrange", 0);
+    process(0);
+    gain_test::set(*p, "bendrange", 12);
+    p->setUiWheel(true, .5f);
+    process(.5f);
+    p->setUiWheel(true, 0);
+    process(0);
+}
+
 void checkEnvelopeMidiEdges() {
     using namespace juce;
     for (double rate : {44100., 48000., 96000.})
@@ -1129,6 +1157,7 @@ int main(int argc, char **argv) {
         factorybank_test::run();
         factorybank_test::search();
         processor_phase_test::run();
+        checkPitchBendIndicator();
         checkEnvelopeMidiEdges();
         gain_test::run(true);
         checkEffects();

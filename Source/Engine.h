@@ -44,6 +44,7 @@ struct Params {
     std::array<LfoParams, 2> lfo{};
     std::array<Misc, 4> misc{};
     float filterCutoff = 0, filterResonance = 0, keytrack = 0, portamento = 0, bendRange = 2;
+    float bendInputRange = 2;
     double bpm = 120;
     int polyphony = defaultPolyphony, solo = 0, portaMode = 0;
     bool fixedVelocity = false;
@@ -126,6 +127,7 @@ class Engine {
     }
     std::array<PlaybackPicture, playerCount> pictures{};
     std::array<float, 16> bend{}, wheel{}, pressure{};
+    std::array<bool, 16> localBend{};
     std::array<bool, 16> sustain{};
     struct Key {
         int note = -1, channel = 1;
@@ -296,6 +298,7 @@ class Engine {
         for (auto &voice : voices)
             clearVoice(voice);
         bend = {};
+        localBend = {};
         wheel = {};
         pressure = {};
         sustain = {};
@@ -443,9 +446,17 @@ class Engine {
                     releaseVoice(v, p);
             }
     }
-    void pitchWheel(int channel, float normalized) {
-        if (channel >= 1 && channel <= 16)
+    void pitchWheel(int channel, float normalized, bool local = false) {
+        if (channel >= 1 && channel <= 16) {
             bend[size_t(channel - 1)] = clamp(normalized, -1, 1);
+            localBend[size_t(channel - 1)] = local;
+        }
+    }
+    float pitchBendCents(int channel, const Params &p) const {
+        const auto index = size_t(channel - 1);
+        const float limit = p.bendRange * 100.f;
+        const float input = localBend[index] ? limit : p.bendInputRange * 100.f;
+        return clamp(bend[index] * input, -limit, limit);
     }
     void aftertouch(int channel, int note, float value) {
         if (channel < 1 || channel > 16)
@@ -484,6 +495,7 @@ class Engine {
         }
         if (cc == 121) {
             wheel[ch] = bend[ch] = pressure[ch] = 0;
+            localBend[ch] = false;
             sustain[ch] = false;
             for (auto &v : voices)
                 if (v.channel == channel && v.sustained)
@@ -630,6 +642,7 @@ class Engine {
                     fxDrive = mods.get(Destination::DistortionAmount);
                     fxPhaser = mods.get(Destination::PhaserFrequency);
                 }
+                const float bendSemitones = pitchBendCents(v.channel, p) / 100.f;
                 float oscillators[partCount][2]{};
                 const auto previousSignals = v.modulationSignal;
                 v.modulationSignal = {};
@@ -671,8 +684,7 @@ class Engine {
                     if (n == 0 || (level <= 0 && !needed[size_t(osc)]))
                         continue;
                     oscillatorSamples += uint64_t(n);
-                    const float pitch = bend[size_t(v.channel - 1)] * p.bendRange +
-                                        mods.pair(Destination::PitchA, part) * 48;
+                    const float pitch = bendSemitones + mods.pair(Destination::PitchA, part) * 48;
                     float targetPosition = clamp(op.position + mods.position(osc), 0, 1);
                     auto &position = v.sourcePosition[size_t(osc)];
                     position += smoothing * (targetPosition - position);
