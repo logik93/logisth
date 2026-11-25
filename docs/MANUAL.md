@@ -1,10 +1,9 @@
-# logisth 1.0.4 — User Manual
+# logisth 1.0.5 — User Manual
 
 wavelogik logisth is a three-part polyphonic subtractive synthesizer for VST3, CLAP and standalone use.
 This manual describes logisth's controls, sound engines and preset workflow.
 
-This edition describes the development checkout, including the performance
-wheel changes after **v1.0.4**. Published downloads include their corresponding manuals.
+This edition describes **v1.0.5**. Published downloads include their corresponding manuals.
 
 ## Contents
 
@@ -972,13 +971,18 @@ with 0 at the center. At 12 semitones, +5 raises pitch by six semitones and
 +10 raises it by an octave. The wheel shows the applied bend relative to
 BEND / st and springs back to center after a mouse drag.
 
-For standard MIDI pitch bend, full travel uses BEND / st. A host can send
-MIDI Pitch Bend Sensitivity to specify the range for its MIDI channel. Its
-requested shift is still capped at BEND / st. In FL Studio, enable **Send pitch
-bend range** in the wrapper's MIDI settings to use the range sent by the host.
-You can also set the channel's **RANGE** and logisth's **BEND / st** to the same
-value when using the FL Studio channel **PITCH** control. [FL Studio wrapper
-settings](https://www.image-line.com/fl-studio-learning-content/fl-studio-online-manual/html/plugins/wrapper.htm)
+MIDI Pitch Bend Sensitivity (RPN 0,0) sets the input range for a channel.
+**BEND / st** caps the resulting shift. If the host sends wheel position
+without a sensitivity, logisth uses ±2 semitones in FL Studio and BEND / st
+in other hosts.
+
+For FL Studio toolbar **Master Pitch**, enable **Enable main pitch** in the
+instrument channel's settings. For a full ±1200-cent sweep, set the channel
+**RANGE** and the wrapper's MIDI **Send pitch bend range** to 12 semitones,
+enable **Send pitch bend range**, and set logisth **BEND / st** to 12 or higher.
+At that input range, +200 cents is one sixth of full upward travel, and +1200
+cents is full travel. If a two-semitone wrapper range clips the wheel at +200
+cents, further increases in Master Pitch transmit the same endpoint. [FL Studio channel settings](https://www.image-line.com/fl-studio-learning-content/fl-studio-online-manual/html/chansettings_misc.htm) · [Wrapper MIDI settings](https://www.image-line.com/fl-studio-learning-content/fl-studio-online-manual/html/plugins/wrapper.htm)
 
 To automate the plug-in controls directly, select **PERFORMANCE / Bend** or
 **PERFORMANCE / Mod** from the host's parameter list. In FL Studio, open

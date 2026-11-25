@@ -1,14 +1,14 @@
-# logisth 1.0.4 — Technical Manual
+# logisth 1.0.5 — Technical Manual
 
 **wavelogik · Architecture, DSP and Engineering Reference**
 
-Document revision: 2.4 · Software baseline: 1.0.4 · State schema: 4
+Document revision: 2.4 · Software baseline: 1.0.5 · State schema: 4
 
-Implementation baseline: development checkout after `v1.0.4`. The technical identity manifest
+Implementation baseline: release tag `v1.0.5`. The technical identity manifest
 records the CMake/runtime source identity. Native BUILD_INFO records its tagged
 commit, tree fingerprints, binary hashes and manual identities.
 
-This reference describes the current development implementation of logisth. It is
+This reference describes the implementation of logisth 1.0.5. It is
 intended for sound designers, audio engineers, contributors and integrators.
 The [User Manual](MANUAL.md) describes operating the interface; this document
 explains how its controls affect processing, how data is stored and which
@@ -107,11 +107,14 @@ pressure and sustain state. Mono legato uses the held-key history and portamento
 logic instead of allocating a new independent note for every key.
 
 MIDI pitch bend is centered at 8192 and normalized with 8192 steps below
-center and 8191 above. Full travel uses BEND / st (0–24 semitones, default
-12). MIDI RPN 0,0 sets a channel's explicit sensitivity in semitones and
-optional cents. The engine scales that channel's MIDI wheel by the supplied
-range and clamps the resulting pitch shift to BEND / st. The indicator tracks
-the most recent wheel channel's applied shift and centers when BEND / st is 0.
+center and 8191 above. MIDI RPN 0,0 sets a channel's explicit sensitivity in
+semitones and optional cents. The engine scales the MIDI wheel by the supplied
+range and clamps the resulting pitch shift to BEND / st (0–24 semitones, default
+12). With no explicit sensitivity, the FL Studio host profile uses ±2 semitones
+and other hosts use BEND / st. Logisth identifies FL Studio through JUCE's host
+type or the VST3 host application's name. The indicator shows the most recent
+wheel channel's applied shift relative to BEND / st and centers when the limit
+is 0. [VST3 measurements and comparison](REVIEW-v1.0.5.md)
 
 The two new host parameters are `bendwheel` (−10 to +10) and `modwheel`
 (0 to 1). Changes to them apply globally at the processing block boundary,
@@ -1054,4 +1057,4 @@ the release tag matching a binary when investigating a specific implementation.
 | 2.1 | 1.0.2 | MIDI continuity through gaps in host transport metadata and sample clock rebasing |
 | 2.2 | 1.0.3 | Realtime VST3 graph restarts with live MIDI or unavailable transport, and offline reset coverage |
 | 2.3 | 1.0.4 | MIDI pitch bend input range, output limit and VST3 frequency measurement |
-| 2.4 | Development after 1.0.4 | Host-automatable performance wheels and MIDI Pitch Bend Sensitivity |
+| 2.4 | 1.0.5 | Host-automatable performance wheels, MIDI Pitch Bend Sensitivity and FL Studio fallback |

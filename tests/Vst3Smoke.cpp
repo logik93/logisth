@@ -9,6 +9,7 @@
 #include <pluginterfaces/vst/ivstaudioprocessor.h>
 #include <pluginterfaces/vst/ivstevents.h>
 #include <pluginterfaces/vst/ivsteditcontroller.h>
+#include <pluginterfaces/vst/ivsthostapplication.h>
 #include <pluginterfaces/vst/ivstmidicontrollers.h>
 #include <pluginterfaces/vst/ivstmessage.h>
 #include <pluginterfaces/vst/ivstparameterchanges.h>
@@ -96,6 +97,25 @@ template <class Interface> struct Borrowed : Interface {
         return 1;
     }
 };
+struct FlStudioHost : Borrowed<IHostApplication> {
+    tresult PLUGIN_API queryInterface(const TUID iid, void **out) override {
+        if (std::memcmp(iid, IHostApplication_iid, sizeof(TUID)) == 0 ||
+            std::memcmp(iid, FUnknown_iid, sizeof(TUID)) == 0) {
+            *out = static_cast<IHostApplication *>(this);
+            return kResultOk;
+        }
+        return Borrowed<IHostApplication>::queryInterface(iid, out);
+    }
+    tresult PLUGIN_API getName(String128 name) override {
+        constexpr TChar title[] = u"FL Studio";
+        std::copy_n(title, std::size(title), name);
+        return kResultOk;
+    }
+    tresult PLUGIN_API createInstance(TUID, TUID, void **out) override {
+        *out = nullptr;
+        return kNoInterface;
+    }
+};
 struct Note : Borrowed<IEventList> {
     bool releaseKey = false;
     int32 PLUGIN_API getEventCount() override {
@@ -174,10 +194,10 @@ struct Player {
     IAudioProcessor *audio = nullptr;
     int64 cursor = 0;
     int32 processingMode = kRealtime;
-    Player(IPluginFactory &factory, const TUID &cid) {
+    Player(IPluginFactory &factory, const TUID &cid, FUnknown *host = nullptr) {
         check(factory.createInstance(cid, IComponent_iid, reinterpret_cast<void **>(&component)) ==
                       kResultOk &&
-                  component->initialize(nullptr) == kResultOk,
+                  component->initialize(host) == kResultOk,
               "create VST3 instrument");
         check(component->queryInterface(IAudioProcessor_iid, reinterpret_cast<void **>(&audio)) ==
                   kResultOk,
@@ -341,14 +361,16 @@ template <size_t N> struct WheelChanges : Borrowed<IParameterChanges> {
     }
 };
 
-void pitchBend(IPluginFactory &factory, const TUID &cid) {
-    Player player(factory, cid);
+void pitchBend(IPluginFactory &factory, const TUID &cid, bool flStudio = false) {
+    FlStudioHost flStudioHost;
+    FUnknown *host = flStudio ? &flStudioHost : nullptr;
+    Player player(factory, cid, host);
     TUID controllerId{};
     IEditController *controller = nullptr;
     check(player.component->getControllerClassId(controllerId) == kResultOk &&
               factory.createInstance(controllerId, IEditController_iid,
                                      reinterpret_cast<void **>(&controller)) == kResultOk &&
-              controller->initialize(nullptr) == kResultOk,
+              controller->initialize(host) == kResultOk,
           "create VST3 edit controller");
     IConnectionPoint *componentLink = nullptr, *controllerLink = nullptr;
     check(player.component->queryInterface(IConnectionPoint_iid,
@@ -412,14 +434,26 @@ void pitchBend(IPluginFactory &factory, const TUID &cid) {
         check(crossings > 2, "audible periodic VST3 bend output");
         const double actual = 48000. * (crossings - 1) / (last - first);
         const double expected = 440. * std::exp2((-9. + cents / 100.) / 12.);
-        std::cout << "VST3 pitch bend " << cents << " cents: " << actual
+        std::cout << (flStudio ? "FL Studio host profile" : "VST3 host") << ", "
+                  << cents << " cents: " << actual
                   << " Hz (expected " << expected << " Hz)\n";
         check(std::abs(1200. * std::log2(actual / expected)) < 1.,
               "VST3 measured pitch bend within one cent");
     };
     measure(wheel, .5, 0);
-    measure(wheel, 1., 1200);
-    measure(wheel, 0., -1200);
+    measure(wheel, 1., flStudio ? 200 : 1200);
+    measure(wheel, 0., flStudio ? -200 : -1200);
+    if (flStudio) {
+        measure(wheel, .75, 100);
+        measure(wheel, .25, -100);
+        WheelChanges octaveRange{std::array{Point(rpnMsb, 0.), Point(rpnLsb, 0.),
+                                            Point(dataEntry, 12. / 128.)}};
+        player.render(false, &octaveRange);
+        measure(wheel, (8192. + 1365.) / 16384., 200);
+        measure(wheel, (8192. - 1365.) / 16384., -200);
+        measure(wheel, 1., 1200);
+        measure(wheel, 0., -1200);
+    }
 
     // A host such as FL Studio can send MIDI Pitch Bend Sensitivity before its wheel data.
     WheelChanges rpn{std::array{Point(rpnMsb, 0.), Point(rpnLsb, 0.),
@@ -493,6 +527,7 @@ int main(int argc, char **argv) {
                 }
                 offlineRestart(*factory, info.cid);
                 pitchBend(*factory, info.cid);
+                pitchBend(*factory, info.cid, true);
             }
         }
         factory->release();

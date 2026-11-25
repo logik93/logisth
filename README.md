@@ -1,4 +1,4 @@
-# logisth 1.0.4
+# logisth 1.0.5
 
 **wavelogik logisth — a three-part polyphonic subtractive synthesizer with a compact single-window console.**
 VST3, CLAP and Standalone for Windows, macOS and Linux. Built with JUCE and an
@@ -9,12 +9,13 @@ independent synthesis engine.
 
 ![logisth dark interface](docs/images/logisth-dark.png)
 
-## In development
+## New in 1.0.5
 
-The **Bend** and **Mod** performance wheels are automatable. **BEND / st**
-sets a range of 0–24 semitones and defaults to 12. MIDI Pitch Bend Sensitivity
-lets hosts such as FL Studio supply a channel-specific range. See [the
-performance wheel controls](docs/MANUAL.md#8-mixer-and-performance).
+FL Studio's default two-semitone MIDI wheel range is recognized when the host
+sends no sensitivity. Enable the wrapper's **Send pitch bend range** option at
+12 semitones for the full octave of **Master Pitch**. **PERFORMANCE / Bend**
+and **PERFORMANCE / Mod** are automatable, and **Bend / st** defaults to 12 with
+a maximum of 24. [Release notes](docs/RELEASE-v1.0.5.md) · [VST3 measurements](docs/REVIEW-v1.0.5.md)
 
 ## New in 1.0.4
 

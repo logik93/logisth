@@ -13,7 +13,7 @@
 namespace logisth {
 struct ThemeDraft;
 }
-class LogisthProcessor : public juce::AudioProcessor {
+class LogisthProcessor : public juce::AudioProcessor, private juce::VST3ClientExtensions {
   public:
     LogisthProcessor();
     int effectivePolyphony() const {
@@ -175,6 +175,9 @@ class LogisthProcessor : public juce::AudioProcessor {
     std::atomic<uint64_t> effectSamples{0};
 
   private:
+    juce::VST3ClientExtensions *getVST3ClientExtensions() override { return this; }
+    void setIHostApplication(Steinberg::FUnknown *) override;
+    std::atomic<bool> flStudioHost{juce::PluginHostType{}.isFruityLoops()};
     static juce::AudioProcessorValueTreeState::ParameterLayout layout();
     float get(logisth::Param id) const {
         return logisth::morphedValue(id, [this](size_t i) {

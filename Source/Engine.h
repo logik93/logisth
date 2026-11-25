@@ -44,6 +44,7 @@ struct Params {
     std::array<LfoParams, 2> lfo{};
     std::array<Misc, 4> misc{};
     float filterCutoff = 0, filterResonance = 0, keytrack = 0, portamento = 0, bendRange = 12;
+    float midiBendFallback = -1.f;
     double bpm = 120;
     int polyphony = defaultPolyphony, solo = 0, portaMode = 0;
     bool fixedVelocity = false;
@@ -466,8 +467,11 @@ class Engine {
     }
     float pitchBendSemitones(int channel, const Params &p) const {
         const auto index = size_t(channel - 1);
-        if (midiBend[index] && midiBendRange[index] >= 0)
-            return clamp(bend[index] * midiBendRange[index], -p.bendRange, p.bendRange);
+        if (midiBend[index]) {
+            const float range = midiBendRange[index] >= 0 ? midiBendRange[index] : p.midiBendFallback;
+            if (range >= 0)
+                return clamp(bend[index] * range, -p.bendRange, p.bendRange);
+        }
         return bend[index] * p.bendRange;
     }
     void modWheel(int channel, float normalized) {

@@ -1,6 +1,7 @@
 #include "PluginProcessor.h"
 #include "FactoryPresets.h"
 #include "PluginEditor.h"
+#include <pluginterfaces/vst/ivsthostapplication.h>
 using namespace juce;
 using namespace logisth;
 AudioProcessorValueTreeState::ParameterLayout LogisthProcessor::layout() {
@@ -39,6 +40,27 @@ LogisthProcessor::LogisthProcessor()
     publishChords(map);
     loadPreset(0);
     preparation.startThread();
+}
+void LogisthProcessor::setIHostApplication(Steinberg::FUnknown *context) {
+    using namespace Steinberg;
+    Vst::IHostApplication *host = nullptr;
+    if (context == nullptr ||
+        context->queryInterface(Vst::IHostApplication_iid, reinterpret_cast<void **>(&host)) !=
+            kResultOk)
+        return;
+
+    Vst::String128 name{};
+    const auto result = host->getName(name);
+    host->release();
+    if (result == kResultOk) {
+        std::array<CharPointer_UTF16::CharType, std::size(name)> utf16{};
+        std::copy_n(name, utf16.size() - 1, utf16.begin());
+        const String hostName = String(CharPointer_UTF16(utf16.data())).trim();
+        if (hostName.startsWithIgnoreCase("FL Studio") ||
+            hostName.startsWithIgnoreCase("Fruity Loops") ||
+            hostName.startsWithIgnoreCase("FruityLoops"))
+            flStudioHost = true;
+    }
 }
 Params LogisthProcessor::snapshot() const {
     Params p;
@@ -175,6 +197,10 @@ Params LogisthProcessor::snapshot() const {
     p.portamento = get(Param::portamento);
     p.portaMode = int(get(Param::portamode));
     p.bendRange = get(Param::bendrange);
+    // The FL wrapper defaults to a two-semitone MIDI range even when the
+    // toolbar's Master Pitch dial spans an octave. An explicit RPN overrides this.
+    if (flStudioHost.load())
+        p.midiBendFallback = 2.f;
     p.polyphony = effectivePolyphony();
     p.monoLegato = get(Param::monolegato) > 0;
     p.sync = get(Param::sync) > 0;
