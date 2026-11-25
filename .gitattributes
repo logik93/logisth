@@ -1,5 +1,7 @@
 # Preserve exact upstream bytes and formatting across native build hosts.
 Source/vendor/signalsmith-stretch/** -text -whitespace
+Source/vendor/steinberg-asio/** -text -whitespace
+licenses/Steinberg-ASIO-SDK.txt -text -whitespace
 *.pdf binary
 *.png binary
 *.wav binary

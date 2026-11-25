@@ -43,6 +43,8 @@ def required_test_count(version, platform):
     linux, other = (20, 18) if tuple(map(int, version.split('.'))) >= (0, 9, 7) else (19, 17)
     if tuple(map(int, version.split('.'))) >= (1, 0, 0):
         other = 19  # The shipped VST3 now runs a two-instance host test on every OS.
+    if platform == 'windows-x86_64' and tuple(map(int, version.split('.'))) >= (1, 0, 6):
+        return 20  # Windows also verifies the Standalone ASIO device type.
     return linux if platform.startswith('linux') else other
 
 

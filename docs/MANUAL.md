@@ -1,9 +1,9 @@
-# logisth 1.0.5 — User Manual
+# logisth 1.0.6 — User Manual
 
 wavelogik logisth is a three-part polyphonic subtractive synthesizer for VST3, CLAP and standalone use.
 This manual describes logisth's controls, sound engines and preset workflow.
 
-This edition describes **v1.0.5**. Published downloads include their corresponding manuals.
+This edition describes **v1.0.6**. Published downloads include their corresponding manuals.
 
 ## Contents
 
@@ -59,6 +59,12 @@ The on-screen keyboard also generates notes. Start at a moderate listening level
 For Standalone, launch the executable or app and choose audio and MIDI devices
 in its audio settings. The standalone wrapper provides its own device settings;
 those are separate from the synth panel.
+
+On Windows, install the ASIO driver supplied by your audio interface vendor.
+In Standalone, open **Audio/MIDI Settings**, select **ASIO** under **Audio
+device type**, then select your interface and its output channels. Set the
+sample rate and buffer size in the settings or the driver's control panel.
+
 
 Windows builds target x64. macOS Universal bundles contain Intel x86_64 and Apple
 Silicon arm64 code and require macOS 11 or later. The minimum Linux glibc version

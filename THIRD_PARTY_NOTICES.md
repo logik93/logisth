@@ -13,6 +13,7 @@ remove their distribution requirements.
 | Open Sans | Apache-2.0; [license](assets/fonts/LICENSE.txt) and [notice](assets/fonts/NOTICE.txt). |
 | VST3 SDK bundled with the pinned JUCE dependency | Retains its upstream SDK licensing; see the SDK LICENSE.txt under JUCE's VST3_SDK directory. |
 | Optional VST2 SDK | Separately obtained licensed SDK; not included in this repository or binary packages. |
+| Steinberg ASIO SDK headers | GPLv3 for the Windows Standalone backend. See [SDK license](licenses/Steinberg-ASIO-SDK.txt), [upstream files](https://github.com/juce-framework/JUCE/tree/654bdbc7a9db0dae90849b44abe91f339e9f0768/modules/juce_audio_devices/native/asio) and [GPLv3 text](licenses/GPL-3.0.txt). |
 
 Convolution reverb uses JUCE's dsp::Convolution (non-uniform partitioned FFT,
 zero added latency), under the same JUCE terms above. Its IR adapter and the
@@ -21,6 +22,11 @@ synthetic factory chamber response are original wavelogik code/material.
 JUCE's notice lists further bundled third-party components and their licenses.
 Binary distribution must satisfy the applicable JUCE/SDK terms as well as the
 notices above; the original-code MIT grant remains available independently.
+
+The ASIO-enabled Windows Standalone uses JUCE under [AGPLv3](licenses/AGPL-3.0.txt)
+and the Steinberg interfaces under GPLv3. ASIO is a trademark of Steinberg
+Media Technologies GmbH. Corresponding source is available through the release
+source archive and the exact dependency commits in CMakeLists.txt.
 
 ## Signalsmith Stretch and Linear
 

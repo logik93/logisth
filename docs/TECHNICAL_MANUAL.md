@@ -1,14 +1,14 @@
-# logisth 1.0.5 — Technical Manual
+# logisth 1.0.6 — Technical Manual
 
 **wavelogik · Architecture, DSP and Engineering Reference**
 
-Document revision: 2.4 · Software baseline: 1.0.5 · State schema: 4
+Document revision: 2.5 · Software baseline: 1.0.6 · State schema: 4
 
-Implementation baseline: release tag `v1.0.5`. The technical identity manifest
+Implementation baseline: release tag `v1.0.6`. The technical identity manifest
 records the CMake/runtime source identity. Native BUILD_INFO records its tagged
 commit, tree fingerprints, binary hashes and manual identities.
 
-This reference describes the implementation of logisth 1.0.5. It is
+This reference describes the implementation of logisth 1.0.6. It is
 intended for sound designers, audio engineers, contributors and integrators.
 The [User Manual](MANUAL.md) describes operating the interface; this document
 explains how its controls affect processing, how data is stored and which
@@ -95,6 +95,11 @@ every patch produces a 60-second audible decay.
 
 Implementation: [PluginProcessor.cpp](../Source/PluginProcessor.cpp),
 [PluginProcessor.h](../Source/PluginProcessor.h), [Topology.h](../Source/Topology.h).
+
+The Windows Standalone links JUCE's ASIO backend by default. Its device manager
+loads the driver installed on the system. The ASIO backend test instantiates
+JUCE's device type without requiring audio hardware. The VST3 and CLAP targets
+use the audio stream supplied by their host. [Windows ASIO verification](REVIEW-v1.0.6.md)
 
 ## 2. Voice allocation and envelopes
 
@@ -1058,3 +1063,4 @@ the release tag matching a binary when investigating a specific implementation.
 | 2.2 | 1.0.3 | Realtime VST3 graph restarts with live MIDI or unavailable transport, and offline reset coverage |
 | 2.3 | 1.0.4 | MIDI pitch bend input range, output limit and VST3 frequency measurement |
 | 2.4 | 1.0.5 | Host-automatable performance wheels, MIDI Pitch Bend Sensitivity and FL Studio fallback |
+| 2.5 | 1.0.6 | Windows Standalone ASIO backend and native registration test |

@@ -1,4 +1,4 @@
-# logisth 1.0.5
+# logisth 1.0.6
 
 **wavelogik logisth — a three-part polyphonic subtractive synthesizer with a compact single-window console.**
 VST3, CLAP and Standalone for Windows, macOS and Linux. Built with JUCE and an
@@ -8,6 +8,11 @@ independent synthesis engine.
 [Technical Manual PDF](docs/logisth-Technical-Manual-English.pdf)
 
 ![logisth dark interface](docs/images/logisth-dark.png)
+
+## New in 1.0.6
+
+Windows Standalone supports installed ASIO drivers. Choose **ASIO** under
+**Audio/MIDI Settings → Audio device type**. [Release notes](docs/RELEASE-v1.0.6.md)
 
 ## New in 1.0.5
 
@@ -446,6 +451,10 @@ cmake -S . -B build -A x64
 cmake --build build --config Release --parallel 3
 ctest --test-dir build -C Release --output-on-failure
 ```
+
+The Windows Standalone build enables ASIO by default and uses the bundled
+Steinberg interface headers under GPLv3. Use `-DLOGISTH_ASIO=OFF` to omit it.
+[Third-party notices](THIRD_PARTY_NOTICES.md)
 
 macOS (Xcode command-line tools and CMake):
 
