@@ -5,8 +5,8 @@
   "run_url": "https://github.com/logik93/logisth/actions/runs/45689444082",
   "phase": "failed",
   "pipeline_phase": "failed",
-  "stage": "windows-linux",
-  "recorded_at": "2026-11-25T20:15:20.036015+00:00",
+  "stage": "final",
+  "recorded_at": "2026-11-25T20:16:07.672539+00:00",
   "jobs": {
     "started": {
       "result": "success",
@@ -22,6 +22,18 @@
     },
     "publish": {
       "result": "failure",
+      "outputs": {}
+    },
+    "report_initial": {
+      "result": "success",
+      "outputs": {}
+    },
+    "macos": {
+      "result": "skipped",
+      "outputs": {}
+    },
+    "publish_macos": {
+      "result": "skipped",
       "outputs": {}
     }
   }
