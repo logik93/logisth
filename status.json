@@ -1,0 +1,27 @@
+{
+  "tag": "v1.0.7",
+  "automation_commit": "2fd74465b56e3a8b667314836f8e1175e494222a",
+  "run_id": "45845642866",
+  "run_url": "https://github.com/logik93/logisth/actions/runs/45845642866",
+  "phase": "failed",
+  "pipeline_phase": "failed",
+  "stage": "",
+  "recorded_at": "2026-11-26T15:25:23.870270+00:00",
+  "check": "windows-asan",
+  "platform": "windows-x86_64",
+  "failures": [
+    {
+      "log": "native-out\\logs\\tests.log",
+      "errors": [
+        "The following tests FAILED:"
+      ]
+    }
+  ],
+  "test_failures": [
+    {
+      "name": "processor",
+      "message": "Failed",
+      "output": "\n\t\t\n\t\t\n\t\tPASS appearance: persisted size, typed scale, isolated instances, ten JSON defaults, custom editor, folder scanning and stable selection\nPASS advanced themes: chosen save path, rename, font/background/knobs, two-minute scans, per-instance draft and editor recreation\nPASS 0.9.2 integration: zero MOD ENV, source DSP bindings, EQ audio/gestures, new parameter presets and conditional UI\nPASS 0.9.3 integration: MORPH names/ranges, section locks/Undo, zoomed range selection/handles, routing and full layout\nPASS 0.9.4 integration: six per-player controls, preset round-trips, compact UI, live/muted pool changes and last-request preparation\nPASS 0.9.5 integration: 736 frozen host parameters, six players, 200 ct, extended choices, tail mouse editing, all-parameter presets and old sessions\nPASS 0.9.6 integration: frozen 954-parameter contract, six 400ct/blend controls, paired menus, velocity/MIDI, scrollable credits, 16 EQ bands and presets\nPASS v0.9.6.1 baseline: 1055 frozen definitions, 200 grouped macro choices and symmetric A/B/C mappings\nPASS convolution: direct FIR parity, three rates, arbitrary blocks, zero latency, normalization, embedded preset/project PCM, invalid imports, live replacement and audio allocation guards\nPASS oscillator clipboard: all 36 source/destination pairs, complete controls, semantic FM routing, embedded media, cross-instance paste and six panel buttons\nPASS 0.9.6.2 integration: Legacy recall, dynamic presets, post-Main ceiling, live graphs, no audio allocations, ordered tabs, IR waveform/drop, 1070-control layout and MIDI-only CPU\nPASS 0.9.7: 1070-field compatibility, 32 voices, default Sample, pointer/keyboard reorder, preset/legacy order, allocation/ceiling, 120 theme renders and layout\nPASS stereo convolution: 48 real-WAV lane/polarity/normalization/rate cases, stereo sampler integration and audio allocation guards\nwheel gestures publish plugin parameter changes\n\n\t"
+    }
+  ]
+}
