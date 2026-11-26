@@ -1,9 +1,9 @@
-# logisth 1.0.6 — User Manual
+# logisth 1.0.7 — User Manual
 
 wavelogik logisth is a three-part polyphonic subtractive synthesizer for VST3, CLAP and standalone use.
 This manual describes logisth's controls, sound engines and preset workflow.
 
-This edition describes **v1.0.6**. Published downloads include their corresponding manuals.
+This edition describes **v1.0.7**. Published downloads include their corresponding manuals.
 
 ## Contents
 
@@ -972,14 +972,14 @@ mono mode. GLIDE sets portamento time; Normal mode glides for overlapping notes,
 while Slide also permits glide between separate notes.
 
 **BEND / st** sets the maximum shift in either direction, from 0 to 24
-semitones. New instances default to 12. **BEND** travels from −10 to +10,
-with 0 at the center. At 12 semitones, +5 raises pitch by six semitones and
-+10 raises it by an octave. The wheel shows the applied bend relative to
+semitones. New instances default to 12. **BEND** travels from −12 to +12,
+with 0 at the center. At the default range, +3 raises pitch by three semitones
+and +12 raises it by an octave. The wheel shows the applied bend relative to
 BEND / st and springs back to center after a mouse drag.
 
 MIDI Pitch Bend Sensitivity (RPN 0,0) sets the input range for a channel.
 **BEND / st** caps the resulting shift. If the host sends wheel position
-without a sensitivity, logisth uses ±2 semitones in FL Studio and BEND / st
+without a sensitivity, logisth uses ±12 semitones in FL Studio and BEND / st
 in other hosts.
 
 For FL Studio toolbar **Master Pitch**, enable **Enable main pitch** in the

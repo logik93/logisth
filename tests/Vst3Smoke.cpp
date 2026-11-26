@@ -441,16 +441,29 @@ void pitchBend(IPluginFactory &factory, const TUID &cid, bool flStudio = false) 
               "VST3 measured pitch bend within one cent");
     };
     measure(wheel, .5, 0);
-    measure(wheel, 1., flStudio ? 200 : 1200);
-    measure(wheel, 0., flStudio ? -200 : -1200);
     if (flStudio) {
-        measure(wheel, .75, 100);
-        measure(wheel, .25, -100);
+        auto measureMasterPitch = [&] {
+            for (const int cents : {300, 400, 200, -300, -400, -200})
+                measure(wheel, .5 + cents / 2400., cents);
+        };
+        measureMasterPitch();
+        measure(wheel, 1., 1200);
+        measure(wheel, 0., -1200);
+        WheelChanges fourSemitoneLimit{std::array{Point("bendrange", 4. / 24.)}};
+        player.render(false, &fourSemitoneLimit);
+        measure(wheel, .625, 300);
+        measure(wheel, .75, 400);
+        measure(wheel, .375, -300);
+        measure(wheel, .25, -400);
+        WheelChanges restoreLimit{std::array{Point("bendrange", .5)}};
+        player.render(false, &restoreLimit);
         WheelChanges octaveRange{std::array{Point(rpnMsb, 0.), Point(rpnLsb, 0.),
                                             Point(dataEntry, 12. / 128.)}};
         player.render(false, &octaveRange);
-        measure(wheel, (8192. + 1365.) / 16384., 200);
-        measure(wheel, (8192. - 1365.) / 16384., -200);
+        measureMasterPitch();
+        measure(wheel, 1., 1200);
+        measure(wheel, 0., -1200);
+    } else {
         measure(wheel, 1., 1200);
         measure(wheel, 0., -1200);
     }

@@ -160,7 +160,9 @@ class LogisthProcessor : public juce::AudioProcessor, private juce::VST3ClientEx
     juce::MidiKeyboardState keyboard;
     float displayedBend() const {
         const float value = get(logisth::Param::bendwheel);
-        return value == lastBendParameter.load() ? pitchPosition.load() * 10.f : value;
+        return value == lastBendParameter.load()
+                   ? pitchPosition.load() * logisth::bendWheelMax
+                   : value;
     }
     float displayedMod() const {
         const float value = get(logisth::Param::modwheel);

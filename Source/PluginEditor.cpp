@@ -1632,7 +1632,7 @@ class LogisthEditor::Console : public Component,
             wheel->getProperties().set("trim", true);
             addAndMakeVisible(wheel);
         }
-        pitch.setTooltip("Pitch bend from -10 to +10. BEND / st sets the range in semitones.");
+        pitch.setTooltip("Pitch bend from -12 to +12. BEND / st sets the range in semitones.");
         mod.setTooltip("Modulation wheel");
         auto attachWheel = [this](Slider &slider, const char *id) {
             slider.setComponentID("wheel." + String(id));

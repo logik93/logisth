@@ -1100,6 +1100,7 @@ enum class Param : size_t {
     Count
 };
 constexpr size_t parameterCount = size_t(Param::Count);
+inline constexpr float bendWheelMax = 12.f;
 struct ParameterSpec {
     const char *id;
     const char *label;
@@ -2829,7 +2830,7 @@ inline const std::array<ParameterSpec, parameterCount> parameterSpecs{{
     {"distcross1", "Crossover 1 / Hz", 3, "DISTORTION", 20, 20000, 200, .3f, "", false},
     {"distcross2", "Crossover 2 / Hz", 3, "DISTORTION", 20, 20000, 2000, .3f, "", false},
     {"distcross3", "Crossover 3 / Hz", 3, "DISTORTION", 20, 20000, 8000, .3f, "", false},
-    {"bendwheel", "Bend", 0, "PERFORMANCE", -10, 10, 0, 1, "", false},
+    {"bendwheel", "Bend", 0, "PERFORMANCE", -bendWheelMax, bendWheelMax, 0, 1, "", false},
     {"modwheel", "Mod", 0, "PERFORMANCE", 0, 1, 0, 1, "", false},
 }};
 

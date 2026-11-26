@@ -9,6 +9,13 @@ independent synthesis engine.
 
 ![logisth dark interface](docs/images/logisth-dark.png)
 
+## New in 1.0.7
+
+FL Studio wheel messages without an explicit pitch bend sensitivity now use
+the ±12-semitone Master Pitch scale. **BEND / st** caps the applied shift, and
+**PERFORMANCE / Bend** spans −12 to +12 with zero at the center.
+[Release notes](docs/RELEASE-v1.0.7.md)
+
 ## New in 1.0.6
 
 Windows Standalone supports installed ASIO drivers. Choose **ASIO** under

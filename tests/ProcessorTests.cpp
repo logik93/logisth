@@ -44,19 +44,19 @@ void checkPerformanceWheels() {
         p->processBlock(audio, midi);
         midi.clear();
         check(std::abs(p->displayedBend() - expected) < 1e-5f,
-              "Bend wheel shows the applied shift on its -10 to +10 scale");
+              "Bend wheel shows the applied shift on its -12 to +12 scale");
     };
     midi.addEvent(MidiMessage::pitchWheel(2, 16383), 0);
-    process(10);
+    process(12);
     midi.addEvent(MidiMessage::pitchWheel(2, 0), 0);
-    process(-10);
+    process(-12);
     midi = MidiRPNGenerator::generate(2, 0, (2 << 7) | 50, false, true);
-    process(-10.f * 2.5f / 12.f);
+    process(-2.5f);
     midi.addEvent(MidiMessage::pitchWheel(3, 16383), 19);
-    process(10); // The range message belongs to channel 2.
+    process(12); // The range message belongs to channel 2.
     gain_test::set(*p, "bendrange", 1);
     midi.addEvent(MidiMessage::pitchWheel(2, 0), 7);
-    process(-10);
+    process(-12);
     gain_test::set(*p, "bendrange", 0);
     process(0);
     gain_test::set(*p, "bendrange", 12);

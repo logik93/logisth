@@ -197,10 +197,10 @@ Params LogisthProcessor::snapshot() const {
     p.portamento = get(Param::portamento);
     p.portaMode = int(get(Param::portamode));
     p.bendRange = get(Param::bendrange);
-    // The FL wrapper defaults to a two-semitone MIDI range even when the
-    // toolbar's Master Pitch dial spans an octave. An explicit RPN overrides this.
+    // Master Pitch spans an octave. Use that scale for FL Studio wheel data
+    // without a sensitivity message, independently of the patch's bend limit.
     if (flStudioHost.load())
-        p.midiBendFallback = 2.f;
+        p.midiBendFallback = 12.f;
     p.polyphony = effectivePolyphony();
     p.monoLegato = get(Param::monolegato) > 0;
     p.sync = get(Param::sync) > 0;
@@ -710,7 +710,7 @@ void LogisthProcessor::processBlock(AudioBuffer<float> &audio, MidiBuffer &midi)
     const float bendParameter = get(Param::bendwheel);
     if (bendParameter != lastBendParameter.load()) {
         lastBendParameter = bendParameter;
-        emit(MidiEvent{0, EventType::PitchWheel, 1, 0, bendParameter / 10.f}, true);
+        emit(MidiEvent{0, EventType::PitchWheel, 1, 0, bendParameter / bendWheelMax}, true);
     }
     const float modParameter = get(Param::modwheel);
     if (modParameter != lastModParameter.load()) {

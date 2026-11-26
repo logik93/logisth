@@ -139,7 +139,7 @@ inline void run(const File &report = {}) {
     check(bendSlider && modSlider && bend->isAutomatable() && mod->isAutomatable() &&
               editor->getControlParameterIndex(*bendSlider) == bend->getParameterIndex() &&
               editor->getControlParameterIndex(*modSlider) == mod->getParameterIndex() &&
-              bendSlider->getMinimum() == -10 && bendSlider->getMaximum() == 10,
+              bendSlider->getMinimum() == -12 && bendSlider->getMaximum() == 12,
           "wheel controls are discoverable by DAW automation");
     bendSlider->setValue(5, sendNotificationSync);
     modSlider->setValue(.5, sendNotificationSync);
