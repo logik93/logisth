@@ -20,8 +20,8 @@ const platforms = [
 ] as const;
 
 const manuals = [
-  { id: "user", label: "User manual", description: "Controls, workflows and presets", local: "/docs/", Icon: BookOpen },
-  { id: "technical", label: "Technical manual", description: "Architecture, DSP and measurements", local: "/technical/", Icon: Code2 },
+  { id: "user", label: "User manual", description: "Controls, workflows and presets", local: "./docs/", Icon: BookOpen },
+  { id: "technical", label: "Technical manual", description: "Architecture, DSP and measurements", local: "./technical/", Icon: Code2 },
 ] as const;
 
 export function ReleaseDownloads() {
@@ -29,7 +29,7 @@ export function ReleaseDownloads() {
 
   useEffect(() => {
     const controller = new AbortController();
-    void fetch("/releases.php", { signal: controller.signal, headers: { Accept: "application/json" } })
+    void fetch("./releases.php", { signal: controller.signal, headers: { Accept: "application/json" } })
       .then((response) => response.ok && response.headers.get("content-type")?.includes("application/json") ? response.json() : null)
       .then((data: Release | null) => {
         if (data?.version && data.downloads && data.manuals) setRelease(data);

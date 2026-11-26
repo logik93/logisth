@@ -10,7 +10,7 @@ export const metadata: Metadata = {
   title: "logisth — Polyphonic synthesizer by wavelogik",
   description,
   alternates: { canonical: "/" },
-  icons: { icon: "/assets/icon.svg" },
+  icons: { icon: "./assets/icon.svg" },
   openGraph: {
     type: "website",
     title: "logisth — Polyphonic synthesizer",

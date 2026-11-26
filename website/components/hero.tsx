@@ -105,8 +105,8 @@ export function Hero() {
       <div className="hero-stage shell">
         <div className="hero-art" ref={art} aria-hidden="true">
           <picture>
-            <source media="(max-width: 640px)" srcSet="/media/phase-loop-small.webp" />
-            <img src="/media/phase-loop.webp" alt="" width="1320" height="1056" fetchPriority="high" />
+            <source media="(max-width: 640px)" srcSet="./media/phase-loop-small.webp" />
+            <img src="./media/phase-loop.webp" alt="" width="1320" height="1056" fetchPriority="high" />
           </picture>
           <canvas ref={canvas} className="wave-canvas" />
         </div>

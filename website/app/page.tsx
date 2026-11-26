@@ -32,7 +32,7 @@ const questions = [
 ];
 
 function Brand() {
-  return <a className="brand" href="/" aria-label="logisth home"><Activity size={25} strokeWidth={1.7} /><span>logisth<span className="brand-period">.</span></span></a>;
+  return <a className="brand" href="./" aria-label="logisth home"><Activity size={25} strokeWidth={1.7} /><span>logisth<span className="brand-period">.</span></span></a>;
 }
 
 export default function Home() {
@@ -83,7 +83,7 @@ export default function Home() {
                 <h3>Build your effects chain</h3>
                 <p>Reorder eight effects, split distortion across up to four bands and compare the signal before and after processing.</p>
               </div>
-              <img src="/assets/manual/logisth-distortion-multiband.webp" alt="logisth multiband distortion rack with crossover controls and a spectrum display" width="1240" height="860" loading="lazy" decoding="async" />
+              <img src="./assets/manual/logisth-distortion-multiband.webp" alt="logisth multiband distortion rack with crossover controls and a spectrum display" width="1240" height="860" loading="lazy" decoding="async" />
             </article>
             <article className="surface modulation-card">
               <Radio className="card-icon" size={23} />

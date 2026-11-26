@@ -7,8 +7,11 @@ and manuals. The two bundled HTML manuals remain available under `/docs/` and
 
 ## Deploy on Apache
 
-Extract [wavelogik.pl.zip](wavelogik.pl.zip) into the document root for the
-site. PHP 8.2 or newer must handle `.php` files and Apache must serve
+Extract the entire [wavelogik.pl.zip](wavelogik.pl.zip) into the document
+root or a subdirectory on the site. Keep `_next/`, `assets/` and `media/`
+alongside `index.php` and `index.html`. Open the directory URL over HTTP or
+HTTPS, with a trailing slash for a subdirectory such as `/logisth/`.
+PHP 8.2 or newer must handle `.php` files and Apache must serve
 `index.php` or `index.html` as a directory index. The ZIP includes both
 entry points, `_next/`, `media/`, the release service and both manuals.
 The production site runs on Apache and PHP without a Node.js process or a

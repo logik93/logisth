@@ -66,7 +66,7 @@ export function EngineExplorer() {
           )}
         </div>
       ))}
-      <noscript><p className="engine-nojs">See all engines in the <a className="text-link" href="/docs/">user manual</a>.</p></noscript>
+      <noscript><p className="engine-nojs">See all engines in the <a className="text-link" href="./docs/">user manual</a>.</p></noscript>
     </div>
   );
 }
