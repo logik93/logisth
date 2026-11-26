@@ -141,7 +141,7 @@ inline void run(const File &report = {}) {
               editor->getControlParameterIndex(*modSlider) == mod->getParameterIndex() &&
               bendSlider->getMinimum() == -12 && bendSlider->getMaximum() == 12,
           "wheel controls are discoverable by DAW automation");
-    bendSlider->setValue(5, sendNotificationSync);
+    bendSlider->setValue(6, sendNotificationSync);
     modSlider->setValue(.5, sendNotificationSync);
     check(std::abs(bend->getValue() - .75f) < 1e-6f && std::abs(mod->getValue() - .5f) < 1e-6f,
           "wheel gestures publish plugin parameter changes");
