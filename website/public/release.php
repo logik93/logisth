@@ -5,6 +5,11 @@ declare(strict_types=1);
 namespace Wavelogik;
 
 const RELEASES_URL = 'https://github.com/logik93/logisth/releases';
+const REPOSITORY_URL = 'https://github.com/logik93/logisth';
+const MANUALS = [
+    'user' => ['MANUAL.md', 'logisth-Manual-English.pdf'],
+    'technical' => ['TECHNICAL_MANUAL.md', 'logisth-Technical-Manual-English.pdf'],
+];
 const LATEST_API = 'https://api.github.com/repos/logik93/logisth/releases/latest';
 const MAX_RELEASE_BYTES = 1024 * 1024;
 
@@ -44,7 +49,21 @@ function releaseDetails(mixed $data): ?array
         ];
     }
 
-    return ['version' => substr($tag, 1), 'url' => RELEASES_URL . '/tag/' . $tag, 'downloads' => $downloads];
+    $manuals = [];
+    foreach (MANUALS as $key => [$markdown, $pdf]) {
+        $url = RELEASES_URL . '/download/' . $tag . '/' . $pdf;
+        $manuals[$key] = [
+            'online' => REPOSITORY_URL . '/blob/' . $tag . '/docs/' . $markdown,
+            'pdf' => ($uploaded[$pdf] ?? null) === $url ? $url : null,
+        ];
+    }
+
+    return [
+        'version' => substr($tag, 1),
+        'url' => RELEASES_URL . '/tag/' . $tag,
+        'downloads' => $downloads,
+        'manuals' => $manuals,
+    ];
 }
 
 function fetchRelease(): ?array

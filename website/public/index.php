@@ -51,6 +51,12 @@ function escapeHtml(string $value): string
         <div class="wrap hero-inner">
           <div class="hero-art" aria-hidden="true">
             <img src="assets/spectrum.webp" alt="" fetchpriority="high" />
+            <div class="spectrum-orbit"></div>
+            <div class="spectrum-meter">
+              <?php foreach ([18, 26, 38, 55, 71, 48, 63, 88, 72, 51, 77, 94, 83, 66, 43, 58, 40, 31, 20] as $i => $level): ?>
+                <i style="--level: <?= $level ?>%; --beat: <?= $i * -97 ?>ms"></i>
+              <?php endforeach; ?>
+            </div>
           </div>
           <div class="hero-copy">
             <div class="overline"><i></i> POLYPHONIC SYNTHESIZER</div>
@@ -280,17 +286,28 @@ function escapeHtml(string $value): string
         <div id="docs">
           <p class="eyebrow">REFERENCE</p>
           <h2>Documentation</h2>
-          <a class="rowlink" href="docs/"
-            ><span
-              ><strong>User manual</strong
-              ><small>Controls, workflows and presets</small></span
-            ><span aria-hidden="true" class="arrow up-right"></span></a
-          ><a class="rowlink" href="technical/"
-            ><span
-              ><strong>Technical manual</strong
-              ><small>Architecture, DSP and measurements</small></span
-            ><span aria-hidden="true" class="arrow up-right"></span></a
-          >
+          <?php if ($release !== null): ?>
+            <p class="manual-version">Version <?= escapeHtml($release['version']) ?> · English</p>
+          <?php endif; ?>
+          <?php foreach ([
+              'user' => ['User manual', 'Controls, workflows and presets', 'docs/'],
+              'technical' => ['Technical manual', 'Architecture, DSP and measurements', 'technical/'],
+          ] as $key => [$title, $description, $local]): ?>
+            <?php $manual = $release['manuals'][$key] ?? null; ?>
+            <div class="manual-row">
+              <a class="rowlink" href="<?= escapeHtml($manual['online'] ?? $local) ?>">
+                <span><strong><?= escapeHtml($title) ?></strong><small><?= escapeHtml($description) ?></small></span>
+              </a>
+              <?php if ($manual !== null): ?>
+                <div class="manual-formats">
+                  <?php if ($manual['pdf'] !== null): ?>
+                    <a href="<?= escapeHtml($manual['pdf']) ?>" aria-label="<?= escapeHtml($title) ?> PDF">PDF</a>
+                  <?php endif; ?>
+                  <a href="<?= escapeHtml($local) ?>" aria-label="<?= escapeHtml($title) ?> bundled edition">Bundled HTML</a>
+                </div>
+              <?php endif; ?>
+            </div>
+          <?php endforeach; ?>
         </div>
         <div id="download">
           <?php if ($release !== null): ?>

@@ -830,3 +830,81 @@ footer {
     scroll-behavior: auto;
   }
 }
+
+.spectrum-orbit {
+  position: absolute;
+  inset: 17% 7%;
+  border: 1px solid #a88dfc42;
+  border-radius: 50%;
+  box-shadow: inset 0 0 45px #9163ff22, 0 0 38px #9163ff22;
+  transform: rotate(-17deg);
+  mask-image: linear-gradient(110deg, transparent 12%, #000 82%);
+}
+.spectrum-meter {
+  display: flex;
+  align-items: center;
+  gap: clamp(3px, 0.65vw, 10px);
+  position: absolute;
+  inset: auto 13% 11% auto;
+  height: clamp(24px, 6vw, 65px);
+  opacity: 0.67;
+}
+.spectrum-meter i {
+  width: clamp(2px, 0.32vw, 5px);
+  height: var(--level);
+  border-radius: 4px;
+  background: linear-gradient(#89e2ec, #af81fe 72%, #6941ba);
+  box-shadow: 0 0 11px #ac8aff65;
+}
+.manual-version {
+  color: var(--violet);
+  font-size: .9rem;
+}
+.manual-row .rowlink {
+  margin-bottom: 0;
+}
+.manual-formats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .9rem;
+  margin: .35rem 0 1rem;
+  font-size: .875rem;
+}
+.manual-formats a {
+  text-decoration: underline;
+  text-underline-offset: .2em;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .spectrum-orbit {
+    animation: orbit-bloom 4.6s ease-out both;
+  }
+  .spectrum-meter i {
+    animation: meter-pulse 800ms ease-in-out var(--beat) 5 alternate backwards;
+  }
+  .hero-copy {
+    animation: copy-arrival 750ms cubic-bezier(.2,.65,.25,1) both;
+  }
+  .button, .manual-row .rowlink {
+    transition: transform 200ms ease, background-color 200ms ease, box-shadow 200ms ease;
+  }
+  .button:hover, .manual-row .rowlink:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 9px 28px #9c76ef27;
+  }
+  .section-arrival {
+    animation: copy-arrival 680ms cubic-bezier(.2,.65,.25,1) both;
+  }
+}
+@keyframes orbit-bloom {
+  from { opacity: 0; transform: rotate(-24deg) scale(.85); }
+  53% { opacity: .95; }
+  to { opacity: .7; transform: rotate(-17deg) scale(1); }
+}
+@keyframes meter-pulse {
+  from { transform: scaleY(.45); }
+  to { transform: scaleY(1.1); }
+}
+@keyframes copy-arrival {
+  from { opacity: .55; transform: translateY(15px); }
+  to { opacity: 1; transform: translateY(0); }
+}

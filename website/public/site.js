@@ -99,3 +99,18 @@ document.querySelectorAll(".plot").forEach((surface, index) => {
   paint();
   if ("ResizeObserver" in window) new ResizeObserver(paint).observe(surface);
 });
+
+if ("IntersectionObserver" in window &&
+    matchMedia("(prefers-reduced-motion: no-preference)").matches) {
+  const observer = new IntersectionObserver((entries) => {
+    for (const { target, isIntersecting } of entries) {
+      if (isIntersecting) {
+        target.classList.add("section-arrival");
+        observer.unobserve(target);
+      }
+    }
+  }, { threshold: 0.15 });
+  document.querySelectorAll("body:not(.reading) main section.section").forEach(
+    (section) => observer.observe(section),
+  );
+}

@@ -3,7 +3,9 @@
 The site introduces the logisth synthesizer and includes English user and
 technical manuals in HTML and PDF. The home page gets the latest published
 stable release from GitHub and shows download links as each platform archive
-becomes available.
+becomes available. The Documentation section uses the same release tag for
+both manuals on GitHub and links to the English PDF assets once uploaded.
+The bundled HTML manuals stay available as a fallback.
 
 ## Deploy on your own server
 
@@ -37,5 +39,6 @@ python3 website/package.py
 ```
 
 The packaging script puts the contents of `website/public/` into
-`website/wavelogik.pl.zip`. The download section refreshes independently
-of the bundled manuals.
+`website/wavelogik.pl.zip`. The download and GitHub documentation links refresh on the same five-minute
+cache. Rebuild the website ZIP when deploying changes to the site itself or
+refreshing its bundled HTML fallback.
