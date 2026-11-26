@@ -4,6 +4,7 @@ import re
 import shutil
 import subprocess
 from pathlib import Path
+from string import Template
 from urllib.parse import quote, urlsplit
 from PIL import Image
 
@@ -11,11 +12,16 @@ root = Path(__file__).resolve().parents[1]
 public = root / 'website/public'
 version = re.search(r'project\(Logisth VERSION ([\d.]+)', (root / 'CMakeLists.txt').read_text())[1]
 repository = 'https://github.com/logik93/logisth/blob/v' + version + '/'
-manuals = {'MANUAL.md': ('docs', 'User manual', 'logisth-Manual-English.pdf'),
-           'TECHNICAL_MANUAL.md': ('technical', 'Technical manual', 'logisth-Technical-Manual-English.pdf')}
+manuals = {
+    'MANUAL.md': ('docs', 'User manual', 'logisth-Manual-English.pdf',
+                  'Installation, synthesis engines, sound design and performance.'),
+    'TECHNICAL_MANUAL.md': ('technical', 'Technical manual', 'logisth-Technical-Manual-English.pdf',
+                            'Architecture, signal flow, DSP algorithms and measurements.'),
+}
+template = Template((public.parent / 'manual-template.html').read_text(encoding='utf-8'))
 asset_dir = public / 'assets/manual'
 asset_dir.mkdir(parents=True, exist_ok=True)
-for filename, (route, title, pdf) in manuals.items():
+for filename, (route, title, pdf, description) in manuals.items():
     source = root / 'docs' / filename
     text = source.read_text(encoding='utf-8')
     text = re.sub(r'^# [^\n]+\n', '', text, count=1)
@@ -53,13 +59,16 @@ for filename, (route, title, pdf) in manuals.items():
                   re.findall(r'<h2 id="([^"]+)">(.+?)</h2>', body))
     body = body.replace('<table>', '<div class="table-wrap"><table>').replace('</table>', '</table></div>')
     body = body.replace('<img ', '<img loading="lazy" ')
-    page = f'''<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>{title} — logisth {version} | wavelogik</title><link rel="icon" href="../assets/icon.svg"><link rel="stylesheet" href="../site.css"></head>
-<body class="reading"><a class="skip" href="#content">Skip to content</a><header class="top"><div class="wrap nav">
-<a class="brand" href="../"><img src="../assets/logisth.svg" alt="">wavelogik</a><nav aria-label="Documentation"><a href="../docs/">User manual</a><a href="../technical/">Technical manual</a></nav><a class="get-small" href="{pdf}" download>PDF <span aria-hidden="true" class="arrow down"></span></a></div></header>
-<main id="content"><div class="book-mast"><div class="wrap"><p class="eyebrow">LOGISTH / DOCUMENTATION</p><h1>{title}</h1><p class="formats">VERSION {version} · ENGLISH</p></div></div>
-<div class="book wrap"><details class="contents" open><summary>Contents</summary><nav aria-label="Chapters">{toc}</nav></details><article>{body}</article></div></main>
-<footer><div class="wrap foot"><a class="brand" href="../"><img src="../assets/logisth.svg" alt="">wavelogik</a><span>wavelogik.pl</span><a href="#content">Back to top</a></div></footer><script src="../site.js" defer></script></body></html>'''
+    manual_links = []
+    for destination, label, _, _ in manuals.values():
+        current = ' aria-current="page"' if destination == route else ''
+        manual_links.append(f'<a href="../{destination}/"{current}>{label}</a>')
+
+    page = template.substitute(
+        title=title, description=description, version=version, pdf=pdf,
+        switch=''.join(manual_links), toc=toc, body=body,
+        source=repository + 'docs/' + filename,
+    )
     directory = public / route
     directory.mkdir(exist_ok=True)
     (directory / 'index.html').write_text(page, encoding='utf-8')

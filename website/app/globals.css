@@ -1,27 +1,6 @@
 @import "tailwindcss";
 
-:root {
-  color-scheme: dark;
-  --bg: #0a0910;
-  --panel: #14111d;
-  --text: #f7f4ff;
-  --muted: #bdb5ce;
-  --accent: #c8afff;
-  --cyan: #a3edfa;
-  --rule: #ffffff21;
-  --mono: "IBM Plex Mono", ui-monospace, monospace;
-}
-
 html { scroll-behavior: smooth; scroll-padding-top: 120px; }
-body {
-  background: var(--bg);
-  color: var(--text);
-  font-family: "Geist Variable", system-ui, sans-serif;
-  font-size: 1rem;
-  line-height: 1.6;
-}
-::selection { background: #bd9dfc; color: #130e21; }
-:focus-visible { outline: 2px solid var(--cyan); outline-offset: 4px; }
 [hidden] { display: none !important; }
 .shell { width: min(100% - 2rem, 76rem); margin-inline: auto; }
 .skip-link {
@@ -40,9 +19,6 @@ body {
   min-height: 4.2rem; display: flex; align-items: center;
   justify-content: space-between; flex-wrap: wrap; gap: 0 .6rem;
 }
-.brand { display: inline-flex; align-items: center; gap: .55rem; font-size: 1.55rem; font-weight: 680; letter-spacing: -.082em; white-space: nowrap; min-height: 44px; }
-.brand svg { color: var(--accent); }
-.brand-period { color: var(--accent); margin-left: .05em; }
 .header-inner nav { order: 3; width: 100%; display: flex; gap: .85rem; justify-content: space-between; border-top: 1px solid #ffffff14; }
 .header-inner nav a, .footer-inner nav a { color: var(--muted); font-size: .875rem; font-weight: 500; padding-block: .72rem; display: inline-flex; align-items: center; gap: .42rem; }
 .header-inner nav a:hover, .footer-inner nav a:hover { color: var(--text); }

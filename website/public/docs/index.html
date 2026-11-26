@@ -1,9 +1,46 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>User manual — logisth 1.0.8 | wavelogik</title><link rel="icon" href="../assets/icon.svg"><link rel="stylesheet" href="../site.css"></head>
-<body class="reading"><a class="skip" href="#content">Skip to content</a><header class="top"><div class="wrap nav">
-<a class="brand" href="../"><img src="../assets/logisth.svg" alt="">wavelogik</a><nav aria-label="Documentation"><a href="../docs/">User manual</a><a href="../technical/">Technical manual</a></nav><a class="get-small" href="logisth-Manual-English.pdf" download>PDF <span aria-hidden="true" class="arrow down"></span></a></div></header>
-<main id="content"><div class="book-mast"><div class="wrap"><p class="eyebrow">LOGISTH / DOCUMENTATION</p><h1>User manual</h1><p class="formats">VERSION 1.0.8 · ENGLISH</p></div></div>
-<div class="book wrap"><details class="contents" open><summary>Contents</summary><nav aria-label="Chapters"><a href="#1-installation-and-first-sound">1. Installation and first sound</a><a href="#2-the-single-window-console">2. The single-window console</a><a href="#3-oscillators-and-amplitude-envelopes">3. Oscillators and amplitude envelopes</a><a href="#31-four-source-engines">3.1 Four source engines</a><a href="#4-filters-and-shared-filter-control">4. Filters and shared Filter Control</a><a href="#5-modulation">5. Modulation</a><a href="#51-morph-and-controlled-mutation">5.1 MORPH and controlled mutation</a><a href="#6-chords-and-pattern-arpeggiator">6. Chords and pattern arpeggiator</a><a href="#7-effects-rack">7. Effects rack</a><a href="#8-mixer-and-performance">8. Mixer and performance</a><a href="#9-presets-automation-and-project-recall">9. Presets, automation and project recall</a><a href="#10-sound-design-examples">10. Sound-design examples</a><a href="#11-troubleshooting-and-technical-notes">11. Troubleshooting and technical notes</a><a href="#license-and-manufacturer">License and manufacturer</a></nav></details><article><p>wavelogik logisth is a three-part polyphonic subtractive synthesizer for VST3, CLAP and standalone use. This manual describes logisth's controls, sound engines and preset workflow.</p>
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#0a0910">
+    <meta name="description" content="Installation, synthesis engines, sound design and performance.">
+    <title>User manual · logisth 1.0.8</title>
+    <link rel="icon" href="../assets/icon.svg">
+    <link rel="stylesheet" href="../theme.css">
+    <link rel="stylesheet" href="../manual.css">
+    <script src="../manual.js" defer></script>
+  </head>
+  <body>
+    <a class="manual-skip" href="#content">Skip to manual</a>
+    <header class="manual-header">
+      <div class="manual-shell manual-bar">
+        <a class="brand" href="../" aria-label="logisth home">
+          <img src="../assets/icon.svg" alt="" width="40" height="40">
+          <span>logisth</span>
+        </a>
+        <nav class="manual-switch" aria-label="Manuals"><a href="../docs/" aria-current="page">User manual</a><a href="../technical/">Technical manual</a></nav>
+        <a class="manual-action" href="logisth-Manual-English.pdf" download>Download PDF</a>
+      </div>
+    </header>
+    <main id="content">
+      <div class="manual-shell manual-mast">
+        <p class="manual-kicker">Documentation</p>
+        <h1>User manual</h1>
+        <p class="manual-description">Installation, synthesis engines, sound design and performance.</p>
+        <div class="manual-meta">
+          <span>logisth v1.0.8</span>
+          <span>English</span>
+          <a href="https://github.com/logik93/logisth/blob/v1.0.8/docs/MANUAL.md">View on GitHub</a>
+        </div>
+      </div>
+      <div class="manual-shell manual-layout">
+        <details class="chapters" open>
+          <summary>Contents</summary>
+          <nav aria-label="Chapters"><a href="#1-installation-and-first-sound">1. Installation and first sound</a><a href="#2-the-single-window-console">2. The single-window console</a><a href="#3-oscillators-and-amplitude-envelopes">3. Oscillators and amplitude envelopes</a><a href="#31-four-source-engines">3.1 Four source engines</a><a href="#4-filters-and-shared-filter-control">4. Filters and shared Filter Control</a><a href="#5-modulation">5. Modulation</a><a href="#51-morph-and-controlled-mutation">5.1 MORPH and controlled mutation</a><a href="#6-chords-and-pattern-arpeggiator">6. Chords and pattern arpeggiator</a><a href="#7-effects-rack">7. Effects rack</a><a href="#8-mixer-and-performance">8. Mixer and performance</a><a href="#9-presets-automation-and-project-recall">9. Presets, automation and project recall</a><a href="#10-sound-design-examples">10. Sound-design examples</a><a href="#11-troubleshooting-and-technical-notes">11. Troubleshooting and technical notes</a><a href="#license-and-manufacturer">License and manufacturer</a></nav>
+        </details>
+        <article class="manual-body" aria-label="User manual">
+<p>wavelogik logisth is a three-part polyphonic subtractive synthesizer for VST3, CLAP and standalone use. This manual describes logisth's controls, sound engines and preset workflow.</p>
 <p>This edition describes <strong>v1.0.8</strong>. Published downloads include their corresponding manuals.</p>
 <h2 id="1-installation-and-first-sound">1. Installation and first sound</h2>
 <p>Download the archive for your operating system from the GitHub release. Each native archive contains VST3, CLAP and Standalone folders. Extract it first. Copy the entire .vst3 bundle and the .clap file or bundle into a plug-in directory scanned by your DAW. Keep the internal structure of bundles intact.</p>
@@ -488,5 +525,18 @@
 <p>The filter is an independent SVF design. The five algorithmic reverb models, including Hall, are original wavelogik implementations. Convolution uses JUCE dsp::Convolution with an original adapter and factory IR. Signalsmith Stretch and Kick sampler modes use Signalsmith Stretch 1.3.2 and Signalsmith Linear 0.6.6 (MIT). Modulation scales and sequencer behaviour are defined by this manual. Open Sans and Ioskeley Mono font notices are included in assets/fonts.</p>
 <h2 id="license-and-manufacturer">License and manufacturer</h2>
 <p>Manufacturer: wavelogik. Product: logisth. Original code and documentation are Copyright (c) 2026 wavelogik, licensed under MIT. Libraries, SDKs and fonts retain their upstream licenses; see LICENSE and THIRD_PARTY_NOTICES.md. The current plug-in identifiers use com.wavelogik.logisth and manufacturer code Wvlg. This changes the host instrument identity from earlier builds; .logisth sound files remain readable.</p>
-</article></div></main>
-<footer><div class="wrap foot"><a class="brand" href="../"><img src="../assets/logisth.svg" alt="">wavelogik</a><span>wavelogik.pl</span><a href="#content">Back to top</a></div></footer><script src="../site.js" defer></script></body></html>
+
+        </article>
+      </div>
+    </main>
+    <footer class="manual-footer">
+      <div class="manual-shell manual-bar">
+        <a class="brand" href="../" aria-label="logisth home">
+          <img src="../assets/icon.svg" alt="" width="40" height="40">
+          <span>logisth</span>
+        </a>
+        <a href="#content">Back to top</a>
+      </div>
+    </footer>
+  </body>
+</html>

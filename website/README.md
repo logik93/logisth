@@ -23,10 +23,10 @@ outside the web root that is writable by PHP. By default PHP uses a
 site-specific directory under its temporary directory.
 
 The release service checks GitHub every five minutes and keeps the last
-successful response during an outage. The homepage also offers GitHub release
-and bundled manual links before the service returns. Packages that GitHub
-has yet to publish appear as pending. Both online manuals use the same tag as
-the downloads.
+successful response during an outage. Packages that GitHub has yet to publish
+appear as pending. Manual titles open the bundled HTML editions on the site.
+The PDF and GitHub links follow the latest stable release when those links
+are available. The bundled manuals display their own version.
 
 ## Build and preview
 

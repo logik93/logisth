@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#0a0910">
+    <meta name="description" content="$description">
+    <title>$title · logisth $version</title>
+    <link rel="icon" href="../assets/icon.svg">
+    <link rel="stylesheet" href="../theme.css">
+    <link rel="stylesheet" href="../manual.css">
+    <script src="../manual.js" defer></script>
+  </head>
+  <body>
+    <a class="manual-skip" href="#content">Skip to manual</a>
+    <header class="manual-header">
+      <div class="manual-shell manual-bar">
+        <a class="brand" href="../" aria-label="logisth home">
+          <img src="../assets/icon.svg" alt="" width="40" height="40">
+          <span>logisth</span>
+        </a>
+        <nav class="manual-switch" aria-label="Manuals">$switch</nav>
+        <a class="manual-action" href="$pdf" download>Download PDF</a>
+      </div>
+    </header>
+    <main id="content">
+      <div class="manual-shell manual-mast">
+        <p class="manual-kicker">Documentation</p>
+        <h1>$title</h1>
+        <p class="manual-description">$description</p>
+        <div class="manual-meta">
+          <span>logisth v$version</span>
+          <span>English</span>
+          <a href="$source">View on GitHub</a>
+        </div>
+      </div>
+      <div class="manual-shell manual-layout">
+        <details class="chapters" open>
+          <summary>Contents</summary>
+          <nav aria-label="Chapters">$toc</nav>
+        </details>
+        <article class="manual-body" aria-label="$title">
+$body
+        </article>
+      </div>
+    </main>
+    <footer class="manual-footer">
+      <div class="manual-shell manual-bar">
+        <a class="brand" href="../" aria-label="logisth home">
+          <img src="../assets/icon.svg" alt="" width="40" height="40">
+          <span>logisth</span>
+        </a>
+        <a href="#content">Back to top</a>
+      </div>
+    </footer>
+  </body>
+</html>

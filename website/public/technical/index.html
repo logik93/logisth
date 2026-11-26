@@ -1,9 +1,46 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Technical manual — logisth 1.0.8 | wavelogik</title><link rel="icon" href="../assets/icon.svg"><link rel="stylesheet" href="../site.css"></head>
-<body class="reading"><a class="skip" href="#content">Skip to content</a><header class="top"><div class="wrap nav">
-<a class="brand" href="../"><img src="../assets/logisth.svg" alt="">wavelogik</a><nav aria-label="Documentation"><a href="../docs/">User manual</a><a href="../technical/">Technical manual</a></nav><a class="get-small" href="logisth-Technical-Manual-English.pdf" download>PDF <span aria-hidden="true" class="arrow down"></span></a></div></header>
-<main id="content"><div class="book-mast"><div class="wrap"><p class="eyebrow">LOGISTH / DOCUMENTATION</p><h1>Technical manual</h1><p class="formats">VERSION 1.0.8 · ENGLISH</p></div></div>
-<div class="book wrap"><details class="contents" open><summary>Contents</summary><nav aria-label="Chapters"><a href="#1-system-specification-and-signal-flow">1. System specification and signal flow</a><a href="#2-voice-allocation-and-envelopes">2. Voice allocation and envelopes</a><a href="#3-classic-oscillator-generation">3. Classic oscillator generation</a><a href="#4-wavetable-synthesis">4. Wavetable synthesis</a><a href="#5-sample-playback-and-interpolation">5. Sample playback and interpolation</a><a href="#6-time-stretching-and-the-spectral-adapter">6. Time stretching and the spectral adapter</a><a href="#7-granular-synthesis">7. Granular synthesis</a><a href="#8-fm-am-and-width-modulation">8. FM, AM and width modulation</a><a href="#9-modulation-matrix-and-performance-macros">9. Modulation matrix and performance macros</a><a href="#10-filters-routing-and-stereo">10. Filters, routing and stereo</a><a href="#11-chords-arpeggiator-and-midi">11. Chords, arpeggiator and MIDI</a><a href="#12-effect-rack-and-reverb">12. Effect rack and reverb</a><a href="#13-compressor-clipper-and-final-limiter">13. Compressor, clipper and final limiter</a><a href="#14-real-time-execution-and-memory-ownership">14. Real-time execution and memory ownership</a><a href="#15-presets-state-and-appearance-files">15. Presets, state and appearance files</a><a href="#16-open-source-components-and-licenses">16. Open-source components and licenses</a><a href="#17-build-validation-and-release-engineering">17. Build, validation and release engineering</a><a href="#18-measurements-limits-and-source-index">18. Measurements, limits and source index</a></nav></details><article><p><strong>wavelogik · Architecture, DSP and Engineering Reference</strong></p>
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#0a0910">
+    <meta name="description" content="Architecture, signal flow, DSP algorithms and measurements.">
+    <title>Technical manual · logisth 1.0.8</title>
+    <link rel="icon" href="../assets/icon.svg">
+    <link rel="stylesheet" href="../theme.css">
+    <link rel="stylesheet" href="../manual.css">
+    <script src="../manual.js" defer></script>
+  </head>
+  <body>
+    <a class="manual-skip" href="#content">Skip to manual</a>
+    <header class="manual-header">
+      <div class="manual-shell manual-bar">
+        <a class="brand" href="../" aria-label="logisth home">
+          <img src="../assets/icon.svg" alt="" width="40" height="40">
+          <span>logisth</span>
+        </a>
+        <nav class="manual-switch" aria-label="Manuals"><a href="../docs/">User manual</a><a href="../technical/" aria-current="page">Technical manual</a></nav>
+        <a class="manual-action" href="logisth-Technical-Manual-English.pdf" download>Download PDF</a>
+      </div>
+    </header>
+    <main id="content">
+      <div class="manual-shell manual-mast">
+        <p class="manual-kicker">Documentation</p>
+        <h1>Technical manual</h1>
+        <p class="manual-description">Architecture, signal flow, DSP algorithms and measurements.</p>
+        <div class="manual-meta">
+          <span>logisth v1.0.8</span>
+          <span>English</span>
+          <a href="https://github.com/logik93/logisth/blob/v1.0.8/docs/TECHNICAL_MANUAL.md">View on GitHub</a>
+        </div>
+      </div>
+      <div class="manual-shell manual-layout">
+        <details class="chapters" open>
+          <summary>Contents</summary>
+          <nav aria-label="Chapters"><a href="#1-system-specification-and-signal-flow">1. System specification and signal flow</a><a href="#2-voice-allocation-and-envelopes">2. Voice allocation and envelopes</a><a href="#3-classic-oscillator-generation">3. Classic oscillator generation</a><a href="#4-wavetable-synthesis">4. Wavetable synthesis</a><a href="#5-sample-playback-and-interpolation">5. Sample playback and interpolation</a><a href="#6-time-stretching-and-the-spectral-adapter">6. Time stretching and the spectral adapter</a><a href="#7-granular-synthesis">7. Granular synthesis</a><a href="#8-fm-am-and-width-modulation">8. FM, AM and width modulation</a><a href="#9-modulation-matrix-and-performance-macros">9. Modulation matrix and performance macros</a><a href="#10-filters-routing-and-stereo">10. Filters, routing and stereo</a><a href="#11-chords-arpeggiator-and-midi">11. Chords, arpeggiator and MIDI</a><a href="#12-effect-rack-and-reverb">12. Effect rack and reverb</a><a href="#13-compressor-clipper-and-final-limiter">13. Compressor, clipper and final limiter</a><a href="#14-real-time-execution-and-memory-ownership">14. Real-time execution and memory ownership</a><a href="#15-presets-state-and-appearance-files">15. Presets, state and appearance files</a><a href="#16-open-source-components-and-licenses">16. Open-source components and licenses</a><a href="#17-build-validation-and-release-engineering">17. Build, validation and release engineering</a><a href="#18-measurements-limits-and-source-index">18. Measurements, limits and source index</a></nav>
+        </details>
+        <article class="manual-body" aria-label="Technical manual">
+<p><strong>wavelogik · Architecture, DSP and Engineering Reference</strong></p>
 <p>Document revision: 2.6 · Software baseline: 1.0.8 · State schema: 4</p>
 <p>Implementation baseline: release tag <code>v1.0.8</code>. The technical identity manifest records the CMake/runtime source identity. Native BUILD_INFO records its tagged commit, tree fingerprints, binary hashes and manual identities.</p>
 <p>This reference describes the implementation of logisth 1.0.8. It is intended for sound designers, audio engineers, contributors and integrators. The <a href="../docs/">User Manual</a> describes operating the interface; this document explains how its controls affect processing, how data is stored and which open-source components are used. Source paths and measurement reports provide the evidence for implementation-specific statements.</p>
@@ -784,5 +821,18 @@ Signalsmith Linear
 </tr>
 </tbody>
 </table></div>
-</article></div></main>
-<footer><div class="wrap foot"><a class="brand" href="../"><img src="../assets/logisth.svg" alt="">wavelogik</a><span>wavelogik.pl</span><a href="#content">Back to top</a></div></footer><script src="../site.js" defer></script></body></html>
+
+        </article>
+      </div>
+    </main>
+    <footer class="manual-footer">
+      <div class="manual-shell manual-bar">
+        <a class="brand" href="../" aria-label="logisth home">
+          <img src="../assets/icon.svg" alt="" width="40" height="40">
+          <span>logisth</span>
+        </a>
+        <a href="#content">Back to top</a>
+      </div>
+    </footer>
+  </body>
+</html>

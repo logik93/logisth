@@ -1,5 +1,5 @@
 import {
-  Activity, AudioWaveform, Boxes, CircleHelp, Download, GitFork, Plus, Radio, SlidersHorizontal, Waves,
+  AudioWaveform, Boxes, CircleHelp, Download, GitFork, Plus, Radio, SlidersHorizontal, Waves,
 } from "lucide-react";
 import { EngineExplorer } from "../components/engine-explorer";
 import { Hero } from "../components/hero";
@@ -32,7 +32,12 @@ const questions = [
 ];
 
 function Brand() {
-  return <a className="brand" href="./" aria-label="logisth home"><Activity size={25} strokeWidth={1.7} /><span>logisth<span className="brand-period">.</span></span></a>;
+  return (
+    <a className="brand" href="./" aria-label="logisth home">
+      <img src="./assets/icon.svg" alt="" width="40" height="40" />
+      <span>logisth</span>
+    </a>
+  );
 }
 
 export default function Home() {

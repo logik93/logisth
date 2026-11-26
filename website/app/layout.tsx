@@ -1,6 +1,4 @@
 import type { Metadata, Viewport } from "next";
-import "@fontsource-variable/geist";
-import "@fontsource/ibm-plex-mono/latin-400.css";
 import "./globals.css";
 
 const description = "logisth is an open-source polyphonic synthesizer with classic, wavetable, sampler and granular engines. Available as VST3, CLAP and Standalone.";
@@ -27,6 +25,7 @@ export const viewport: Viewport = { themeColor: "#0a0910" };
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en">
+      <head><link rel="stylesheet" href="./theme.css" /></head>
       <body>{children}</body>
     </html>
   );

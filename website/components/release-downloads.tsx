@@ -20,8 +20,8 @@ const platforms = [
 ] as const;
 
 const manuals = [
-  { id: "user", label: "User manual", description: "Controls, workflows and presets", local: "./docs/", Icon: BookOpen },
-  { id: "technical", label: "Technical manual", description: "Architecture, DSP and measurements", local: "./technical/", Icon: Code2 },
+  { id: "user", label: "User manual", description: "Controls, workflows and presets", local: "./docs/", pdf: "./docs/logisth-Manual-English.pdf", Icon: BookOpen },
+  { id: "technical", label: "Technical manual", description: "Architecture, DSP and measurements", local: "./technical/", pdf: "./technical/logisth-Technical-Manual-English.pdf", Icon: Code2 },
 ] as const;
 
 export function ReleaseDownloads() {
@@ -47,18 +47,18 @@ export function ReleaseDownloads() {
           <p className="section-text">Find your way around the instrument or go deeper into its signal processing.</p>
         </div>
         <div className="manual-stack">
-          {manuals.map(({ id, label, description, local, Icon }) => {
+          {manuals.map(({ id, label, description, local, pdf, Icon }) => {
             const manual = release?.manuals[id];
             return (
               <article className="manual surface" key={id}>
                 <Icon size={24} />
                 <div>
-                  <a className="manual-title" href={manual?.online ?? local}>{label}</a>
+                  <a className="manual-title" href={local}>{label}</a>
                   <p>{description}</p>
                 </div>
                 <div className="manual-links">
-                  {manual?.pdf && <a title="Download PDF" aria-label={label + " PDF"} href={manual.pdf}><FileText size={17} /> PDF</a>}
-                  {manual && <a title="Bundled HTML edition" aria-label={label + " bundled HTML"} href={local}>HTML</a>}
+                  <a aria-label={label + " PDF"} href={manual?.pdf ?? pdf}><FileText size={17} /> PDF</a>
+                  {manual && <a aria-label={label + " on GitHub"} href={manual.online}>GitHub</a>}
                 </div>
               </article>
             );
