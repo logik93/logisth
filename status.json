@@ -1,0 +1,67 @@
+{
+  "tag": "v1.0.8",
+  "automation_commit": "60eecbf406cad2ff5f2836e3a1edaae31504d9f3",
+  "run_id": "45847127590",
+  "run_url": "https://github.com/logik93/logisth/actions/runs/45847127590",
+  "phase": "passed",
+  "pipeline_phase": "passed",
+  "stage": "",
+  "recorded_at": "2026-11-26T15:26:00.644317+00:00",
+  "platform": "linux-x86_64",
+  "build": {
+    "version": "1.0.8",
+    "platform": "linux-x86_64",
+    "source_commit": "60eecbf406cad2ff5f2836e3a1edaae31504d9f3",
+    "source_fingerprint": {
+      "Source": "37383177188778719670c3a29f556cc4a2ef6244",
+      "CMakeLists.txt": "9f182eaf07153a362b27d3bee819a2b0feb0d53a",
+      "tests": "4dfdbc270f1908855686f2269f02b2c68cae82df",
+      "assets": "d1cf91f49de4a7b9198e2e60fc9b9f071266f235"
+    },
+    "technical_manual": {
+      "format": 1,
+      "software_version": "1.0.8",
+      "implementation_sha256": "aca840315cbddac0295bfa86e221fd672d2b4a6ef8469af87f1df2f4778a7fc0",
+      "markdown_sha256": "7681a1e9c121ca4c3c09531a5de5c28b538f9c5d1c9a1192ea801f24a9cde5f4",
+      "pdf_sha256": "e74fba9b4d2865c6ec69ad47a9ed0b8af683f736b9968b66b95952fca2b56225"
+    },
+    "tests": {
+      "passed": 20,
+      "failed": 0,
+      "skipped": 0
+    },
+    "binaries": [
+      {
+        "path": "VST3/logisth.vst3/Contents/x86_64-linux/logisth.so",
+        "architectures": [
+          "x86_64"
+        ],
+        "sha256": "531884764cc36daf2e60e765e4037ac2ed5e8a688af31ad2713ba14b467b87c2"
+      },
+      {
+        "path": "CLAP/logisth.clap",
+        "architectures": [
+          "x86_64"
+        ],
+        "sha256": "10be4c96e259b3e1c98111d6fb7b49847e37d5c5117283164eec67c506d666e3"
+      },
+      {
+        "path": "Standalone/logisth",
+        "architectures": [
+          "x86_64"
+        ],
+        "sha256": "37017656f65ab1676fba8f575db3ec483e6ed877cea7a57716fcca4afc740edd"
+      }
+    ],
+    "formats": [
+      "VST3",
+      "CLAP",
+      "Standalone"
+    ],
+    "run_url": "https://github.com/logik93/logisth/actions/runs/45847127590",
+    "signing": "unsigned",
+    "minimum_glibc": "2.35",
+    "archive": "logisth-1.0.8-linux-x86_64.tar.gz",
+    "archive_sha256": "c48da2c93eaa787ff27d4603d122bf71a8406a6bb86eda221d15b6e10d4efe80"
+  }
+}
