@@ -23,7 +23,8 @@ jobs:
       - name: Encrypt test package
         shell: pwsh
         env:
-          ARCHIVE_PUBLIC_KEY: LS0tLS1CRUdJTiBQVUJMSUMgS0VZLS0tLS0KTUlJQm9qQU5CZ2txaGtpRzl3MEJBUUVGQUFPQ0FZOEFNSUlCaWdLQ0FZRUFxSDRMUHp3a0diRFY5cm8yZDdObwp5VGFQWXZuL1B6dGZMZ3JUdVZHcklHa1pZek1sWVRDVDBySTNyMXQ2dE1Oa0lVdDZmU3RJVnNmL3VGV2dyemZkCklObXRJOHI0dXkya0pqY1VHc1ZIbFlRcm5EN0dabTJwN1RHL1AvUWxtaVlGb2RmbndIbVIzRG53SDBVMFlPTjUKemIvZEwzcW5LSDhSb2Ivcmw2MnljR2tQV0FkemxOVmhxZEtzMzVaRWg4b2Q2ekkreUM1TDdTQlBHbklaR3BwMgowN1czVit0QjJIOW5ycHVDdlFQZkQxQ0N6UVFYNC9DbGY0b0NVWFovWkVKemsxc1V4MFhIS0hYdXRTbWVZTUtlCnZxdFk5aUdGOVhrYTZUK08vdFN6ajVGOWxjWS9MU1NCckFxWWhnZ0RWM0NreURkdTF0Z0tiOUZ5MjJpd3VuRmUKYlVTOERwTTdHUWVyOFhWbzFBdENNU2svaEdSVTNSbDFwVXc4Tzc4L1I2MVJMeVllSVdIYUJ0V3dPY3dLT3kvQQpPWGE4NHVOZjhHUXZIS3ZBL0FEL2o1RmVUTTF2VEJoSXY4TndJa3h2YWhxS1pIZktQcjVrQ05aOFh4ZVdIaVgwClhOVzlYQ3V5dFI0Q0hZeHdMZlhmSUI4cERQd0Q3WGhIWFpDaE9MOExZY3JOQWdNQkFBRT0KLS0tLS1FTkQgUFVCTElDIEtFWS0tLS0tCg==
+          ARCHIVE_MODULUS: qH4LPzwkGbDV9ro2d7NoyTaPYvn/PztfLgrTuVGrIGkZYzMlYTCT0rI3r1t6tMNkIUt6fStIVsf/uFWgrzfdINmtI8r4uy2kJjcUGsVHlYQrnD7GZm2p7TG/P/QlmiYFodfnwHmR3DnwH0U0YON5zb/dL3qnKH8Rob/rl62ycGkPWAdzlNVhqdKs35ZEh8od6zI+yC5L7SBPGnIZGpp207W3V+tB2H9nrpuCvQPfD1CCzQQX4/Clf4oCUXZ/ZEJzk1sUx0XHKHXutSmeYMKevqtY9iGF9Xka6T+O/tSzj5F9lcY/LSSBrAqYhggDV3CkyDdu1tgKb9Fy22iwunFebUS8DpM7GQer8XVo1AtCMSk/hGRU3Rl1pUw8O78/R61RLyYeIWHaBtWwOcwKOy/AOXa84uNf8GQvHKvA/AD/j5FeTM1vTBhIv8NwIkxvahqKZHfKPr5kCNZ8XxeWHiX0XNW9XCuytR4CHYxwLfXfIB8pDPwD7XhHXZChOL8LYcrN
+          ARCHIVE_EXPONENT: AQAB
         run: |
           $stage = New-Item -ItemType Directory -Path test-stage/logisth
           $release = 'build/Logisth_artefacts/Release'
@@ -42,8 +43,10 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Encrypted archive verification failed' }
           $rsa = [Security.Cryptography.RSA]::Create()
           try {
-            $pem = [Text.Encoding]::ASCII.GetString([Convert]::FromBase64String($env:ARCHIVE_PUBLIC_KEY))
-            $rsa.ImportFromPem($pem)
+            $key = [Security.Cryptography.RSAParameters]::new()
+            $key.Modulus = [Convert]::FromBase64String($env:ARCHIVE_MODULUS)
+            $key.Exponent = [Convert]::FromBase64String($env:ARCHIVE_EXPONENT)
+            $rsa.ImportParameters($key)
             $wrapped = $rsa.Encrypt([Text.Encoding]::ASCII.GetBytes($password), [Security.Cryptography.RSAEncryptionPadding]::OaepSHA256)
             Write-Output "SEALED_ARCHIVE_PASSWORD=$([Convert]::ToBase64String($wrapped))"
           } finally { $rsa.Dispose() }
