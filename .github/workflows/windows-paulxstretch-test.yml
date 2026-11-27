@@ -1,0 +1,56 @@
+name: Private Windows test package
+on:
+  push:
+    branches: ['test/paulxstretch-win-20261127']
+permissions:
+  contents: read
+jobs:
+  windows:
+    runs-on: windows-2022
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure Windows x64
+        shell: pwsh
+        run: >-
+          cmake -S . -B build -A x64 -DBUILD_TESTING=ON
+          -DLOGISTH_PLUGINS=ON -DLOGISTH_VST2=OFF -DLOGISTH_ASIO=ON
+          '-DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded$<$<CONFIG:Debug>:Debug>'
+      - name: Build Windows x64
+        run: cmake --build build --config Release --parallel 2
+      - name: Run Windows tests
+        run: ctest --test-dir build -C Release --output-on-failure --no-tests=error
+      - name: Encrypt test package
+        shell: pwsh
+        env:
+          ARCHIVE_PUBLIC_KEY: LS0tLS1CRUdJTiBQVUJMSUMgS0VZLS0tLS0KTUlJQm9qQU5CZ2txaGtpRzl3MEJBUUVGQUFPQ0FZOEFNSUlCaWdLQ0FZRUFxSDRMUHp3a0diRFY5cm8yZDdObwp5VGFQWXZuL1B6dGZMZ3JUdVZHcklHa1pZek1sWVRDVDBySTNyMXQ2dE1Oa0lVdDZmU3RJVnNmL3VGV2dyemZkCklObXRJOHI0dXkya0pqY1VHc1ZIbFlRcm5EN0dabTJwN1RHL1AvUWxtaVlGb2RmbndIbVIzRG53SDBVMFlPTjUKemIvZEwzcW5LSDhSb2Ivcmw2MnljR2tQV0FkemxOVmhxZEtzMzVaRWg4b2Q2ekkreUM1TDdTQlBHbklaR3BwMgowN1czVit0QjJIOW5ycHVDdlFQZkQxQ0N6UVFYNC9DbGY0b0NVWFovWkVKemsxc1V4MFhIS0hYdXRTbWVZTUtlCnZxdFk5aUdGOVhrYTZUK08vdFN6ajVGOWxjWS9MU1NCckFxWWhnZ0RWM0NreURkdTF0Z0tiOUZ5MjJpd3VuRmUKYlVTOERwTTdHUWVyOFhWbzFBdENNU2svaEdSVTNSbDFwVXc4Tzc4L1I2MVJMeVllSVdIYUJ0V3dPY3dLT3kvQQpPWGE4NHVOZjhHUXZIS3ZBL0FEL2o1RmVUTTF2VEJoSXY4TndJa3h2YWhxS1pIZktQcjVrQ05aOFh4ZVdIaVgwClhOVzlYQ3V5dFI0Q0hZeHdMZlhmSUI4cERQd0Q3WGhIWFpDaE9MOExZY3JOQWdNQkFBRT0KLS0tLS1FTkQgUFVCTElDIEtFWS0tLS0tCg==
+        run: |
+          $stage = New-Item -ItemType Directory -Path test-stage/logisth
+          $release = 'build/Logisth_artefacts/Release'
+          foreach ($format in 'VST3', 'CLAP', 'Standalone') {
+            if (!(Test-Path "$release/$format")) { throw "Missing $format bundle" }
+            Copy-Item -Recurse "$release/$format" $stage.FullName
+          }
+          $output = New-Item -ItemType Directory -Path test-download
+          $archive = Join-Path $output.FullName 'logisth-1.0.10.1-windows-x64-test.7z'
+          $password = [Convert]::ToHexString([Security.Cryptography.RandomNumberGenerator]::GetBytes(16))
+          Write-Output "::add-mask::$password"
+          $sevenZip = Join-Path $env:ProgramFiles '7-Zip/7z.exe'
+          & $sevenZip a -t7z "-p$password" -mhe=on -mx=3 $archive $stage.FullName
+          if ($LASTEXITCODE -ne 0) { throw 'Encryption failed' }
+          & $sevenZip t "-p$password" $archive
+          if ($LASTEXITCODE -ne 0) { throw 'Encrypted archive verification failed' }
+          $rsa = [Security.Cryptography.RSA]::Create()
+          try {
+            $pem = [Text.Encoding]::ASCII.GetString([Convert]::FromBase64String($env:ARCHIVE_PUBLIC_KEY))
+            $rsa.ImportFromPem($pem)
+            $wrapped = $rsa.Encrypt([Text.Encoding]::ASCII.GetBytes($password), [Security.Cryptography.RSAEncryptionPadding]::OaepSHA256)
+            Write-Output "SEALED_ARCHIVE_PASSWORD=$([Convert]::ToBase64String($wrapped))"
+          } finally { $rsa.Dispose() }
+      - uses: actions/upload-artifact@v4
+        with:
+          name: logisth-windows-x64-encrypted-test
+          path: test-download/*.7z
+          compression-level: 0
+          if-no-files-found: error
+          retention-days: 14

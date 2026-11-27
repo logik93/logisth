@@ -6,6 +6,7 @@
 #include <vector>
 
 namespace logisth {
+inline constexpr float minPhaseStretch = .1f, maxPhaseStretch = 1024.f;
 // Magnitude-preserving, random-phase STFT with four-way overlap. Stereo shares
 // each phase rotation so inter-channel phase survives the diffusion.
 class PhaseDiffuseStretch {
@@ -78,7 +79,7 @@ class PhaseDiffuseStretch {
                 for (size_t i = 0; i < size; ++i)
                     channel[(at + i) % size] += time[i] * window[i] * (norm * .5f / float(size));
             }
-            source += double(hop) * step / std::clamp(double(stretch), 1. / 64, 64.);
+            source += double(hop) * step / std::clamp(stretch, minPhaseStretch, maxPhaseStretch);
             untilFrame = hop;
         }
         std::array<float, 2> result{output[0][at], output[1][at]};

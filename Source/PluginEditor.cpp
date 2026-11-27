@@ -800,6 +800,8 @@ class LogisthEditor::Console : public Component,
                                    : String(v, 0) + "Hz";
             if (name.endsWith("ssformant") || name.endsWith("sssemitones"))
                 return (v > 0 ? "+" : "") + String(v, 1) + "st";
+            if (name.endsWith("paulamount"))
+                return String(v, 1) + "x";
             if (name.endsWith("stretch") || name.endsWith("ssrate"))
                 return String(v, 2) + "x";
             if (name.endsWith("phase"))
@@ -1702,6 +1704,11 @@ class LogisthEditor::Console : public Component,
                 repaint();
             };
             addChildComponent(view);
+            auto &stretch = stretchAlgorithms[size_t(i)];
+            stretch.setComponentID("source.stretch.algorithm." + String(i));
+            stretch.setName("Stretch algorithm to edit");
+            stretch.onChange = [this] { layout(); repaint(); };
+            addChildComponent(stretch);
             auto &load = sourceLoad[size_t(i)];
             load.setButtonText("IMPORT");
             load.onClick = [this, i] { chooseSource(i); };
@@ -2479,7 +2486,7 @@ class LogisthEditor::Console : public Component,
         for (int part = 0; part < partCount; ++part)
             for (int mode = 0; mode < 4; ++mode)
                 for (int model = 0; model < 2; ++model)
-                    for (int view = 1; view <= 12; ++view) {
+                    for (int view = 1; view <= 11; ++view) {
                         selectedPart = part;
                         previewSource = mode;
                         previewGran = model;
@@ -3093,6 +3100,9 @@ class LogisthEditor::Console : public Component,
                               "\nOriginal code: MIT / (c) 2026 wavelogik"
                               "\nBuilt with JUCE, CLAP extensions, Open Sans\n and Ioskeley Mono."
                               "\nDependencies retain their respective licenses."
+                              "\n\nPaulXStretch mode: original logisth DSP using Signalsmith Linear (MIT)."
+                              "\nInspired by PaulStretch by Nasca Octavian Paul and PaulXStretch "
+                              "by Xenakios and Jesse Chappell.\nhttps://github.com/essej/paulxstretch"
                               "\n\nCREDITS\n\n"
                               "Logik - Prompt engineer, tester, and everything in between.\n\n"
                               "coldwave - No. 1 tester with a head full of ideas.\n\n"
@@ -3635,7 +3645,6 @@ class LogisthEditor::Console : public Component,
             if (mode >= 2)
                 menu.addItem("PLAYBACK", 8);
             if (mode == 2) {
-                menu.addItem("PAUL STRETCH", 12);
                 menu.addItem("STRETCH", 10);
                 menu.addItem("LOOP TAIL", 11);
             }
@@ -3716,17 +3725,6 @@ class LogisthEditor::Console : public Component,
                 if (mode == 3)
                     control(id + "trimstart", {b.getX() + 88, b.getY() + 142, 170, 28},
                             Style::Number, "TRIM START");
-            } else if (view == 12) {
-                control(id + "paul", {b.getX() + 88, b.getY() + 36, 145, 24}, Style::Toggle,
-                        "PHASE DIFFUSION");
-                control(id + "stretch", {b.getX() + 255, b.getY() + 35, 92, 60}, Style::Knob,
-                        "TIME FACTOR");
-                control(id + "ssblock", {b.getX() + 351, b.getY() + 35, 92, 60}, Style::Knob,
-                        "BLOCK (ms)");
-                for (int i = 0; i < 3; ++i)
-                    control(id + StringArray{"pauldown", "paulunity", "paulup"}[i],
-                            {b.getX() + 88 + 119 * i, b.getY() + 98, 110, 66}, Style::Knob,
-                            StringArray{"RATIO 0.5X", "RATIO 1X", "RATIO 2X"}[i]);
             } else if (view == 8 && mode == 3) {
                 control(id + "interpolation", {b.getX() + 88, b.getY() + 36, 172, 42},
                         Style::Menu, "INTERPOLATION");
@@ -3745,29 +3743,57 @@ class LogisthEditor::Console : public Component,
                     control(id + "kickattack", {b.getX() + 269, b.getY() + 86, 100, 80},
                             Style::Knob, "KICK ATTACK");
             } else if (view == 10) {
-                const int algorithm =
-                    int(value(Param(playerParamIndex(Param::o1stretchmode, int(slot), 10))));
-                const bool signalsmith = algorithm == 6 || algorithm == 7;
-                StringArray keys{"ssrate",    "sssemitones", "sstonality",
-                                 "ssformant", "ssblock",     "ssoverlap"};
-                StringArray labels{"RATE",    "SEMITONES",  "TONALITY LIMIT",
-                                   "FORMANT", "BLOCK (ms)", "OVERLAP"};
-                std::vector<int> visible{0, 1};
-                if (signalsmith) {
-                    visible.push_back(2);
-                    visible.push_back(3);
+                auto &picker = stretchAlgorithms[slot];
+                const auto layers = processor.samplerLayerMask(int(slot));
+                const int solo = int(value(Param(playerParamIndex(Param::o1stretchmode, int(slot), 10))));
+                if (!picker.getNumItems() || stretchPickerMasks[slot] != layers) {
+                    constexpr const char *names[]{"Tape", "Granular", "WSOLA", "Tonal", "Transient",
+                                                   "Kick", "Signalsmith Stretch", "PaulXStretch"};
+                    const int chosen = picker.getSelectedId();
+                    picker.clear(dontSendNotification);
+                    for (int i = 1; i <= phaseDiffusionMode; ++i)
+                        picker.addItem(String(names[i - 1]) + ((layers & (1u << i)) ? "  [ON]" : ""), i);
+                    picker.setSelectedId(chosen > 0 ? chosen : (solo > 0 ? solo : phaseDiffusionMode),
+                                         dontSendNotification);
+                    stretchPickerMasks[slot] = layers;
                 }
-                if (algorithm >= 2) {
-                    visible.push_back(4);
-                    visible.push_back(5);
-                }
-                int columns = signalsmith ? 3 : 2;
-                for (int at = 0; at < int(visible.size()); ++at) {
-                    int i = visible[size_t(at)];
-                    control(id + keys[i],
-                            {b.getX() + 88 + (at % columns) * (columns == 3 ? 119 : 178),
-                             b.getY() + 35 + (at / columns) * 69, columns == 3 ? 110 : 170, 66},
-                            i == 5 ? Style::Menu : Style::Knob, labels[i]);
+                picker.setBounds(b.getX() + 88, b.getY() + 35, 206, 24);
+                picker.setVisible(true);
+                const int algorithm = picker.getSelectedId();
+                const auto enabled = stretchLayerParam(int(slot), algorithm);
+                put(Param(enabled), {b.getX() + 307, b.getY() + 35, 63, 24}, Style::Toggle, "ON");
+                if (algorithm == phaseDiffusionMode) {
+                    control(id + "paulamount", {b.getX() + 88, b.getY() + 61, 105, 51}, Style::Knob,
+                            "STRETCH AMOUNT");
+                    control(id + "paulfft", {b.getX() + 208, b.getY() + 63, 144, 40}, Style::Menu,
+                            "FFT SIZE (SAMPLES)");
+                    for (int i = 0; i < 3; ++i)
+                        control(id + StringArray{"pauldown", "paulunity", "paulup"}[i],
+                                {b.getX() + 88 + 119 * i, b.getY() + 114, 110, 54}, Style::Knob,
+                                StringArray{"RATIO 0.5X", "RATIO 1X", "RATIO 2X"}[i]);
+                } else {
+                    const bool signalsmith = algorithm == 6 || algorithm == 7;
+                    StringArray keys{"ssrate", "sssemitones", "sstonality", "ssformant", "ssblock",
+                                     "ssoverlap", "stretch", "kickattack"};
+                    StringArray labels{"RATE", "SEMITONES", "TONALITY LIMIT", "FORMANT", "BLOCK (ms)",
+                                       "OVERLAP", "TIME FACTOR", "KICK ATTACK"};
+                    std::vector<int> visible{6, 0, 1};
+                    if (signalsmith) {
+                        visible.push_back(2);
+                        visible.push_back(3);
+                    }
+                    if (algorithm >= 2) {
+                        visible.push_back(4);
+                        visible.push_back(5);
+                    }
+                    if (algorithm == 6)
+                        visible.push_back(7);
+                    for (int at = 0; at < int(visible.size()); ++at) {
+                        const int i = visible[size_t(at)];
+                        control(id + keys[i],
+                                {b.getX() + 88 + (at % 4) * 89, b.getY() + 62 + (at / 4) * 55, 83, 52},
+                                i == 5 ? Style::Menu : Style::Knob, labels[i]);
+                    }
                 }
             } else if (view == 4) {
                 control(id + "gmodel", {b.getX() + 88, b.getY() + 35, 150, 24}, Style::Menu);
@@ -4333,6 +4359,8 @@ class LogisthEditor::Console : public Component,
             button.setVisible(false);
         for (auto &w : sourceViews)
             w.setVisible(false);
+        for (auto &w : stretchAlgorithms)
+            w.setVisible(false);
         for (auto &w : oscCopy)
             w.setVisible(false);
         for (auto &w : oscPaste)
@@ -4441,7 +4469,8 @@ class LogisthEditor::Console : public Component,
             state[size_t(7 + 2 * playerCount + o)] =
                 int(value(Param(playerParamIndex(Param::o1wave, o, 12))));
             state[size_t(7 + 3 * playerCount + o)] =
-                int(value(Param(playerParamIndex(Param::o1stretchmode, o, 10))));
+                int(value(Param(playerParamIndex(Param::o1stretchmode, o, 10)))) +
+                16 * int(processor.samplerLayerMask(o));
         }
         state[5 + 2 * playerCount] = int(value(Param::reverbtype));
         state[6 + 2 * playerCount] = int(value(Param::eqmode));
@@ -4756,8 +4785,11 @@ class LogisthEditor::Console : public Component,
                 auto names =
                     StringArray::fromTokens(parameterSpecs[size_t(parameter)].choices, "|", "");
                 title = "SAMPLE / " + names[int(value(parameter))].toUpperCase();
-                if (value(Param(phaseDiffuseParam(waveView.selectedSlot()))) > 0)
-                    title = "SAMPLE / PHASE DIFFUSION";
+                const unsigned layers = processor.samplerLayerMask(waveView.selectedSlot());
+                if (layers == (1u << phaseDiffusionMode))
+                    title = "SAMPLE / PaulXStretch";
+                else if (layers)
+                    title = "SAMPLE / STRETCH LAYERS";
             }
             const Rectangle<int> titleArea =
                 mode >= 2 ? Rectangle<int>(491, 289, 236, 23) : Rectangle<int>(540, 289, 295, 23);
@@ -4822,7 +4854,8 @@ class LogisthEditor::Console : public Component,
     std::array<ToggleButton, partCount> parts;
     std::array<ToggleButton, 2> stepPages;
     std::array<std::unique_ptr<RackButton>, 14> rackButtons;
-    std::array<ComboBox, playerCount> sourceViews, sourceFrame;
+    std::array<ComboBox, playerCount> sourceViews, sourceFrame, stretchAlgorithms;
+    std::array<unsigned, playerCount> stretchPickerMasks{};
     std::array<int, playerCount> sourceMenuStates{-1, -1, -1, -1, -1, -1};
     std::array<TextButton, playerCount> sourceLoad, sourceClear, oscCopy, oscPaste;
     TextButton impulseLoad, impulseReset;

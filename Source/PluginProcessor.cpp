@@ -17,7 +17,9 @@ AudioProcessorValueTreeState::ParameterLayout LogisthProcessor::layout() {
                                                            int(s.high), int(s.initial)));
         else
             layout.add(std::make_unique<AudioParameterFloat>(
-                ParameterID{s.id, 1}, name, NormalisableRange<float>(s.low, s.high, 0, s.skew),
+                ParameterID{s.id, 1}, name,
+                NormalisableRange<float>(s.low, s.high, String(s.id).endsWith("paulamount") ? .1f : 0.f,
+                                         s.skew),
                 s.initial,
                 AudioParameterFloatAttributes().withStringFromValueFunction([](float v, int) {
                     return String(v, std::abs(v) >= 100                   ? 0
@@ -108,8 +110,12 @@ Params LogisthProcessor::snapshot() const {
         o.pwmDepth = get(Param(modulation + 5));
         o.pwmRate = get(Param(modulation + 6));
         const auto diffuse = phaseDiffuseParam(i);
-        o.stretchControls.diffuse = o.engine == 2 && get(Param(diffuse)) > 0;
-        o.stretchMode = o.stretchControls.diffuse ? 8 : int(get(Param(modulation + 7)));
+        const auto phaseSettings = phaseSettingsParam(i);
+        o.stretchMode = int(get(Param(modulation + 7)));
+        if (o.engine == 2)
+            o.stretchLayers = samplerLayerMask(i);
+        o.phaseStretch = get(Param(phaseSettings));
+        o.stretchControls.phaseFftOrder = minPhaseFftOrder + int(get(Param(phaseSettings + 1)));
         for (int layer = 0; layer < 3; ++layer)
             o.stretchControls.ratios[size_t(layer)] = get(Param(diffuse + 1 + layer));
         o.stretch = get(Param(modulation + 8));

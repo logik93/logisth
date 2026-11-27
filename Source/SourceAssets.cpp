@@ -532,10 +532,22 @@ bool LogisthProcessor::restoreAssets(const ValueTree &tree) {
     return true;
 }
 
+unsigned LogisthProcessor::samplerLayerMask(int slot) const {
+    unsigned layers = 0;
+    for (int mode = 1; mode <= phaseDiffusionMode; ++mode)
+        if (raw[stretchLayerParam(slot, mode)]->load() > 0)
+            layers |= 1u << mode;
+    return layers;
+}
+
+static bool needsSignalsmith(int mode, unsigned layers) {
+    return layers ? (layers & ((1u << 6) | (1u << 7))) != 0 : mode == 6 || mode == 7;
+}
+
 void LogisthProcessor::ensureSpectral(bool synchronous) {
-    unsigned wanted = 0;
+    unsigned wanted = 0, phaseWanted = 0;
     std::array<int, playerCount> unisons{};
-    std::array<SpectralConfig, playerCount> configs{};
+    std::array<SpectralConfig, playerCount> configs{}, phaseConfigs{};
     double rate = 0;
     int voiceCount = defaultPolyphony;
     uint64_t generation = 0;
@@ -546,32 +558,41 @@ void LogisthProcessor::ensureSpectral(bool synchronous) {
             int voices = int(raw[playerParamIndex(Param::o1voices, i, 12)]->load());
             unisons[size_t(i)] = voices > 1 && voices % 2 == 0 ? voices + 1 : jlimit(1, 8, voices);
             int mode = int(raw[playerParamIndex(Param::o1stretchmode, i, 10)]->load());
-            const bool diffuse = raw[phaseDiffuseParam(i)]->load() > 0;
-            if (voices > 0 && raw[playerParamIndex(Param::o1engine, i, 16)]->load() == 2 &&
-                (mode == 6 || mode == 7 || diffuse))
+            if (voices <= 0 || raw[playerParamIndex(Param::o1engine, i, 16)]->load() != 2)
+                continue;
+            const unsigned layers = samplerLayerMask(i);
+            if (needsSignalsmith(mode, layers))
                 wanted |= 1u << i;
             StretchControls controls;
-            controls.diffuse = diffuse;
             size_t at = playerParamIndex(Param::o1ssrate, i, 6);
             controls.blockMs = raw[at + 4]->load();
             int overlap = int(raw[at + 5]->load());
             controls.overlap = overlap == 0 ? 0 : overlap + 1;
             configs[size_t(i)] = SpectralConfig::from(controls);
+            if (layers & (1u << phaseDiffusionMode)) {
+                phaseWanted |= 1u << i;
+                controls.diffuse = true;
+                controls.phaseFftOrder = minPhaseFftOrder + int(raw[phaseSettingsParam(i) + 1]->load());
+                phaseConfigs[size_t(i)] = SpectralConfig::from(controls);
+            }
         }
         voiceCount = raw[size_t(Param::monolegato)]->load() > 0 ? 1 : effectivePolyphony();
         rate = spectralRate.load();
         if (wanted != spectralDesiredMask || voiceCount != spectralDesiredVoices ||
             rate != spectralDesiredRate || configs != spectralDesiredConfigs ||
+            phaseWanted != spectralDesiredPhaseMask || phaseConfigs != spectralDesiredPhaseConfigs ||
             unisons != spectralDesiredUnisons) {
             spectralDesiredMask = wanted;
             spectralDesiredVoices = voiceCount;
             spectralDesiredRate = rate;
             spectralDesiredConfigs = configs;
+            spectralDesiredPhaseMask = phaseWanted;
+            spectralDesiredPhaseConfigs = phaseConfigs;
             spectralDesiredUnisons = unisons;
             ++spectralGeneration;
         }
         generation = spectralGeneration.load();
-        if (!wanted) {
+        if (!(wanted | phaseWanted)) {
             if (spectralOwner) {
                 retiredSpectral.push_back(spectralOwner);
                 spectralPointer = nullptr;
@@ -581,20 +602,23 @@ void LogisthProcessor::ensureSpectral(bool synchronous) {
         }
         previous = spectralOwner;
         if (previous && previous->rate == rate && previous->voiceCapacity >= voiceCount) {
-            bool enough = (previous->mask & wanted) == wanted;
+            bool enough = (previous->mask & wanted) == wanted &&
+                          (previous->phaseMask & phaseWanted) == phaseWanted;
             for (int i = 0; i < playerCount; ++i)
-                if ((wanted & (1u << i)) && (previous->capacity[size_t(i)] < unisons[size_t(i)] ||
-                                             previous->configs[size_t(i)] != configs[size_t(i)]))
+                if ((((wanted | phaseWanted) & (1u << i)) && previous->capacity[size_t(i)] < unisons[size_t(i)]) ||
+                    ((wanted & (1u << i)) && previous->configs[size_t(i)] != configs[size_t(i)]) ||
+                    ((phaseWanted & (1u << i)) && previous->phaseConfigs[size_t(i)] != phaseConfigs[size_t(i)]))
                     enough = false;
             if (enough)
                 return;
         }
         if (spectralRejectedGeneration == generation)
             return;
-        if (SpectralBank::estimatedBytes(rate, wanted, unisons, configs, voiceCount) >
+        if (SpectralBank::estimatedBytes(rate, wanted, unisons, configs, voiceCount) +
+            SpectralBank::estimatedBytes(rate, phaseWanted, unisons, phaseConfigs, voiceCount) / 2 >
             SpectralBank::memoryBudget) {
             spectralRejectedGeneration = generation;
-            assetStatus = "Signalsmith memory budget: reduce block, polyphony or unison.";
+            assetStatus = "Spectral memory budget: reduce FFT size, block, polyphony or unison.";
             return;
         }
         if (!synchronous && spectralPending.load())
@@ -605,10 +629,11 @@ void LogisthProcessor::ensureSpectral(bool synchronous) {
         spectralPendingGeneration = generation;
         assetStatus = "Preparing spectral stretch buffers...";
     }
-    auto build = [this, previous, wanted, rate, unisons, configs, voiceCount, generation] {
+    auto build = [this, previous, wanted, rate, unisons, configs, voiceCount, generation,
+                  phaseWanted, phaseConfigs] {
         try {
             auto next = std::make_shared<SpectralBank>(rate, wanted, unisons, previous, configs,
-                                                       voiceCount);
+                                                       voiceCount, phaseWanted, phaseConfigs);
             const ScopedLock lock(assetLock);
             if (spectralRate.load() == rate && spectralGeneration.load() == generation) {
                 if (spectralOwner)
@@ -621,7 +646,7 @@ void LogisthProcessor::ensureSpectral(bool synchronous) {
             const ScopedLock lock(assetLock);
             if (spectralGeneration.load() == generation) {
                 spectralRejectedGeneration = generation;
-                assetStatus = "Signalsmith buffers unavailable: reduce block, polyphony or unison.";
+                assetStatus = "Spectral buffers unavailable: reduce FFT size, block, polyphony or unison.";
             }
         }
         const ScopedLock lock(assetLock);
@@ -637,19 +662,31 @@ void LogisthProcessor::ensureSpectral(bool synchronous) {
 bool LogisthProcessor::spectralReady(int slot) const {
     const ScopedLock lock(assetLock);
     if (slot < 0 || slot >= playerCount || !spectralOwner ||
-        spectralOwner->rate != spectralRate.load() || !(spectralOwner->mask & (1u << slot)))
+        spectralOwner->rate != spectralRate.load())
+        return false;
+    const unsigned layers = samplerLayerMask(slot), bit = 1u << slot;
+    const bool diffuse = (layers & (1u << phaseDiffusionMode)) != 0;
+    const int mode = int(raw[playerParamIndex(Param::o1stretchmode, slot, 10)]->load());
+    const bool signalsmith = needsSignalsmith(mode, layers);
+    if (!(diffuse || signalsmith))
         return false;
     StretchControls controls;
-    controls.diffuse = raw[phaseDiffuseParam(slot)]->load() > 0;
     size_t at = playerParamIndex(Param::o1ssrate, slot, 6);
     controls.blockMs = raw[at + 4]->load();
     int overlap = int(raw[at + 5]->load());
     controls.overlap = overlap == 0 ? 0 : overlap + 1;
+    if (signalsmith && (!(spectralOwner->mask & bit) ||
+                        spectralOwner->configs[size_t(slot)] != SpectralConfig::from(controls)))
+        return false;
+    controls.diffuse = diffuse;
+    controls.phaseFftOrder = minPhaseFftOrder + int(raw[phaseSettingsParam(slot) + 1]->load());
+    if (diffuse && (!(spectralOwner->phaseMask & bit) ||
+                    spectralOwner->phaseConfigs[size_t(slot)] != SpectralConfig::from(controls)))
+        return false;
     int voices = raw[size_t(Param::monolegato)]->load() > 0 ? 1 : effectivePolyphony();
     int unison = jlimit(1, 8, int(raw[playerParamIndex(Param::o1voices, slot, 12)]->load()));
     if (unison > 1 && unison % 2 == 0)
         ++unison;
     return spectralOwner->voiceCapacity >= voices &&
-           spectralOwner->configs[size_t(slot)] == SpectralConfig::from(controls) &&
            spectralOwner->capacity[size_t(slot)] >= unison;
 }

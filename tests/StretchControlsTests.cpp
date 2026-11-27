@@ -102,9 +102,60 @@ static void checkDiffusionAndGrainRate() {
     check(a.generated == b.generated && b.head > 3.9 * a.head,
           "Granulizer time rate changes traversal independently of grain interval");
 }
+static void checkParallelStretch() {
+    constexpr double rate = 48000;
+    StretchControls phase;
+    phase.diffuse = true;
+    phase.phaseFftOrder = minPhaseFftOrder;
+    const auto config = SpectralConfig::from(phase);
+    check(config.window(rate) == 256, "FFT control selects the exact transform length");
+    phase.blockMs = 120;
+    check(config == SpectralConfig::from(phase), "Signalsmith's block does not change the PaulXStretch FFT");
+    phase.phaseFftOrder = maxPhaseFftOrder;
+    check(SpectralConfig::from(phase).window(rate) == 262144, "largest selectable transform is exact");
+
+    for (float amount : {minPhaseStretch, maxPhaseStretch}) {
+        PhaseDiffuseStretch stream(256);
+        stream.reset(0, 42);
+        int reads = 0;
+        double secondFrame = 0;
+        for (int i = 0; i <= 64; ++i)
+            stream.tick([&](double at, int) {
+                if (reads++ == 512)
+                    secondFrame = at;
+                return .25f;
+            }, 1., 1.f, amount, {0, 1, 0});
+        check(std::abs(secondFrame - 64. / amount) < .0001, "Stretch Amount changes real FFT traversal over the full range");
+    }
+
+    std::array<SpectralConfig, playerCount> phaseConfigs{};
+    phaseConfigs[0] = config;
+    SpectralBank bank(rate, 1, {1, 1, 1, 1, 1, 1}, {}, {}, 1, 1, phaseConfigs);
+    check(bank.get(0, 0, 0, 0) != bank.get(0, 0, 0, 1) &&
+              bank.getPhase(0, 0, 0) && bank.getPhase(0, 0, 0)->config == config,
+          "Kick, Signalsmith and PaulXStretch have independent FFT streams");
+    auto sample = SourceData::factory();
+    SourcePlayback tape, grains, parallel;
+    double difference = 0;
+    for (int i = 0; i < 2048; ++i) {
+        const auto next = [&](SourcePlayback &player, unsigned layers) {
+            return player.tick(*sample, 2, 1., rate, 0, 1, true, false, .04f, 16, 0, 0, 0,
+                               0, 2, 0, .5f, 0, 25, 0, {}, {}, layers);
+        };
+        const auto a = next(tape, 1u << 1), b = next(grains, 1u << 2);
+        const auto sum = next(parallel, (1u << 1) | (1u << 2));
+        for (int ch = 0; ch < 2; ++ch) {
+            difference += std::abs(a[size_t(ch)] - b[size_t(ch)]);
+            check(std::abs(sum[size_t(ch)] - (a[size_t(ch)] + b[size_t(ch)]) * .5f) < 1e-6f,
+                  "parallel engines render independently and mix both outputs");
+        }
+    }
+    check(difference > 1, "parallel layers produce measurably different output");
+}
 int main() {
     try {
         checkDiffusionAndGrainRate();
+        checkParallelStretch();
         for (double rate : {44100., 48000., 96000.})
             for (float speed : {.5f, 1.f, 2.f}) {
                 upstreamParity(rate, {}, speed, 1.5f, 3000, 7);

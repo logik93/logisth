@@ -1401,6 +1401,31 @@ int main(int argc, char **argv) {
             check(ui->getChildComponent(0)->findChildWithID("graph.canvas") == nullptr &&
                       p.state.getParameter("arpgraphs") == nullptr,
                   "Graphs is removed from the editor and parameter model");
+
+            auto *engine = dynamic_cast<juce::ComboBox *>(findWidget("o1engine"));
+            check(engine != nullptr, "oscillator engine menu");
+            engine->setSelectedId(3, juce::sendNotificationSync);
+            auto *console = ui->getChildComponent(0);
+            auto *source = dynamic_cast<juce::ComboBox *>(console->findChildWithID("source.view.0"));
+            check(source && source->indexOfItemId(10) >= 0 && source->indexOfItemId(12) < 0,
+                  "PaulXStretch moved into Sampler Stretch");
+            source->setSelectedId(10, juce::sendNotificationSync);
+            auto *algorithm = dynamic_cast<juce::ComboBox *>(
+                console->findChildWithID("source.stretch.algorithm.0"));
+            check(algorithm && algorithm->isVisible() && algorithm->getNumItems() == 8,
+                  "all eight stretch layers can be edited from one place");
+            for (const auto &item : {std::pair{1, "o1stretchon1"}, std::pair{8, "o1paul"}}) {
+                algorithm->setSelectedId(item.first, juce::sendNotificationSync);
+                auto *on = dynamic_cast<juce::ToggleButton *>(findWidget(item.second));
+                check(on && on->getButtonText() == "ON", "each algorithm exposes its own On button");
+                on->setToggleState(true, juce::sendNotificationSync);
+            }
+            auto *fft = dynamic_cast<juce::ComboBox *>(findWidget("o1paulfft"));
+            check(fft && fft->getNumItems() == 11 && fft->getText() == "32768" &&
+                      findWidget("o1paulamount") != nullptr &&
+                      p.samplerLayerMask(0) == ((1u << 1) | (1u << 8)),
+                  "dedicated FFT/amount controls and independent layer flags");
+            check(compact->validateLayout().isEmpty(), "combined Stretch layout remains clear");
         }
         p.setStateInformation(uiState.getData(), int(uiState.getSize()));
         if (argc > 1) {
