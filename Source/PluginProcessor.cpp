@@ -107,7 +107,11 @@ Params LogisthProcessor::snapshot() const {
         o.pulseWidth = get(Param(modulation + 4));
         o.pwmDepth = get(Param(modulation + 5));
         o.pwmRate = get(Param(modulation + 6));
-        o.stretchMode = int(get(Param(modulation + 7)));
+        const auto diffuse = phaseDiffuseParam(i);
+        o.stretchControls.diffuse = o.engine == 2 && get(Param(diffuse)) > 0;
+        o.stretchMode = o.stretchControls.diffuse ? 8 : int(get(Param(modulation + 7)));
+        for (int layer = 0; layer < 3; ++layer)
+            o.stretchControls.ratios[size_t(layer)] = get(Param(diffuse + 1 + layer));
         o.stretch = get(Param(modulation + 8));
         o.interpolation = int(get(Param(modulation + 9)));
         size_t extra = playerParamIndex(Param::o1fmsource, i, 5);
@@ -124,6 +128,9 @@ Params LogisthProcessor::snapshot() const {
         o.stretchControls.blockMs = get(Param(stretch + 4));
         int overlap = int(get(Param(stretch + 5)));
         o.stretchControls.overlap = overlap == 0 ? 0 : overlap + 1;
+        o.gran.timeRate = std::clamp(o.stretchControls.rate / o.stretch, 1.f / 64, 64.f);
+        o.gran.interpolation = o.interpolation;
+        o.gran.pitchRatio = std::exp2(o.stretchControls.semitones / 12.f);
         const size_t tail = size_t(tailParam(i));
         o.tail.enabled = get(Param(tail)) > 0;
         o.tail.start = get(Param(tail + 1));
@@ -253,6 +260,9 @@ EffectsParams LogisthProcessor::effectsSnapshot() const {
     }
     p.phaser = get(Param::phaseron) > 0;
     p.chorus = get(Param::choruson) > 0;
+    p.flange = {get(Param::flangeron) > 0, get(Param::flangerdelay), get(Param::flangerdepth),
+                get(Param::flangerrate), get(Param::flangerfeedback), get(Param::flangerwidth),
+                get(Param::flangerdamping), get(Param::flangermix)};
     p.eq = get(Param::eqon) > 0;
     p.reverb = get(Param::reverbon) > 0;
     p.delay = get(Param::delayon) > 0;
@@ -414,6 +424,7 @@ void LogisthProcessor::resetDsp() {
     pendingVstRestart = false;
     releaseOutputNotes = true;
     engine.reset();
+    keyboard.reset();
     lastBendParameter = lastModParameter = 0.f;
     pitchPosition = wheelPosition = 0.f;
     lastPitchChannel = lastModChannel = 1;
@@ -520,7 +531,20 @@ void LogisthProcessor::processBlock(AudioBuffer<float> &audio, MidiBuffer &midi)
         if (std::isfinite(expectedPpq))
             expectedPpq += n / framesPerBeat;
     }
+    // JUCE's virtual keyboard handles CC123 but ignores CC120. Mirror CC120
+    // as a display-only note release without injecting extra synth events.
     keyboard.processNextMidiBuffer(midi, 0, n, true);
+    unsigned cleared = 0;
+    for (const auto metadata : midi) {
+        const auto message = metadata.getMessage();
+        if (message.isAllSoundOff()) {
+            cleared |= 1u << message.getChannel();
+            keyboard.processNextMidiEvent(MidiMessage::allNotesOff(message.getChannel()));
+        } else if ((cleared & (1u << message.getChannel())) &&
+                   (message.isNoteOn() || message.isNoteOff() || message.isAllNotesOff())) {
+            keyboard.processNextMidiEvent(message);
+        }
+    }
     const bool midiOnly = get(Param::midionly) > 0;
     if (midiOnly != wasMidiOnly) {
         engine.silenceVoices();

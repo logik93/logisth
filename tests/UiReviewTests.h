@@ -130,7 +130,7 @@ inline void run(const File &report = {}) {
     const auto originalPoly = p->state.getParameter("polyphonyextra");
     auto *bend = p->state.getParameter("bendwheel");
     auto *mod = p->state.getParameter("modwheel");
-    check(parameterCount == 1091 && originalPoly == p->getParameters()[1070] &&
+    check(parameterCount > 1091 && originalPoly == p->getParameters()[1070] &&
               p->state.getParameter("dist1on") == p->getParameters()[1071] &&
               bend == p->getParameters()[1089] && mod == p->getParameters()[1090],
           "performance wheels follow the existing host parameters");

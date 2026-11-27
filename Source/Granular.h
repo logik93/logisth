@@ -6,7 +6,8 @@ struct GranularParams {
     float trimStart = 0;
     float attack = .01f, hold = .03f, grainSpacing = 1, waveSpacing = 1, pan = 0, depth = 0,
           frequency = 1, randomness = 0, transientHold = .03f, beats = 4;
-    int transients = 0, keyTo = 0;
+    float timeRate = 1, pitchRatio = 1;
+    int transients = 0, keyTo = 0, interpolation = 0;
 };
 struct GranulizerPlayback {
     struct Grain {
@@ -84,7 +85,7 @@ struct GranulizerPlayback {
             if (p.sync)
                 wave *=
                     span / std::max(1., double(p.beats) * 60 / std::max(1., bpm) * data.sampleRate);
-            double advance = p.freeze ? 0. : waveHold * wave;
+            double advance = p.freeze ? 0. : waveHold * wave * p.timeRate;
             if (p.transients > 0 && !markers.empty()) {
                 auto marker = advance >= 0 ? std::lower_bound(markers.begin(), markers.end(),
                                                               int64_t(std::ceil(head)))
@@ -131,7 +132,7 @@ struct GranulizerPlayback {
                         resample(data,
                                  warpSamplePosition(grain.cursor, data.sampleRate * .04, width) +
                                      fmOffset,
-                                 ch, 0, speed, first, last, loop) *
+                                 ch, p.interpolation, speed, first, last, loop) *
                         std::clamp(envelope, 0.f, 1.f) * panGain;
                 }
                 grain.cursor += reverse ? -speed : speed;

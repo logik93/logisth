@@ -799,6 +799,8 @@ class Engine {
                                 double ratio = std::exp2((v.pitch - op.root + pitch + op.semitone +
                                                           spread * op.detune * .01) /
                                                          12.);
+                                if (op.engine == 3)
+                                    ratio *= op.gran.pitchRatio;
                                 if (op.engine == 3 && op.gran.enabled) {
                                     signal = v.granular[size_t(osc)][size_t(u)].tick(
                                         *op.data, op.gran, sr, ratio, position, op.end, op.loop,
@@ -823,7 +825,7 @@ class Engine {
                                                   std::exp2(
                                                       mods.pair(Destination::GrainSizeA, part) * 4),
                                               .005f, .25f),
-                                        op.density, op.spray, op.scan,
+                                        op.density, op.spray, op.scan * op.gran.timeRate,
                                         op.engine == 3 &&
                                                 v.playback[size_t(osc)][size_t(u)].untilGrain <= 0
                                             ? noise()
@@ -868,7 +870,7 @@ class Engine {
                                             float(grain.cursor / (length - 1));
                             } else if (op.engine == 3) {
                                 auto &player = v.playback[size_t(osc)][size_t(displayLane)];
-                                view.position = float(position + player.elapsed * op.scan);
+                                view.position = float(position + player.scanPosition);
                                 view.position -= std::floor(view.position);
                                 for (const auto &grain : player.grains)
                                     if (grain.active && view.grainCount < 16)

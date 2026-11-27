@@ -12,12 +12,13 @@ enum class EffectStage : unsigned {
     Reverb,
     Delay,
     Compressor,
-    Clipper
+    Clipper,
+    Flanger
 };
-inline constexpr int effectStageCount = 8;
+inline constexpr int effectStageCount = 9;
 struct EffectOrder {
     std::array<EffectStage, effectStageCount> stages{
-        EffectStage::Distortion, EffectStage::Phaser, EffectStage::Chorus,
+        EffectStage::Distortion, EffectStage::Phaser, EffectStage::Chorus, EffectStage::Flanger,
         EffectStage::Equalizer,  EffectStage::Reverb, EffectStage::Delay,
         EffectStage::Compressor, EffectStage::Clipper};
     bool valid() const noexcept {
@@ -30,18 +31,31 @@ struct EffectOrder {
         }
         return true;
     }
-    uint32_t packed() const noexcept {
-        uint32_t value = 0;
+    uint64_t packed() const noexcept {
+        uint64_t value = 0;
         for (unsigned i = 0; i < stages.size(); ++i)
-            value |= uint32_t(stages[i]) << (i * 3);
+            value |= uint64_t(stages[i]) << (i * 4);
         return value;
     }
-    static bool unpack(uint32_t value, EffectOrder &result) noexcept {
-        if (value >> 24)
+    static bool unpack(uint64_t value, EffectOrder &result) noexcept {
+        if (value >> (effectStageCount * 4))
             return false;
         EffectOrder order;
-        for (unsigned i = 0; i < order.stages.size(); ++i)
-            order.stages[i] = EffectStage((value >> (3 * i)) & 7);
+        if (value >> 24) {
+            for (unsigned i = 0; i < order.stages.size(); ++i)
+                order.stages[i] = EffectStage((value >> (4 * i)) & 15);
+        } else {
+            // The old encoding stored eight three-bit slots.
+            size_t at = 0;
+            for (unsigned i = 0; i < 8; ++i) {
+                auto stage = EffectStage((value >> (3 * i)) & 7);
+                order.stages[at++] = stage;
+                if (stage == EffectStage::Chorus && at < order.stages.size())
+                    order.stages[at++] = EffectStage::Flanger;
+                if (at == order.stages.size() && i != 7)
+                    return false;
+            }
+        }
         if (!order.valid())
             return false;
         result = order;

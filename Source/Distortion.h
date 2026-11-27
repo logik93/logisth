@@ -50,6 +50,7 @@ struct DistortionOrder {
             return result;
         for (size_t i = 0; i < 4; ++i)
             result.stages[i] = EffectStage(slots[i]);
+        result.stages[4] = EffectStage::Flanger;
         return result;
     }
 };

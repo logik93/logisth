@@ -61,8 +61,50 @@ double power(const std::vector<float> &v, double hz, int from = 6000) {
     return std::max(0., a * a + b * b - coefficient * a * b) /
            std::pow(double(v.size() - size_t(from)), 2);
 }
+static void checkDiffusionAndGrainRate() {
+    constexpr double rate = 48000.;
+    auto render = [](std::array<float, 3> gains) {
+        PhaseDiffuseStretch player(4096);
+        player.reset(0, 42);
+        std::vector<float> output;
+        for (int frame = 0; frame < 24000; ++frame) {
+            auto x = player.tick([](double at, int) {
+                return .4f * float(std::sin(2 * pi * 375 * at / rate));
+            }, 1., 1.f, 8.f, gains);
+            check(std::isfinite(x[0]) && x[0] == x[1] && std::abs(x[0]) < 2.f,
+                  "diffusion preserves stereo coherence and finite output");
+            output.push_back(x[0]);
+        }
+        return output;
+    };
+    const auto unity = render({0, 1, 0}), octave = render({0, 0, 1}), muted = render({0, 0, 0});
+    const auto band = [](const std::vector<float> &v, double centre) {
+        double energy = 0;
+        for (auto hz = centre - 65; hz <= centre + 65; hz += 5)
+            energy += power(v, hz);
+        return energy;
+    };
+    check(band(unity, 375) > band(unity, 750) * 10 + 1e-5 &&
+              band(octave, 750) > band(octave, 375) * 10 + 1e-5 &&
+              *std::max_element(muted.begin(), muted.end()) == 0,
+          "ratio mixer moves the occupied band up one octave and can mute all layers");
+
+    SourceData source = *SourceData::factory();
+    GranularParams slow, fast;
+    slow.timeRate = .5f;
+    fast.timeRate = 2.f;
+    slow.hold = fast.hold = .002f;
+    GranulizerPlayback a, b;
+    for (int i = 0; i < 192; ++i) {
+        a.tick(source, slow, rate, 1., 0, 1, true, false, 60, 60, 120);
+        b.tick(source, fast, rate, 1., 0, 1, true, false, 60, 60, 120);
+    }
+    check(a.generated == b.generated && b.head > 3.9 * a.head,
+          "Granulizer time rate changes traversal independently of grain interval");
+}
 int main() {
     try {
+        checkDiffusionAndGrainRate();
         for (double rate : {44100., 48000., 96000.})
             for (float speed : {.5f, 1.f, 2.f}) {
                 upstreamParity(rate, {}, speed, 1.5f, 3000, 7);

@@ -140,6 +140,39 @@ class SparseImpulse : public ImpulseProcessor {
     }
 };
 #include "MultibandTests.h"
+static void checkFlanger() {
+    for (double rate : {44100., 48000., 96000., 192000.}) {
+        Flanger flanger;
+        flanger.prepare(rate);
+        FlangerControls controls;
+        float left = .41f, right = -.27f;
+        flanger.process(&left, &right, 1, controls);
+        check(left == .41f && right == -.27f, "zero mix is transparent");
+        flanger.reset();
+        controls.enabled = true;
+        controls.feedback = -.9f;
+        double stereoDifference = 0, change = 0;
+        for (int i = 0; i < int(rate * .18); ++i) {
+            float dry = .4f * float(std::sin(2 * pi * 530 * i / rate));
+            left = right = dry;
+            flanger.process(&left, &right, 1, controls);
+            check(std::isfinite(left) && std::isfinite(right) &&
+                      std::max(std::abs(left), std::abs(right)) < 3,
+                  "flanger remains bounded across native rates at negative feedback limit");
+            stereoDifference += std::abs(left - right);
+            change += std::abs(left - dry);
+        }
+        check(stereoDifference > 5 && change > 5, "stereo delays produce a distinct audible effect");
+        controls.enabled = false;
+        for (int i = 0; i < int(rate * .25); ++i) {
+            left = right = .125f;
+            if (flanger.active(controls))
+                flanger.process(&left, &right, 1, controls);
+        }
+        check(left == .125f && right == .125f && !flanger.active(controls),
+              "the short bypass ramp returns to transparent idle");
+    }
+}
 int main(int argc, char **argv) {
     try {
         if (argc > 2 && std::string(argv[1]) == "--multiband-report") {
@@ -148,7 +181,11 @@ int main(int argc, char **argv) {
         }
         checkDistortionsAndSpectrum();
         multiband_test::run();
+        checkFlanger();
         EffectOrder order;
+        check(order.stages[2] == EffectStage::Chorus && order.stages[3] == EffectStage::Flanger,
+              "Flanger defaults immediately after Chorus");
+        std::sort(order.stages.begin(), order.stages.end());
         int permutations = 0;
         do {
             EffectOrder decoded;
@@ -156,12 +193,12 @@ int main(int argc, char **argv) {
                   "all permutations round-trip as atomic order values");
             ++permutations;
         } while (std::next_permutation(order.stages.begin(), order.stages.end()));
-        check(permutations == 40320, "all eight stages can move independently");
+        check(permutations == 362880, "all nine stages can move independently");
         auto invalid = order;
         invalid.stages[1] = invalid.stages[0];
         check(!invalid.valid() && !EffectOrder::unpack(0, invalid), "duplicate stages rejected");
         check(!EffectOrder::unpack(0x1000000, invalid), "unknown packed bits rejected");
-        check(!order.move(-1, 0) && !order.move(0, 8), "move bounds validated");
+        check(!order.move(-1, 0) && !order.move(0, 9), "move bounds validated");
         for (double rate : {44100., 48000., 96000.}) {
             auto current = std::make_unique<Effects>();
             auto frozen = std::make_unique<FrozenEffects0962>();
@@ -205,7 +242,11 @@ int main(int argc, char **argv) {
             }
             check(error < 2e-5, "default seven-effect audio remains consistent with 0.9.6.2");
         }
-        auto render = [](bool clipFirst, bool distortion) {
+        const auto position = [](const EffectOrder &order, EffectStage stage) {
+            return int(std::find(order.stages.begin(), order.stages.end(), stage) -
+                       order.stages.begin());
+        };
+        auto render = [&](bool clipFirst, bool distortion) {
             auto fx = std::make_unique<Effects>();
             fx->prepare(48000);
             EffectsParams p;
@@ -215,7 +256,7 @@ int main(int argc, char **argv) {
             p.bass = 12;
             p.distortion = distortion;
             if (clipFirst)
-                p.order.move(distortion ? 3 : 7, 0);
+                p.order.move(position(p.order, distortion ? EffectStage::Equalizer : EffectStage::Clipper), 0);
             Clipper clipper;
             DynamicsMeters meter;
             ClipperSettings cp{!distortion, false, 0, 0, -1, .5f, 1};
@@ -249,7 +290,7 @@ int main(int argc, char **argv) {
             p.feedback = 0;
             p.highCut = 3000;
             if (delayFirst)
-                p.order.move(5, 4);
+                p.order.move(position(p.order, EffectStage::Delay), position(p.order, EffectStage::Reverb));
             float l[128]{}, r[128]{}, mod[128]{};
             bool late = false;
             for (int offset = 0; offset < 28000; offset += 128) {
@@ -269,7 +310,7 @@ int main(int argc, char **argv) {
         RackTransition ramp;
         ramp.reset(48000, EffectOrder{});
         auto moved = EffectOrder{};
-        moved.move(7, 0);
+        moved.move(position(moved, EffectStage::Clipper), 0);
         ramp.request(moved);
         float previous = 1;
         bool switched = false;
@@ -288,7 +329,7 @@ int main(int argc, char **argv) {
         }
         check(switched && previous == 1 && ramp.order() == moved && ramp.blockLimit(512) == 512,
               "live order settles after ten milliseconds");
-        std::cout << "PASS rack: all 40320 orders, default DSP parity, actual reordered audio, "
+        std::cout << "PASS rack: all 362880 orders, default DSP parity, actual reordered audio, "
                      "movable clipper and causal transition\n";
     } catch (const std::exception &error) {
         std::cerr << error.what() << '\n';

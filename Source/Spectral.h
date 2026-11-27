@@ -1,5 +1,6 @@
 #pragma once
 #include "Topology.h"
+#include "PhaseDiffuseStretch.h"
 #include "vendor/signalsmith-stretch/signalsmith-stretch.h"
 #include <array>
 #include <atomic>
@@ -10,17 +11,20 @@
 namespace logisth {
 struct StretchControls {
     float rate = 1, semitones = 0, tonalityHz = 0, formant = 0, blockMs = 0;
+    bool diffuse = false;
+    std::array<float, 3> ratios{0, 1, 0};
     int overlap = 0; // Auto, otherwise the actual overlap ratio (2..16).
 };
 struct SpectralConfig {
     float blockMs = 0;
     int overlap = 0;
+    bool diffuse = false;
     static SpectralConfig from(const StretchControls &controls) {
         return {std::isfinite(controls.blockMs) ? std::clamp(controls.blockMs, 0.f, 200.f) : 0.f,
-                controls.overlap == 0 ? 0 : std::clamp(controls.overlap, 2, 16)};
+                controls.overlap == 0 ? 0 : std::clamp(controls.overlap, 2, 16), controls.diffuse};
     }
     bool operator==(const SpectralConfig &other) const {
-        return blockMs == other.blockMs && overlap == other.overlap;
+        return blockMs == other.blockMs && overlap == other.overlap && diffuse == other.diffuse;
     }
     bool operator!=(const SpectralConfig &other) const {
         return !(*this == other);
@@ -38,15 +42,17 @@ struct SpectralConfig {
     }
     size_t estimatedBytes(double rate) const {
         size_t fft = 1;
-        while (fft < size_t(window(rate)))
+        const size_t frames = size_t(diffuse ? std::max(1024, window(rate)) : window(rate));
+        while (fft < frames)
             fft *= 2;
-        return fft * 160 + size_t(window(rate)) * 32 + 65536;
+        return fft * 160 + frames * 32 + 65536;
     }
 };
 // configure() and its allocations belong exclusively to preparation threads.
 class SpectralStream {
     inline static std::atomic<uint64_t> identities{0};
     signalsmith::stretch::SignalsmithStretch<float> core{0x4c677374};
+    std::unique_ptr<PhaseDiffuseStretch> diffusion;
     std::array<std::vector<float>, 2> input;
     std::array<std::array<float, 64>, 2> output{};
     uint64_t token = 0, revision = 0;
@@ -69,6 +75,10 @@ class SpectralStream {
     explicit SpectralStream(double hostRate, SpectralConfig settings = {})
         : rate(std::isfinite(hostRate) ? std::clamp(hostRate, 8000., 384000.) : 48000.),
           config(settings) {
+        if (config.diffuse) {
+            diffusion = std::make_unique<PhaseDiffuseStretch>(std::max(1024, config.window(rate)));
+            return;
+        }
         core.configure(2, config.window(rate), config.hop(rate));
         for (auto &channel : input)
             channel.resize(size_t(std::max(config.window(rate), 4096)));
@@ -80,6 +90,16 @@ class SpectralStream {
     std::array<float, 2> tick(Read read, double cursor, double step, float ratio, float stretch,
                               uint64_t newToken, uint64_t newRevision, bool forceReset = false,
                               const StretchControls &controls = {}) {
+        if (diffusion) {
+            if (forceReset || !ready || token != newToken || revision != newRevision) {
+                diffusion->reset(cursor, newToken ^ newRevision);
+                token = newToken;
+                revision = newRevision;
+                ready = true;
+            }
+            return diffusion->tick(read, step, std::clamp(ratio, .00390625f, 256.f), stretch,
+                                   controls.ratios);
+        }
         double speed = 1 / std::clamp(double(stretch), 1. / 64, 64.);
         float *in[]{input[0].data(), input[1].data()}, *out[]{output[0].data(), output[1].data()};
         if (forceReset || !ready || token != newToken || revision != newRevision) {

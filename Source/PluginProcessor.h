@@ -262,7 +262,7 @@ class LogisthProcessor : public juce::AudioProcessor, private juce::VST3ClientEx
     void resetDsp();
     logisth::Engine engine;
     logisth::Effects effects;
-    std::atomic<uint32_t> effectOrderBits{logisth::EffectOrder{}.packed()};
+    std::atomic<uint64_t> effectOrderBits{logisth::EffectOrder{}.packed()};
     std::atomic<unsigned> distortionOrderBits{logisth::DistortionOrder{}.packed()};
     bool lastEqCapture = false, lastDistortionCapture = false;
     logisth::RackTransition rackTransition;

@@ -74,6 +74,23 @@ void checkPerformanceWheels() {
     check(p->displayedMod() == 0, "reset controllers clears the Mod indicator");
     gain_test::set(*p, "bendwheel", 0);
     process(0);
+    midi.addEvent(MidiMessage::noteOn(2, 60, .8f), 0);
+    midi.addEvent(MidiMessage::noteOn(3, 60, .8f), 8);
+    process(0);
+    check(p->keyboard.isNoteOn(2, 60) && p->keyboard.isNoteOn(3, 60),
+          "keyboard draws host note-ons on each channel");
+    midi.addEvent(MidiMessage::allSoundOff(2), 10);
+    midi.addEvent(MidiMessage::noteOn(2, 62, .8f), 15);
+    process(0);
+    check(!p->keyboard.isNoteOn(2, 60) && p->keyboard.isNoteOn(3, 60) &&
+              p->keyboard.isNoteOn(2, 62),
+          "All Sound Off clears only its channel and keeps a later note");
+    midi.addEvent(MidiMessage::allNotesOff(2), 0);
+    midi.addEvent(MidiMessage::noteOff(3, 60), 0);
+    process(0);
+    check(!p->keyboard.isNoteOnForChannels(0xffff, 60) &&
+              !p->keyboard.isNoteOnForChannels(0xffff, 62),
+          "keyboard clears explicit note-off and All Notes Off");
 }
 
 void checkEnvelopeMidiEdges() {

@@ -1,14 +1,14 @@
-# logisth 1.0.8 — Technical Manual
+# logisth 1.0.9 — Technical Manual
 
 **wavelogik · Architecture, DSP and Engineering Reference**
 
-Document revision: 2.6 · Software baseline: 1.0.8 · State schema: 4
+Document revision: 2.7 · Software baseline: 1.0.9 · State schema: 4
 
-Implementation baseline: release tag `v1.0.8`. The technical identity manifest
+Implementation baseline: release tag `v1.0.9`. The technical identity manifest
 records the CMake/runtime source identity. Native BUILD_INFO records its tagged
 commit, tree fingerprints, binary hashes and manual identities.
 
-This reference describes the implementation of logisth 1.0.8. It is
+This reference describes the implementation of logisth 1.0.9. It is
 intended for sound designers, audio engineers, contributors and integrators.
 The [User Manual](MANUAL.md) describes operating the interface; this document
 explains how its controls affect processing, how data is stored and which
@@ -68,7 +68,7 @@ note, the six players form three source buses. Each part filter can select any
 combination of those buses. Its amp envelope, velocity and part mix scale the
 filtered signal. Solo determines which part contributions reach the common sum.
 
-The default stereo audio order is **Distortion → Phaser → Chorus → Equalizer →
+The default stereo audio order is **Distortion → Phaser → Chorus → Flanger → Equalizer →
 Reverb → Delay → Compressor → Clipper → Main → Limiter → Output**. The eight
 pre-Main stages are user-reorderable. Chords and Arpeggiator occupy a separate
 GENERATORS row; Sample and Morph remain editing/performance tools. A new editor
@@ -119,7 +119,7 @@ range and clamps the resulting pitch shift to BEND / st (0–24 semitones, defau
 and other hosts use BEND / st. Logisth identifies FL Studio through JUCE's host
 type or the VST3 host application's name. The indicator shows the most recent
 wheel channel's applied shift relative to BEND / st and centers when the limit
-is 0. [VST3 regression coverage](RELEASE-v1.0.8.md)
+is 0. [VST3 regression coverage](RELEASE-v1.0.9.md)
 
 The two host parameters are `bendwheel` (−12 to +12) and `modwheel`
 (0 to 1). Changes to them apply globally at the processing block boundary,
@@ -340,7 +340,23 @@ instead of allocating without a bound.
 Implementation: [Sampler.h](../Source/Sampler.h), [Spectral.h](../Source/Spectral.h),
 [SourceAssets.cpp](../Source/SourceAssets.cpp).
 
+### Phase diffusion and ratio mixing
+
+The Sampler can override its playback algorithm with the phase diffusion
+option on the Paul Stretch page. The adapter uses the licensed Signalsmith
+Linear FFT and original logisth source for the stretch. Each frame uses a
+square-root Hann window and four-way overlap. Shared phase rotations preserve
+the stereo relationship. The mixer remaps bins to 0.5x, 1x and 2x frequency
+ratios with band limiting at Nyquist. The existing spectral pool owns the
+working buffers, allocates them off the audio thread and bounds their size.
+[PaulXStretch project](https://github.com/essej/paulxstretch)
+
 ## 7. Granular synthesis
+
+Granular Playback separates grain pitch from source traversal. Granulizer
+multiplies each new grain-head step by Rate / Time Factor. Cloud integrates
+the adjusted scan rate so changes in time factor do not jump the scan
+position. Both paths use the selected interpolation for grain reads.
 
 The dedicated Granulizer uses sixty-four fixed grain records per player/unison
 lane. A grain has a source cursor, age, attack, hold and alternating stereo pan.
@@ -515,6 +531,7 @@ Implementation: [Chords.h](../Source/Chords.h), [Arpeggiator.h](../Source/Arpegg
 | Distortion | Four serial modules in Legacy, or 1–4 parallel bands with LR24 crossovers; tanh/folding/clipping/hold/quantization |
 | Phaser | Six all-pass stages per channel, LFO frequency sweep, feedback and width |
 | Chorus | Fractional delay modulation with stereo phase offsets; optional dual lines and feedback |
+| Flanger | Cubic fractional delay reads, stereo phase offset, bipolar damped feedback and smoothed controls |
 | Legacy EQ | Two corrected second-order shelving filters: bass and treble |
 | Graphic EQ | Sixteen independent biquad slots with frequency, gain, Q, type and enable |
 | Reverb | Five original algorithmic models or prepared JUCE convolution |
@@ -743,7 +760,7 @@ archive. Preset writing uses a temporary file and replacement on success.
 | Source asset | `SOURCE` child with slot, regions and compressed stereo float PCM, source rate, frame size and name |
 | Impulse response | `IMPULSE` child, format 1, compressed PCM/rate/channels/name |
 | Chords / patterns | `CHORDMAP`/`CHORD` data and stored `PATTERN` trees |
-| Audio effect order | Optional root `effectOrder`, eight 3-bit stage IDs packed into 24 bits; duplicates/unknown bits rejected |
+| Audio effect order | Optional root `effectOrder`, nine 4-bit stage IDs packed into 36 bits. The legacy 24-bit layout is read with Flanger inserted after Chorus |
 | Appearance | Separate `appearance.json`, theme JSON files and per-instance draft state |
 
 Factory source data can be reconstructed instead of embedding an identical
@@ -1065,3 +1082,4 @@ the release tag matching a binary when investigating a specific implementation.
 | 2.4 | 1.0.5 | Host-automatable performance wheels, MIDI Pitch Bend Sensitivity and FL Studio fallback |
 | 2.5 | 1.0.6 | Windows Standalone ASIO backend and native registration test |
 | 2.6 | 1.0.8 | FL Studio octave-wide Master Pitch fallback and Bend scale of −12 to +12 |
+| 2.7 | 1.0.9 | Flanger, granular playback controls and Sampler phase diffusion |

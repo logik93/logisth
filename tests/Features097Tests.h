@@ -78,6 +78,13 @@ inline void run(const juce::File &report = {}) {
     gain_test::set(p, "env1dest1", 14);
     check(destination->getSelectedId() == 15,
           "host base destination changes refresh on the first update");
+    auto *flange = console->findChildWithID("rack.13");
+    check(flange && flange->getY() > console->findChildWithID("rack.3")->getY(),
+          "Flanger is visible below Chorus");
+    check(flange->keyPressed(KeyPress(KeyPress::upKey, ModifierKeys::altModifier, 0)) &&
+              p.effectOrder().stages[2] == EffectStage::Flanger,
+          "Flanger moves in the UI and DSP order");
+    p.setEffectOrder(EffectOrder{});
     auto *clip = console->findChildWithID("rack.11");
     const auto start = Point<float>{float(clip->getWidth() - 6), 10};
     auto mouse = [&](Point<float> at) {
@@ -97,7 +104,7 @@ inline void run(const juce::File &report = {}) {
           "keyboard reorder matches drag behavior");
     check(console->findChildWithID("rack.8")->getBottom() < clip->getY() &&
               console->findChildWithID("rack.0")->getBottom() < clip->getY() &&
-              console->findChildWithID("rack.12")->getY() == 492,
+              console->findChildWithID("rack.12")->getY() == 494,
           "generators stay separate and final limiter remains fixed");
     const auto savedOrder = p.effectOrder();
     TemporaryFile preset(".logisth");

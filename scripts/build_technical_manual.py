@@ -57,7 +57,7 @@ def signal_flow():
         'select source-bus combinations; per-note stereo filters and part envelopes')
     arrow(234, 96, 234, 80)
     box(0, 35, 468, 'REORDERABLE AUDIO FX (DEFAULT SEQUENCE SHOWN IN TEXT)',
-        'Distortion / Phaser / Chorus / EQ / Reverb / Delay / Compressor / Clipper')
+        'Distortion / Phaser / Chorus / Flanger / EQ / Reverb / Delay / Compressor / Clipper')
     arrow(234, 35, 234, 20)
     drawing.add(String(234, 5, 'MAIN -> LIMITER (FIXED OUTPUT) -> STEREO OUTPUT',
                        fontName='OpenSans-Bold', fontSize=8, textAnchor='middle', fillColor=ink))

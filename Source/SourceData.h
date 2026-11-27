@@ -200,7 +200,7 @@ struct SourcePlayback {
         bool active = false;
     };
     std::array<Grain, 8> grains{};
-    double cursor = 0, elapsed = 0, untilGrain = 0;
+    double cursor = 0, scanPosition = 0, untilGrain = 0;
     int mode = -1;
     const SourceData *source = nullptr;
     uint64_t sourceRevision = 0;
@@ -317,7 +317,7 @@ struct SourcePlayback {
             for (auto &g : grains)
                 if (!g.active) {
                     double centre =
-                        std::max(position, trimStart) + elapsed * scan + random * spray * .25;
+                        std::max(position, trimStart) + scanPosition + random * spray * .25;
                     centre -= std::floor(centre);
                     double at = first + std::fmod(centre * (length - 2) - first, span);
                     if (at < first)
@@ -337,7 +337,7 @@ struct SourcePlayback {
                         resample(data,
                                  warpSamplePosition(g.cursor, data.sampleRate * .04, width) +
                                      fmOffset,
-                                 ch, 0, speed, first, last, true) *
+                                 ch, interpolation, speed, first, last, true) *
                         window;
                 g.cursor += (reverse ? -speed : speed);
                 g.cursor = first + std::fmod(g.cursor - first, span);
@@ -351,7 +351,7 @@ struct SourcePlayback {
         for (auto &x : out)
             x *= gain;
         --untilGrain;
-        elapsed += 1 / sr;
+        scanPosition += double(scan) / sr;
         return out;
     }
 };

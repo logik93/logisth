@@ -1394,7 +1394,7 @@ class LogisthEditor::Console : public Component,
     class Keys : public MidiKeyboardComponent, private ThemeText {
       public:
         Keys(MidiKeyboardState &s, Console &c)
-            : MidiKeyboardComponent(s, horizontalKeyboard), ThemeText(c), owner(c) {
+            : MidiKeyboardComponent(s, horizontalKeyboard), ThemeText(c), owner(c), midi(s) {
             applyTheme();
         }
         void applyTheme() {
@@ -1408,8 +1408,24 @@ class LogisthEditor::Console : public Component,
             setColour(textLabelColourId, owner.darkTheme ? owner.line : owner.muted);
             setColour(shadowColourId, Colours::transparentBlack);
         }
-        void drawBlackNote(int, Graphics &g, Rectangle<float> b, bool down, bool over,
+        void refreshPlayedKeys() {
+            for (int note = getRangeStart(); note <= getRangeEnd(); ++note)
+                if (getRectangleForKey(note).intersects(getLocalBounds().toFloat()) &&
+                    drawn[size_t(note)] != midi.isNoteOnForChannels(getMidiChannelsToDisplay(), note)) {
+                    repaint();
+                    break;
+                }
+        }
+        void drawWhiteNote(int note, Graphics &g, Rectangle<float> b, bool down, bool over,
+                           Colour lineColour, Colour textColour) override {
+            if (g.clipRegionIntersects(b.getSmallestIntegerContainer()))
+                drawn[size_t(note)] = down;
+            MidiKeyboardComponent::drawWhiteNote(note, g, b, down, over, lineColour, textColour);
+        }
+        void drawBlackNote(int note, Graphics &g, Rectangle<float> b, bool down, bool over,
                            Colour) override {
+            if (g.clipRegionIntersects(b.getSmallestIntegerContainer()))
+                drawn[size_t(note)] = down;
             g.setColour(down              ? owner.green
                         : over            ? owner.line.brighter(.15f)
                         : owner.darkTheme ? owner.body.darker(.3f)
@@ -1421,6 +1437,8 @@ class LogisthEditor::Console : public Component,
 
       private:
         Console &owner;
+        MidiKeyboardState &midi;
+        std::array<bool, 128> drawn{};
     };
 
   public:
@@ -1563,11 +1581,8 @@ class LogisthEditor::Console : public Component,
             button.onClick = [this, i] { setPart(i); };
             addAndMakeVisible(button);
         }
-        StringArray names{"ARPEGGIATOR", "DISTORTION", "PHASER",     "CHORUS", "EQUALIZER",
-                          "REVERB",      "DELAY",      "COMPRESSOR", "CHORDS", "SAMPLE",
-                          "MORPH",       "CLIPPER",    "LIMITER"};
-        for (int i = 0; i < 13; ++i) {
-            rackButtons[size_t(i)] = std::make_unique<RackButton>(*this, i, names[i]);
+        for (int i = 0; i < rackNames.size(); ++i) {
+            rackButtons[size_t(i)] = std::make_unique<RackButton>(*this, i, rackNames[i]);
             rackButtons[size_t(i)]->setComponentID("rack." + String(i));
             addAndMakeVisible(*rackButtons[size_t(i)]);
         }
@@ -2194,7 +2209,7 @@ class LogisthEditor::Console : public Component,
     }
     void setRack(int page) {
         settingsOpen = false;
-        rack = jlimit(0, 12, page);
+        rack = jlimit(0, flangerPage, page);
         layout();
         repaint();
     }
@@ -2446,7 +2461,7 @@ class LogisthEditor::Console : public Component,
         for (int clock = 0; clock < 2; ++clock) {
             previewSync = clock;
             for (int part = 0; part < partCount; ++part)
-                for (int page = 0; page < 13; ++page)
+                for (int page = 0; page < rackNames.size(); ++page)
                     for (int step = 0; step < 2; ++step) {
                         selectedPart = part;
                         rack = page;
@@ -2464,7 +2479,7 @@ class LogisthEditor::Console : public Component,
         for (int part = 0; part < partCount; ++part)
             for (int mode = 0; mode < 4; ++mode)
                 for (int model = 0; model < 2; ++model)
-                    for (int view = 1; view <= 11; ++view) {
+                    for (int view = 1; view <= 12; ++view) {
                         selectedPart = part;
                         previewSource = mode;
                         previewGran = model;
@@ -3306,6 +3321,13 @@ class LogisthEditor::Console : public Component,
     void shell(Graphics &g, Rectangle<int> b, const String &title, const String &hint = {}) {
         paintShell(g, b, title, hint, *this);
     }
+    inline static const StringArray rackNames{"ARPEGGIATOR", "DISTORTION", "PHASER", "CHORUS",
+                                               "EQUALIZER", "REVERB", "DELAY", "COMPRESSOR",
+                                               "CHORDS", "SAMPLE", "MORPH", "CLIPPER", "LIMITER",
+                                               "FLANGER"};
+    static constexpr int flangerPage = 13;
+    static constexpr int rackRowTop = 332, rackRowHeight = 18;
+    static constexpr int limiterRowTop = rackRowTop + effectStageCount * rackRowHeight;
     static constexpr std::array<Param, 9> enables{Param::arpon,    Param::diston, Param::phaseron,
                                                   Param::choruson, Param::eqon,   Param::reverbon,
                                                   Param::delayon,  Param::compon, Param::chordon};
@@ -3610,8 +3632,10 @@ class LogisthEditor::Console : public Component,
             }
             menu.addItem("MOD", 7);
             menu.addItem("ROUTING", 9);
-            if (mode == 2) {
+            if (mode >= 2)
                 menu.addItem("PLAYBACK", 8);
+            if (mode == 2) {
+                menu.addItem("PAUL STRETCH", 12);
                 menu.addItem("STRETCH", 10);
                 menu.addItem("LOOP TAIL", 11);
             }
@@ -3692,6 +3716,24 @@ class LogisthEditor::Console : public Component,
                 if (mode == 3)
                     control(id + "trimstart", {b.getX() + 88, b.getY() + 142, 170, 28},
                             Style::Number, "TRIM START");
+            } else if (view == 12) {
+                control(id + "paul", {b.getX() + 88, b.getY() + 36, 145, 24}, Style::Toggle,
+                        "PHASE DIFFUSION");
+                control(id + "stretch", {b.getX() + 255, b.getY() + 35, 92, 60}, Style::Knob,
+                        "TIME FACTOR");
+                control(id + "ssblock", {b.getX() + 351, b.getY() + 35, 92, 60}, Style::Knob,
+                        "BLOCK (ms)");
+                for (int i = 0; i < 3; ++i)
+                    control(id + StringArray{"pauldown", "paulunity", "paulup"}[i],
+                            {b.getX() + 88 + 119 * i, b.getY() + 98, 110, 66}, Style::Knob,
+                            StringArray{"RATIO 0.5X", "RATIO 1X", "RATIO 2X"}[i]);
+            } else if (view == 8 && mode == 3) {
+                control(id + "interpolation", {b.getX() + 88, b.getY() + 36, 172, 42},
+                        Style::Menu, "INTERPOLATION");
+                for (int i = 0; i < 3; ++i)
+                    control(id + StringArray{"stretch", "ssrate", "sssemitones"}[i],
+                            {b.getX() + 88 + i * 118, b.getY() + 86, 108, 80}, Style::Knob,
+                            StringArray{"TIME FACTOR", "RATE", "SEMITONES"}[i]);
             } else if (view == 8) {
                 control(id + "stretchmode", {b.getX() + 88, b.getY() + 36, 170, 42}, Style::Menu,
                         "STRETCH");
@@ -3848,7 +3890,7 @@ class LogisthEditor::Console : public Component,
         }
     }
     static int effectRackPage(EffectStage stage) {
-        constexpr std::array<int, effectStageCount> pages{1, 2, 3, 4, 5, 6, 7, 11};
+        constexpr std::array<int, effectStageCount> pages{1, 2, 3, 4, 5, 6, 7, 11, flangerPage};
         return pages[size_t(stage)];
     }
     int effectPosition(int page) const {
@@ -3859,9 +3901,9 @@ class LogisthEditor::Console : public Component,
         return -1;
     }
     void dragRack(int page, Point<int> position) {
-        if (!Rectangle<int>(289, 332, 112, 160).contains(position))
+        if (!Rectangle<int>(289, rackRowTop, 112, effectStageCount * rackRowHeight).contains(position))
             return;
-        const int target = jlimit(0, effectStageCount - 1, (position.y - 332) / 20);
+        const int target = jlimit(0, effectStageCount - 1, (position.y - rackRowTop) / rackRowHeight);
         if (processor.moveEffect(effectPosition(page), target)) {
             readout = "Effect order saved with the patch / Main -> Limiter -> Output";
             layout();
@@ -3881,9 +3923,10 @@ class LogisthEditor::Console : public Component,
         const auto order = processor.effectOrder();
         auto place = [&](int i, Rectangle<int> bounds) {
             rackButtons[size_t(i)]->setBounds(bounds);
-            if (i < 9 || i == 11 || i == 12) {
+            if (i < 9 || i == 11 || i == 12 || i == flangerPage) {
                 const Param enabled =
-                    i < 9 ? enables[size_t(i)] : (i == 11 ? Param::clipon : Param::limiton);
+                    i < 9 ? enables[size_t(i)] : i == 11 ? Param::clipon
+                        : i == 12 ? Param::limiton : Param::flangeron;
                 put(enabled, {bounds.getX() + 3, bounds.getY(), 20, bounds.getHeight()},
                     Style::Toggle, {}, true);
                 controls[size_t(enabled)]->toFront(false);
@@ -3892,8 +3935,8 @@ class LogisthEditor::Console : public Component,
         place(8, {291, 294, 62, 22});
         place(0, {353, 294, 46, 22});
         for (int row = 0; row < effectStageCount; ++row)
-            place(effectRackPage(order.stages[size_t(row)]), {291, 332 + row * 20, 108, 20});
-        place(12, {291, 492, 108, 20});
+            place(effectRackPage(order.stages[size_t(row)]), {291, rackRowTop + row * rackRowHeight, 108, rackRowHeight});
+        place(12, {291, limiterRowTop, 108, rackRowHeight});
         place(9, {291, 514, 54, 20});
         place(10, {346, 514, 53, 20});
         settingsPanel.setVisible(settingsOpen);
@@ -4177,15 +4220,14 @@ class LogisthEditor::Console : public Component,
                     ->enable(value(Param::arpmode) >= 8);
             }
         } else {
-            const String group =
-                StringArray{"ARPEGGIATOR", "DISTORTION", "PHASER", "CHORUS",
-                            "EQUALIZER",   "REVERB",     "DELAY",  "COMPRESSOR"}[rack];
+            const auto group = rackNames[rack];
+            const auto enable = rack == flangerPage ? Param::flangeron : enables[size_t(rack)];
             std::vector<size_t> list;
             bool sync = value(Param::sync) > 0;
             for (size_t i = 0; i < parameterCount; ++i) {
                 auto &s = parameterSpecs[i];
                 String id(s.id);
-                if (group != s.group || Param(i) == enables[size_t(rack)])
+                if (group != s.group || Param(i) == enable)
                     continue;
                 bool seconds = id == "phaserrate" || id == "chorusrate" || id == "delaytime" ||
                                id == "delayright";
@@ -4388,8 +4430,8 @@ class LogisthEditor::Console : public Component,
             b->repaint();
         layoutStamp = currentLayoutState();
     }
-    std::array<int, 14 + 4 * playerCount> currentLayoutState() const {
-        std::array<int, 14 + 4 * playerCount> state{
+    std::array<int64_t, 14 + 4 * playerCount> currentLayoutState() const {
+        std::array<int64_t, 14 + 4 * playerCount> state{
             int(value(Param::sync)), int(value(Param::lfo1free)), int(value(Param::lfo2free)),
             int(value(Param::arpmode) >= 8), int(value(Param::arppattern))};
         for (int o = 0; o < playerCount; ++o) {
@@ -4410,7 +4452,7 @@ class LogisthEditor::Console : public Component,
         state[7 + 4 * playerCount] = mask + 65536 * int(value(eqBandTypes[size_t(selectedEqBand)]));
         state[8 + 4 * playerCount] = int(value(Param::compmode));
         state[9 + 4 * playerCount] = int(value(Param::clipmode));
-        state[10 + 4 * playerCount] = int(processor.effectOrder().packed());
+        state[10 + 4 * playerCount] = int64_t(processor.effectOrder().packed());
         state[11 + 4 * playerCount] = int(processor.distortionOrder().packed());
         state[12 + 4 * playerCount] = int(value(Param::distbandmode));
         state[13 + 4 * playerCount] = int(value(Param::distbands));
@@ -4428,6 +4470,8 @@ class LogisthEditor::Console : public Component,
         impulseName.setColour(Label::textColourId, screenText);
     }
     void timerCallback() override {
+        if (keyboard.isShowing())
+            keyboard.refreshPlayedKeys();
         for (auto &button : oscPaste)
             button.setEnabled(LogisthProcessor::hasOscillatorClipboard());
         if (impulseName.isVisible()) {
@@ -4689,12 +4733,9 @@ class LogisthEditor::Console : public Component,
         drawCaption(g, "AUDIO FX / DRAG", {292, 317, 108, 13}, 8, screenText.withAlpha(.65f));
         g.setColour(screenLine);
         g.drawHorizontalLine(513, 292, 399);
-        StringArray titles{"ARPEGGIATOR", "DISTORTION", "PHASER",     "CHORUS", "EQUALIZER",
-                           "REVERB",      "DELAY",      "COMPRESSOR", "CHORDS", "SAMPLE",
-                           "MORPH",       "CLIPPER",    "LIMITER"};
         drawCaption(g,
                     !settingsOpen && rack == 1 ? String("DISTORTION")
-                    : rackHeadingVisible()     ? titles[rack]
+                    : rackHeadingVisible()     ? rackNames[rack]
                                                : String{},
                     {414, 289, rack == 1 ? 100 : 350, 20}, 12, screenText,
                     Justification::centredLeft, true);
@@ -4715,6 +4756,8 @@ class LogisthEditor::Console : public Component,
                 auto names =
                     StringArray::fromTokens(parameterSpecs[size_t(parameter)].choices, "|", "");
                 title = "SAMPLE / " + names[int(value(parameter))].toUpperCase();
+                if (value(Param(phaseDiffuseParam(waveView.selectedSlot()))) > 0)
+                    title = "SAMPLE / PHASE DIFFUSION";
             }
             const Rectangle<int> titleArea =
                 mode >= 2 ? Rectangle<int>(491, 289, 236, 23) : Rectangle<int>(540, 289, 295, 23);
@@ -4726,11 +4769,9 @@ class LogisthEditor::Console : public Component,
                         processor.learning() >= 0 ? "Play a chord, then choose DONE"
                                                   : "Each trigger stores up to eight notes",
                         {414, 371, 510, 24}, 12, screenText);
-            drawCaption(g,
-                        "VOICE 1       VOICE 2       VOICE 3       VOICE 4       VOICE 5       "
-                        "VOICE 6       VOICE 7       VOICE 8",
-                        {414, 446, 520, 18}, 8, mint);
-            drawCaption(g, "CHORDS → ARPEGGIATOR → SYNTH / MIDI OUT", {414, 490, 520, 24}, 10,
+            for (int i = 0; i < 8; ++i)
+                drawCaption(g, "VOICE " + String(i + 1), {414 + i * 65, 446, 58, 18}, 8, mint);
+            drawCaption(g, "CHORDS > ARPEGGIATOR > SYNTH / MIDI OUT", {414, 490, 520, 24}, 10,
                         mint.withAlpha(.65f));
         } else if (rack == 0 && value(Param::arppattern) > 0) {
             drawCaption(g, "SWING", {600, 291, 47, 18}, 8, mint);
@@ -4780,7 +4821,7 @@ class LogisthEditor::Console : public Component,
     std::array<std::unique_ptr<Control>, parameterCount> controls;
     std::array<ToggleButton, partCount> parts;
     std::array<ToggleButton, 2> stepPages;
-    std::array<std::unique_ptr<RackButton>, 13> rackButtons;
+    std::array<std::unique_ptr<RackButton>, 14> rackButtons;
     std::array<ComboBox, playerCount> sourceViews, sourceFrame;
     std::array<int, playerCount> sourceMenuStates{-1, -1, -1, -1, -1, -1};
     std::array<TextButton, playerCount> sourceLoad, sourceClear, oscCopy, oscPaste;
@@ -4885,7 +4926,7 @@ class LogisthEditor::Console : public Component,
     TooltipWindow tooltips;
     String readout, lastStatus;
     std::array<uint64_t, playerCount> displayedRevisions{};
-    std::array<int, 14 + 4 * playerCount> layoutStamp{};
+    std::array<int64_t, 14 + 4 * playerCount> layoutStamp{};
     int selectedPart = 0, rack = 9, stepPage = 0, previewSync = -1;
 };
 LogisthEditor::LogisthEditor(LogisthProcessor &p) : AudioProcessorEditor(p) {

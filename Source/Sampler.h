@@ -206,7 +206,7 @@ struct SamplerPlayer {
                                         : pitch,
                             first, last, loop);
         };
-        if ((mode == 6 || mode == 7) && spectral && spectral->matches(sr, controls)) {
+        if (mode >= 6 && spectral && spectral->matches(sr, controls)) {
             if (finished)
                 return {};
             double step = data.sampleRate / sr, attack = kickAttack * .001 * sr;

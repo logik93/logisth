@@ -3,6 +3,7 @@
 #include "Dynamics.h"
 #include "EffectOrder.h"
 #include "Equalizer.h"
+#include "Flanger.h"
 #include "Modulation.h"
 #include "MultibandDistortion.h"
 #include "Reverb.h"
@@ -10,6 +11,7 @@
 namespace logisth {
 struct EffectsParams : ReverbControls, EqualizerParams {
     EffectOrder order;
+    FlangerControls flange;
     DistortionOrder distortionOrder;
     bool firstDistortionEnabled = true;
     std::array<DistortionSettings, 3> extraDistortions{};
@@ -76,6 +78,7 @@ class Effects {
     MultibandDistortionRack distortionRack;
     std::array<std::array<float, 3>, 2> smearState{};
     Equalizer equalizer;
+    Flanger flanger;
     Compressor modern;
     bool compWasEnabled = false, compWasModern = true, sleeping = true;
     uint64_t quietInput = 0, quietOutput = 0;
@@ -365,6 +368,7 @@ class Effects {
         for (int i = 0; i < 5; ++i)
             reverbModels[size_t(i)].prepare(sr, i);
         equalizer.prepare(sr);
+        flanger.prepare(sr);
         distortionRack.prepare(sr);
         reset();
     }
@@ -381,6 +385,7 @@ class Effects {
         distortionRack.reset();
         smearState = {};
         equalizer.reset();
+        flanger.reset();
         modern.reset();
         compWasEnabled = false;
         sleeping = true;
@@ -435,6 +440,7 @@ class Effects {
                                        p.distortionSettings());
         const bool any = clipEnabled || p.eqTrace || p.distortionTrace ||
                          distortionRack.hasTail() || p.activeDistortion() || p.phaser || p.chorus ||
+                         flanger.active(p.flange) ||
                          p.eq || p.reverb || p.delay || p.compressor;
         if (!any)
             return;
@@ -468,6 +474,8 @@ class Effects {
                 chorusPhase += hz * n / sr;
                 chorusPhase -= std::floor(chorusPhase);
             }
+            if (p.flange.enabled)
+                flanger.advance(n, p.flange.rate);
             float reduction = 0;
             if (p.compressor) {
                 if (p.modernCompressor)
@@ -512,6 +520,10 @@ class Effects {
                 if (p.chorus)
                     chorus(l, r, n, p);
                 break;
+            case EffectStage::Flanger:
+                if (flanger.active(p.flange))
+                    flanger.process(l, r, n, p.flange);
+                break;
             case EffectStage::Equalizer:
                 if (p.eq || p.eqTrace)
                     equalize(l, r, n, p);
@@ -551,6 +563,8 @@ class Effects {
         }
         if (p.chorus)
             horizon += .1;
+        if (flanger.active(p.flange))
+            horizon += .18;
         if (quietInput > uint64_t(horizon * sr) && quietOutput > uint64_t(.2 * sr))
             sleeping = true;
     }

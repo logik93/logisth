@@ -317,7 +317,7 @@ void LogisthProcessor::randomisePattern() {
     }
 }
 void LogisthProcessor::saveAssets(ValueTree &tree) {
-    tree.setProperty("effectOrder", int(effectOrder().packed()), nullptr);
+    tree.setProperty("effectOrder", juce::int64(effectOrder().packed()), nullptr);
     tree.setProperty("distortionOrder", int(distortionOrder().packed()), nullptr);
     saveImpulse(tree);
     std::array<std::shared_ptr<const SourceData>, playerCount> owners;
@@ -386,10 +386,10 @@ bool LogisthProcessor::restoreAssets(const ValueTree &tree) {
         // bounded decimal text (or an in-memory integer), never coercible junk.
         const auto text = value.toString();
         if ((!value.isInt() && !value.isInt64() && !value.isString()) || text.isEmpty() ||
-            text.length() > 8 || !text.containsOnly("0123456789"))
+            text.length() > 11 || !text.containsOnly("0123456789"))
             return false;
         const auto bits = text.getLargeIntValue();
-        if (bits < 0 || bits > 0xffffff || !EffectOrder::unpack(uint32_t(bits), restoredOrder))
+        if (bits < 0 || !EffectOrder::unpack(uint64_t(bits), restoredOrder))
             return false;
     }
     DistortionOrder restoredDistortion;
@@ -546,10 +546,12 @@ void LogisthProcessor::ensureSpectral(bool synchronous) {
             int voices = int(raw[playerParamIndex(Param::o1voices, i, 12)]->load());
             unisons[size_t(i)] = voices > 1 && voices % 2 == 0 ? voices + 1 : jlimit(1, 8, voices);
             int mode = int(raw[playerParamIndex(Param::o1stretchmode, i, 10)]->load());
+            const bool diffuse = raw[phaseDiffuseParam(i)]->load() > 0;
             if (voices > 0 && raw[playerParamIndex(Param::o1engine, i, 16)]->load() == 2 &&
-                (mode == 6 || mode == 7))
+                (mode == 6 || mode == 7 || diffuse))
                 wanted |= 1u << i;
             StretchControls controls;
+            controls.diffuse = diffuse;
             size_t at = playerParamIndex(Param::o1ssrate, i, 6);
             controls.blockMs = raw[at + 4]->load();
             int overlap = int(raw[at + 5]->load());
@@ -601,7 +603,7 @@ void LogisthProcessor::ensureSpectral(bool synchronous) {
             generation = ++spectralGeneration;
         spectralPending = true;
         spectralPendingGeneration = generation;
-        assetStatus = "Preparing Signalsmith Stretch buffers...";
+        assetStatus = "Preparing spectral stretch buffers...";
     }
     auto build = [this, previous, wanted, rate, unisons, configs, voiceCount, generation] {
         try {
@@ -613,7 +615,7 @@ void LogisthProcessor::ensureSpectral(bool synchronous) {
                     retiredSpectral.push_back(spectralOwner);
                 spectralOwner = std::move(next);
                 spectralPointer = spectralOwner.get();
-                assetStatus = "Signalsmith Stretch ready";
+                assetStatus = "Spectral stretch ready";
             }
         } catch (const std::exception &) {
             const ScopedLock lock(assetLock);
@@ -638,6 +640,7 @@ bool LogisthProcessor::spectralReady(int slot) const {
         spectralOwner->rate != spectralRate.load() || !(spectralOwner->mask & (1u << slot)))
         return false;
     StretchControls controls;
+    controls.diffuse = raw[phaseDiffuseParam(slot)]->load() > 0;
     size_t at = playerParamIndex(Param::o1ssrate, slot, 6);
     controls.blockMs = raw[at + 4]->load();
     int overlap = int(raw[at + 5]->load());

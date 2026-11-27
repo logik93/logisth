@@ -1,9 +1,9 @@
-# logisth 1.0.8 — User Manual
+# logisth 1.0.9 — User Manual
 
 wavelogik logisth is a three-part polyphonic subtractive synthesizer for VST3, CLAP and standalone use.
 This manual describes logisth's controls, sound engines and preset workflow.
 
-This edition describes **v1.0.8**. Published downloads include their corresponding manuals.
+This edition describes **v1.0.9**. Published downloads include their corresponding manuals.
 
 ## Contents
 
@@ -503,6 +503,23 @@ Tail settings also work with sampler stretching and interpolation modes.
 
 ![Part C players and shared mixer](images/logisth-part-c.png)
 
+### Granular playback and phase diffusion
+
+For a Granular oscillator, open **Playback** to set **Time Factor**, **Rate**,
+**Semitones** and **Interpolation**. Time Factor above 1 slows the scan or
+grain-head motion. Rate offsets that speed independently of the grain pitch.
+Semitones adds to the source tuning in Cloud and in Granulizer when key routing
+controls pitch. In Cloud, set **Scan** away from zero to hear the change in
+source movement. In Granulizer, **Time Hold** still freezes the grain head.
+
+For a Sampler oscillator, open **Paul Stretch** and enable **Phase Diffusion**.
+It processes overlapping spectral windows with randomized phase to draw out
+textures and soften transients. Set the time factor and block size, then blend
+the **0.5x**, **1x** and **2x** spectral layers. Disable Phase Diffusion to
+return to the stretch algorithm selected in Playback. The spectral workspace
+can take a moment to prepare. Smaller blocks or fewer voices and unison lanes
+reduce memory use.
+
 ## 4. Filters and shared Filter Control
 
 Each part has an input selector, type, slope, cutoff, resonance and drive.
@@ -659,7 +676,7 @@ its shared gate. Legacy controls remain available in the Legacy view.
 
 ## 7. Effects rack
 
-The default order is Distortion → Phaser → Chorus → EQ → Reverb → Delay →
+The default order is Distortion → Phaser → Chorus → Flanger → EQ → Reverb → Delay →
 Compressor → Clipper → Main → Limiter. Click a name to edit it and use the adjacent square to bypass
 or enable it. All nine effects are global after the A/B/C mix.
 
@@ -683,6 +700,7 @@ Limiter when a final sample-peak ceiling is required.
 | Distortion | Legacy serial stages or 1–4 parallel frequency bands; independent On/Off, model, Drive and Mix. |
 | Phaser | Six-stage stereo phasing with centre frequency, spread, L/R offset, width, LFO, feedback and Dry/Wet. Its frequency is a modulation destination. |
 | Chorus | Delay, depth, rate, feedback, dual mode, width and Dry/Wet thicken a sound. |
+| Flanger | Short stereo delay with a swept comb response, bipolar feedback, damping and wet mix. |
 | Equalizer | Legacy two-shelf or 16-slot Graphic/parametric; eight filter types, response curve, Auto Gain and output trim. |
 | Reverb | Hall, Room, Spring, Vintage, Shimmer or Convolution; waveform/import for IR and relevant model controls. |
 | Delay | Independent left/right times or divisions, feedback, ping-pong, spread, width, low/high cut, smear and Dry/Wet. |
@@ -738,6 +756,15 @@ division and Hz without moving its cell.
 ![Four-stage distortion](images/logisth-distortion.png)
 
 ![Chorus grid](images/logisth-chorus.png)
+
+### Flanger
+
+Flanger starts directly below Chorus. Turn it on from the rack and adjust
+**Delay** and **Depth** to set the sweep, **Rate** to set its speed in Hz,
+and **Width** to change the offset between left and right sweeps. Positive
+and negative **Feedback** reinforce different comb peaks. **Damping** rolls
+off high frequencies in the feedback path. Use **Mix** to set the balance.
+Drag the row by its handle or use Alt+Up/Down to move it in the chain.
 
 ### Equalizer
 
