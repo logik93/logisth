@@ -1,4 +1,4 @@
-# logisth 1.0.9
+# logisth 1.0.10
 
 **wavelogik logisth — a three-part polyphonic subtractive synthesizer with a compact single-window console.**
 VST3, CLAP and Standalone for Windows, macOS and Linux. Built with JUCE and an
@@ -9,12 +9,12 @@ independent synthesis engine.
 
 ![logisth dark interface](docs/images/logisth-dark.png)
 
-## New in 1.0.9
+## New in 1.0.10
 
 **Flanger** joins the reorderable stereo effect rack immediately after Chorus.
 Granular adds Playback controls for source speed and grain tuning, and Sampler
 adds a Paulstretch-style phase diffusion mode with an octave ratio mixer.
-[Release notes](docs/RELEASE-v1.0.9.md)
+[Release notes](docs/RELEASE-v1.0.10.md)
 
 ## New in 1.0.8
 

@@ -1,14 +1,14 @@
-# logisth 1.0.9 — Technical Manual
+# logisth 1.0.10 — Technical Manual
 
 **wavelogik · Architecture, DSP and Engineering Reference**
 
-Document revision: 2.7 · Software baseline: 1.0.9 · State schema: 4
+Document revision: 2.7 · Software baseline: 1.0.10 · State schema: 4
 
-Implementation baseline: release tag `v1.0.9`. The technical identity manifest
+Implementation baseline: release tag `v1.0.10`. The technical identity manifest
 records the CMake/runtime source identity. Native BUILD_INFO records its tagged
 commit, tree fingerprints, binary hashes and manual identities.
 
-This reference describes the implementation of logisth 1.0.9. It is
+This reference describes the implementation of logisth 1.0.10. It is
 intended for sound designers, audio engineers, contributors and integrators.
 The [User Manual](MANUAL.md) describes operating the interface; this document
 explains how its controls affect processing, how data is stored and which
@@ -119,7 +119,7 @@ range and clamps the resulting pitch shift to BEND / st (0–24 semitones, defau
 and other hosts use BEND / st. Logisth identifies FL Studio through JUCE's host
 type or the VST3 host application's name. The indicator shows the most recent
 wheel channel's applied shift relative to BEND / st and centers when the limit
-is 0. [VST3 regression coverage](RELEASE-v1.0.9.md)
+is 0. [VST3 regression coverage](RELEASE-v1.0.10.md)
 
 The two host parameters are `bendwheel` (−12 to +12) and `modwheel`
 (0 to 1). Changes to them apply globally at the processing block boundary,
@@ -1082,4 +1082,4 @@ the release tag matching a binary when investigating a specific implementation.
 | 2.4 | 1.0.5 | Host-automatable performance wheels, MIDI Pitch Bend Sensitivity and FL Studio fallback |
 | 2.5 | 1.0.6 | Windows Standalone ASIO backend and native registration test |
 | 2.6 | 1.0.8 | FL Studio octave-wide Master Pitch fallback and Bend scale of −12 to +12 |
-| 2.7 | 1.0.9 | Flanger, granular playback controls and Sampler phase diffusion |
+| 2.7 | 1.0.10 | Flanger, granular playback controls and Sampler phase diffusion |

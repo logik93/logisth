@@ -62,13 +62,13 @@ double power(const std::vector<float> &v, double hz, int from = 6000) {
            std::pow(double(v.size() - size_t(from)), 2);
 }
 static void checkDiffusionAndGrainRate() {
-    constexpr double rate = 48000.;
-    auto render = [](std::array<float, 3> gains) {
+    const double rate = 48000.;
+    auto render = [rate](std::array<float, 3> gains) {
         PhaseDiffuseStretch player(4096);
         player.reset(0, 42);
         std::vector<float> output;
         for (int frame = 0; frame < 24000; ++frame) {
-            auto x = player.tick([](double at, int) {
+            auto x = player.tick([rate](double at, int) {
                 return .4f * float(std::sin(2 * pi * 375 * at / rate));
             }, 1., 1.f, 8.f, gains);
             check(std::isfinite(x[0]) && x[0] == x[1] && std::abs(x[0]) < 2.f,
