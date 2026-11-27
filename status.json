@@ -1,0 +1,30 @@
+{
+  "tag": "v1.0.9",
+  "automation_commit": "774d0abf0e8733d596aaacdb38c2f6b27278a02b",
+  "run_id": "46052292279",
+  "run_url": "https://github.com/logik93/logisth/actions/runs/46052292279",
+  "phase": "failed",
+  "pipeline_phase": "failed",
+  "stage": "",
+  "recorded_at": "2026-11-27T18:57:17.804977+00:00",
+  "check": "windows-asan",
+  "platform": "windows-x86_64",
+  "failures": [
+    {
+      "log": "native-out\\logs\\build.log",
+      "errors": [
+        "D:\\a\\logisth\\logisth\\tests\\StretchControlsTests.cpp(72,65): error C3493: 'rate' cannot be implicitly captured because no default capture mode has been specified [D:\\a\\logisth\\logisth\\build\\StretchControls_tests.vcxproj]",
+        "D:\\a\\logisth\\logisth\\tests\\StretchControlsTests.cpp(80,24): error C2064: term does not evaluate to a function taking 1 arguments [D:\\a\\logisth\\logisth\\build\\StretchControls_tests.vcxproj]",
+        "D:\\a\\logisth\\logisth\\tests\\StretchControlsTests.cpp(80,16): error C2737: 'unity': const object must be initialized [D:\\a\\logisth\\logisth\\build\\StretchControls_tests.vcxproj]",
+        "D:\\a\\logisth\\logisth\\tests\\StretchControlsTests.cpp(80,52): error C2064: term does not evaluate to a function taking 1 arguments [D:\\a\\logisth\\logisth\\build\\StretchControls_tests.vcxproj]",
+        "D:\\a\\logisth\\logisth\\tests\\StretchControlsTests.cpp(80,43): error C2737: 'octave': const object must be initialized [D:\\a\\logisth\\logisth\\build\\StretchControls_tests.vcxproj]",
+        "D:\\a\\logisth\\logisth\\tests\\StretchControlsTests.cpp(80,79): error C2064: term does not evaluate to a function taking 1 arguments [D:\\a\\logisth\\logisth\\build\\StretchControls_tests.vcxproj]",
+        "D:\\a\\logisth\\logisth\\tests\\StretchControlsTests.cpp(80,71): error C2737: 'muted': const object must be initialized [D:\\a\\logisth\\logisth\\build\\StretchControls_tests.vcxproj]",
+        "D:\\a\\logisth\\logisth\\tests\\StretchControlsTests.cpp(87,16): error C3536: 'unity': cannot be used before it is initialized [D:\\a\\logisth\\logisth\\build\\StretchControls_tests.vcxproj]",
+        "D:\\a\\logisth\\logisth\\tests\\StretchControlsTests.cpp(88,20): error C3536: 'octave': cannot be used before it is initialized [D:\\a\\logisth\\logisth\\build\\StretchControls_tests.vcxproj]",
+        "D:\\a\\logisth\\logisth\\tests\\StretchControlsTests.cpp(89,33): error C3536: 'muted': cannot be used before it is initialized [D:\\a\\logisth\\logisth\\build\\StretchControls_tests.vcxproj]",
+        "D:\\a\\logisth\\logisth\\tests\\StretchControlsTests.cpp(89,21): error C2672: 'std::max_element': no matching overloaded function found [D:\\a\\logisth\\logisth\\build\\StretchControls_tests.vcxproj]"
+      ]
+    }
+  ]
+}
