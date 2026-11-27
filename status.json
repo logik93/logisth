@@ -1,0 +1,66 @@
+{
+  "tag": "v1.0.10",
+  "automation_commit": "f4fc5725f17d26fb60d0b9393b11c604a6d67e56",
+  "run_id": "46053747596",
+  "run_url": "https://github.com/logik93/logisth/actions/runs/46053747596",
+  "phase": "passed",
+  "pipeline_phase": "passed",
+  "stage": "",
+  "recorded_at": "2026-11-27T19:11:17.024605+00:00",
+  "platform": "windows-x86_64",
+  "build": {
+    "version": "1.0.10",
+    "platform": "windows-x86_64",
+    "source_commit": "f4fc5725f17d26fb60d0b9393b11c604a6d67e56",
+    "source_fingerprint": {
+      "Source": "01ac72aaf28aaa1671a3dee276490690be96a9ec",
+      "CMakeLists.txt": "2ed314be8ed30081fbb6615d7ecbfef53ec4a718",
+      "tests": "f1955da02dc43ca25801c55391a574cbb8344648",
+      "assets": "d1cf91f49de4a7b9198e2e60fc9b9f071266f235"
+    },
+    "technical_manual": {
+      "format": 1,
+      "software_version": "1.0.10",
+      "implementation_sha256": "ac27ab9794a10fbabe42619d5f43c10ad8d9383fe4afd6de0dc442677d0f13b3",
+      "markdown_sha256": "53e0a0197fa2cd68eefc7d1cbb66ed0a1be2133cfa8f7b1e21a8a8277a5c859e",
+      "pdf_sha256": "30c75cdddf06616fb5e9d6289cd4ff018326f45d89bb2924f6718d40ca42cf8f"
+    },
+    "tests": {
+      "passed": 20,
+      "failed": 0,
+      "skipped": 0
+    },
+    "binaries": [
+      {
+        "path": "VST3/logisth.vst3/Contents/x86_64-win/logisth.vst3",
+        "architectures": [
+          "x86_64"
+        ],
+        "sha256": "da2ff22b23aff443102377ebf648d45338e6b6fea50f46c6530ca726928f3df5"
+      },
+      {
+        "path": "CLAP/logisth.clap",
+        "architectures": [
+          "x86_64"
+        ],
+        "sha256": "fa4cdb0fdad91cd3f0011dfa7eda893a0e7e02774b57caf81ce476ec084187c7"
+      },
+      {
+        "path": "Standalone/logisth.exe",
+        "architectures": [
+          "x86_64"
+        ],
+        "sha256": "3a28aedab40042bb27f6268f91d38ab85b7df842d6554a48b3381df9792a062b"
+      }
+    ],
+    "formats": [
+      "VST3",
+      "CLAP",
+      "Standalone"
+    ],
+    "run_url": "https://github.com/logik93/logisth/actions/runs/46053747596",
+    "signing": "unsigned",
+    "archive": "logisth-1.0.10-windows-x86_64.zip",
+    "archive_sha256": "adb803e27873cc5b5c0df947f7063931662cc8804c2f1f21a6f256253cebb936"
+  }
+}
