@@ -2409,9 +2409,11 @@ class LogisthEditor::Console : public Component,
         const int oldPart = selectedPart, oldRack = rack, oldStep = stepPage,
                   oldMacro = selectedMacro, oldEqBand = selectedEqBand,
                   oldDistortion = selectedDistortion;
-        std::array<int, playerCount> views;
-        for (int i = 0; i < playerCount; ++i)
+        std::array<int, playerCount> views, algorithms;
+        for (int i = 0; i < playerCount; ++i) {
             views[size_t(i)] = sourceViews[size_t(i)].getSelectedId();
+            algorithms[size_t(i)] = stretchAlgorithms[size_t(i)].getSelectedId();
+        }
         std::set<size_t> visited;
         String error;
         auto inspect = [&] {
@@ -2517,7 +2519,12 @@ class LogisthEditor::Console : public Component,
             inspect();
             for (auto &view : sourceViews)
                 view.setSelectedId(10, dontSendNotification);
-            inspect();
+            layout();
+            for (int algorithm = 1; algorithm <= phaseDiffusionMode; ++algorithm) {
+                for (int slot = part * 2; slot < part * 2 + 2; ++slot)
+                    stretchAlgorithms[size_t(slot)].setSelectedId(algorithm, dontSendNotification);
+                inspect();
+            }
         }
         previewStretch = -1;
         rack = 4;
@@ -2566,8 +2573,10 @@ class LogisthEditor::Console : public Component,
         rack = oldRack;
         stepPage = oldStep;
         previewSync = previewSource = previewPattern = previewGran = -1;
-        for (int i = 0; i < playerCount; ++i)
+        for (int i = 0; i < playerCount; ++i) {
             sourceViews[size_t(i)].setSelectedId(views[size_t(i)], dontSendNotification);
+            stretchAlgorithms[size_t(i)].setSelectedId(algorithms[size_t(i)], dontSendNotification);
+        }
         modulationCollapsed = oldCollapsed;
         setBounds(oldBounds);
         layout();
@@ -3753,10 +3762,11 @@ class LogisthEditor::Console : public Component,
                     picker.clear(dontSendNotification);
                     for (int i = 1; i <= phaseDiffusionMode; ++i)
                         picker.addItem(String(names[i - 1]) + ((layers & (1u << i)) ? "  [ON]" : ""), i);
-                    picker.setSelectedId(chosen > 0 ? chosen : (solo > 0 ? solo : phaseDiffusionMode),
-                                         dontSendNotification);
+                    picker.setSelectedId(chosen, dontSendNotification);
                     stretchPickerMasks[slot] = layers;
                 }
+                if (picker.getSelectedId() == 0)
+                    picker.setSelectedId(solo > 0 ? solo : phaseDiffusionMode, dontSendNotification);
                 picker.setBounds(b.getX() + 88, b.getY() + 35, 206, 24);
                 picker.setVisible(true);
                 const int algorithm = picker.getSelectedId();
