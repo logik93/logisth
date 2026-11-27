@@ -48,6 +48,16 @@ function parseGitHub(data) {
   return releaseWithAssets(data.tag_name, uploaded);
 }
 
+export function compareVersions(left, right) {
+  const first = left.split(".").map(Number);
+  const second = right.split(".").map(Number);
+  for (let part = 0; part < Math.max(first.length, second.length); ++part) {
+    const difference = (first[part] ?? 0) - (second[part] ?? 0);
+    if (difference) return difference;
+  }
+  return 0;
+}
+
 async function json(url, signal) {
   const timeout = AbortSignal.timeout(4500);
   const response = await fetch(url, {
@@ -60,16 +70,21 @@ async function json(url, signal) {
 }
 
 export async function latestRelease(localUrl, signal) {
+  let cached = null;
   try {
     const local = await json(localUrl, signal);
-    if (tagPattern.test("v" + local?.version) && local.downloads && local.manuals) return local;
+    if (tagPattern.test("v" + local?.version) && local.downloads && local.manuals) {
+      if (!local.stale) return local;
+      cached = local;
+    }
   } catch {
     if (signal?.aborted) return null;
   }
 
   try {
-    return parseGitHub(await json(api, signal));
+    const live = parseGitHub(await json(api, signal));
+    return live && (!cached || compareVersions(live.version, cached.version) >= 0) ? live : cached;
   } catch {
-    return null;
+    return signal?.aborted ? null : cached;
   }
 }

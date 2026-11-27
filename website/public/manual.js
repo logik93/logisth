@@ -1,4 +1,4 @@
-import { latestRelease, manualFiles } from "./release-client.js";
+import { compareVersions, latestRelease, manualFiles } from "./release-client.js";
 
 const chapters = document.querySelector(".chapters");
 const desktop = matchMedia("(min-width: 54rem)");
@@ -65,11 +65,7 @@ async function refreshManual() {
   const source = "https://github.com/logik93/logisth/blob/" + tag + "/docs/";
   const manual = release.manuals[key];
 
-  const current = release.version.split(".").map(Number);
-  const local = version.split(".").map(Number);
-  let order = 0;
-  for (let part = 0; part < Math.max(current.length, local.length) && !order; ++part)
-    order = (current[part] ?? 0) - (local[part] ?? 0);
+  const order = compareVersions(release.version, version);
   if (order <= 0) {
     if (order === 0 && manual.pdf) document.querySelector(".manual-action").href = manual.pdf;
     return;

@@ -114,6 +114,16 @@ function readReleaseCache(string $path): array
     return is_array($cache) ? $cache : [];
 }
 
+function cachedRelease(array $cached, bool $stale = false): ?array
+{
+    $release = releaseDetails($cached['data'] ?? null);
+    if ($release !== null && ($stale || ($cached['stale'] ?? false))) {
+        $release['stale'] = true;
+    }
+
+    return $release;
+}
+
 function latestRelease(string $directory, callable $fetch): ?array
 {
     if (!is_dir($directory) && !@mkdir($directory, 0700, true) && !is_dir($directory)) {
@@ -123,28 +133,29 @@ function latestRelease(string $directory, callable $fetch): ?array
     $path = $directory . '/latest.json';
     $cached = readReleaseCache($path);
     if (is_int($cached['next_check'] ?? null) && $cached['next_check'] > time()) {
-        return releaseDetails($cached['data'] ?? null);
+        return cachedRelease($cached);
     }
 
     $lock = @fopen($directory . '/refresh.lock', 'c');
     if ($lock === false) {
-        return releaseDetails($cached['data'] ?? null) ?? releaseDetails($fetch());
+        return releaseDetails($fetch()) ?? cachedRelease($cached, true);
     }
 
     try {
         if (!flock($lock, LOCK_EX | LOCK_NB)) {
-            return releaseDetails($cached['data'] ?? null);
+            return cachedRelease($cached, true);
         }
 
         $cached = readReleaseCache($path);
         if (is_int($cached['next_check'] ?? null) && $cached['next_check'] > time()) {
-            return releaseDetails($cached['data'] ?? null);
+            return cachedRelease($cached);
         }
 
         $data = $fetch();
         $details = releaseDetails($data);
         $next = json_encode([
             'next_check' => time() + ($details === null ? 60 : 300),
+            'stale' => $details === null,
             'data' => $details === null ? ($cached['data'] ?? null) : $data,
         ], JSON_UNESCAPED_SLASHES);
 
@@ -159,7 +170,7 @@ function latestRelease(string $directory, callable $fetch): ?array
             }
         }
 
-        return $details ?? releaseDetails($cached['data'] ?? null);
+        return $details ?? cachedRelease($cached, true);
     } finally {
         fclose($lock);
     }

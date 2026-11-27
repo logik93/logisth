@@ -7,4 +7,5 @@ type Release = {
   manuals: Record<"user" | "technical", Manual>;
 };
 export const bundledRelease: Release;
+export function compareVersions(left: string, right: string): number;
 export function latestRelease(localUrl: string, signal?: AbortSignal): Promise<Release | null>;

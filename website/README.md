@@ -23,8 +23,9 @@ outside the web root that is writable by PHP. By default PHP uses a
 site-specific directory under its temporary directory.
 
 The PHP service caches GitHub release metadata for five minutes. If PHP is
-unavailable, the browser can request the public API directly. Bundled download
-links point to verified platform packages for the last packaged public release.
+unavailable or serves an expired entry after a failed refresh, the browser
+checks the public API directly. Bundled download links point to verified
+platform packages for the last packaged public release.
 Packages that GitHub has yet to publish appear as pending.
 
 The manual opens in the site's reader with a locally bundled HTML edition.
