@@ -1402,11 +1402,11 @@ int main(int argc, char **argv) {
                       p.state.getParameter("arpgraphs") == nullptr,
                   "Graphs is removed from the editor and parameter model");
 
-            auto *engine = dynamic_cast<juce::ComboBox *>(findWidget("o1engine"));
-            check(engine != nullptr, "oscillator engine menu");
-            engine->setSelectedId(3, juce::sendNotificationSync);
             auto *console = ui->getChildComponent(0);
             auto *source = dynamic_cast<juce::ComboBox *>(console->findChildWithID("source.view.0"));
+            check(source && bool(source->onChange), "oscillator view menu");
+            gain_test::set(p, "o1engine", 2);
+            source->onChange();
             check(source && source->indexOfItemId(10) >= 0 && source->indexOfItemId(12) < 0,
                   "PaulXStretch moved into Sampler Stretch");
             source->setSelectedId(10, juce::sendNotificationSync);
