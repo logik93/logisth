@@ -68,14 +68,36 @@ function releaseDetails(mixed $data): ?array
 
 function fetchRelease(): ?array
 {
-    $context = stream_context_create([
-        'http' => [
-            'header' => "User-Agent: wavelogik.pl\r\nAccept: application/vnd.github+json\r\n",
-            'timeout' => 4,
-            'follow_location' => 0,
-        ],
-    ]);
-    $body = @file_get_contents(LATEST_API, false, $context, 0, MAX_RELEASE_BYTES + 1);
+    $body = false;
+    if (function_exists('curl_init')) {
+        $curl = curl_init(LATEST_API);
+        $buffer = '';
+        curl_setopt_array($curl, [
+            CURLOPT_CONNECTTIMEOUT => 2,
+            CURLOPT_TIMEOUT => 4,
+            CURLOPT_USERAGENT => 'wavelogik.pl',
+            CURLOPT_HTTPHEADER => ['Accept: application/vnd.github+json'],
+            CURLOPT_WRITEFUNCTION => static function ($handle, string $chunk) use (&$buffer): int {
+                if (strlen($buffer) + strlen($chunk) > MAX_RELEASE_BYTES) {
+                    return 0;
+                }
+                $buffer .= $chunk;
+                return strlen($chunk);
+            },
+        ]);
+        if (curl_exec($curl) !== false && curl_getinfo($curl, CURLINFO_HTTP_CODE) === 200) {
+            $body = $buffer;
+        }
+    } elseif (filter_var(ini_get('allow_url_fopen'), FILTER_VALIDATE_BOOLEAN)) {
+        $context = stream_context_create([
+            'http' => [
+                'header' => "User-Agent: wavelogik.pl\r\nAccept: application/vnd.github+json\r\n",
+                'timeout' => 4,
+                'follow_location' => 0,
+            ],
+        ]);
+        $body = @file_get_contents(LATEST_API, false, $context, 0, MAX_RELEASE_BYTES + 1);
+    }
 
     $data = is_string($body) && strlen($body) <= MAX_RELEASE_BYTES
         ? json_decode($body, true)

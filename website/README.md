@@ -17,16 +17,20 @@ entry points, `_next/`, `media/`, the release service and both manuals.
 The production site runs on Apache and PHP without a Node.js process or a
 database.
 
-PHP needs `allow_url_fopen`, HTTPS support and outbound access to
+PHP uses cURL or `allow_url_fopen`, HTTPS support and outbound access to
 `api.github.com`. You can set `WAVELOGIK_CACHE_DIR` to an absolute directory
 outside the web root that is writable by PHP. By default PHP uses a
 site-specific directory under its temporary directory.
 
-The release service checks GitHub every five minutes and keeps the last
-successful response during an outage. Packages that GitHub has yet to publish
-appear as pending. Manual titles open the bundled HTML editions on the site.
-The PDF and GitHub links follow the latest stable release when those links
-are available. The bundled manuals display their own version.
+The PHP service caches GitHub release metadata for five minutes. If PHP is
+unavailable, the browser can request the public API directly. Bundled download
+links point to verified platform packages for the last packaged public release.
+Packages that GitHub has yet to publish appear as pending.
+
+The manual opens in the site's reader with a locally bundled HTML edition.
+When GitHub has a newer release, the reader can load its Markdown, render it
+in the same layout and use the PDF from that release. The offline edition
+includes a local PDF.
 
 ## Build and preview
 

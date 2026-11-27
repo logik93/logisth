@@ -68,6 +68,7 @@ for filename, (route, title, pdf, description) in manuals.items():
         title=title, description=description, version=version, pdf=pdf,
         switch=''.join(manual_links), toc=toc, body=body,
         source=repository + 'docs/' + filename,
+        manual_key='user' if route == 'docs' else 'technical',
     )
     directory = public / route
     directory.mkdir(exist_ok=True)

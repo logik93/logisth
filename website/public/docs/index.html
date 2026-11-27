@@ -5,13 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="theme-color" content="#0a0910">
     <meta name="description" content="Installation, synthesis engines, sound design and performance.">
-    <title>User manual · logisth 1.0.8</title>
+    <title>User manual · logisth 1.0.9</title>
     <link rel="icon" href="../assets/icon.svg">
     <link rel="stylesheet" href="../theme.css">
     <link rel="stylesheet" href="../manual.css">
-    <script src="../manual.js" defer></script>
+    <script type="module" src="../manual.js"></script>
   </head>
-  <body>
+  <body data-manual="user" data-version="1.0.9">
     <a class="manual-skip" href="#content">Skip to manual</a>
     <header class="manual-header">
       <div class="manual-shell manual-bar">
@@ -29,9 +29,9 @@
         <h1>User manual</h1>
         <p class="manual-description">Installation, synthesis engines, sound design and performance.</p>
         <div class="manual-meta">
-          <span>logisth v1.0.8</span>
+          <span class="manual-version">logisth v1.0.9</span>
           <span>English</span>
-          <a href="https://github.com/logik93/logisth/blob/v1.0.8/docs/MANUAL.md">View on GitHub</a>
+          <a class="manual-source" href="https://github.com/logik93/logisth/blob/v1.0.9/docs/MANUAL.md">View on GitHub</a>
         </div>
       </div>
       <div class="manual-shell manual-layout">
@@ -41,7 +41,7 @@
         </details>
         <article class="manual-body" aria-label="User manual">
 <p>wavelogik logisth is a three-part polyphonic subtractive synthesizer for VST3, CLAP and standalone use. This manual describes logisth's controls, sound engines and preset workflow.</p>
-<p>This edition describes <strong>v1.0.8</strong>. Published downloads include their corresponding manuals.</p>
+<p>This edition describes <strong>v1.0.9</strong>. Published downloads include their corresponding manuals.</p>
 <h2 id="1-installation-and-first-sound">1. Installation and first sound</h2>
 <p>Download the archive for your operating system from the GitHub release. Each native archive contains VST3, CLAP and Standalone folders. Extract it first. Copy the entire .vst3 bundle and the .clap file or bundle into a plug-in directory scanned by your DAW. Keep the internal structure of bundles intact.</p>
 <div class="table-wrap"><table>
@@ -301,6 +301,9 @@
 <p>Enabling LOOP TAIL in the editor turns off the earlier whole-selection LOOP. If both are enabled by host automation, LOOP TAIL takes priority. Turning it off resumes one-shot playback from the current source position. Crossfades are limited to a quarter of the tail's length so very short loops remain bounded; overlapping heads shorten each repeated cycle by the crossfade duration. Tail settings also work with sampler stretching and interpolation modes.</p>
 <p><img loading="lazy" src="../assets/manual/logisth-loop-tail.webp" alt="Loop Tail controls and independent region" /></p>
 <p><img loading="lazy" src="../assets/manual/logisth-part-c.webp" alt="Part C players and shared mixer" /></p>
+<h3 id="granular-playback-and-phase-diffusion">Granular playback and phase diffusion</h3>
+<p>For a Granular oscillator, open <strong>Playback</strong> to set <strong>Time Factor</strong>, <strong>Rate</strong>, <strong>Semitones</strong> and <strong>Interpolation</strong>. Time Factor above 1 slows the scan or grain-head motion. Rate offsets that speed independently of the grain pitch. Semitones adds to the source tuning in Cloud and in Granulizer when key routing controls pitch. In Cloud, set <strong>Scan</strong> away from zero to hear the change in source movement. In Granulizer, <strong>Time Hold</strong> still freezes the grain head.</p>
+<p>For a Sampler oscillator, open <strong>Paul Stretch</strong> and enable <strong>Phase Diffusion</strong>. It processes overlapping spectral windows with randomized phase to draw out textures and soften transients. Set the time factor and block size, then blend the <strong>0.5x</strong>, <strong>1x</strong> and <strong>2x</strong> spectral layers. Disable Phase Diffusion to return to the stretch algorithm selected in Playback. The spectral workspace can take a moment to prepare. Smaller blocks or fewer voices and unison lanes reduce memory use.</p>
 <h2 id="4-filters-and-shared-filter-control">4. Filters and shared Filter Control</h2>
 <p>Each part has an input selector, type, slope, cutoff, resonance and drive. Input A uses A1+A2, B uses B1+B2, and C uses C1+C2. A+B, A+C, B+C and A+B+C sum the named sources. None disconnects the input. Each of the three filters accepts all eight selections. Consequently, a part's filter can process the other oscillator source. Its output still passes through its own amplitude envelope and Mix level.</p>
 <p>Choose low-pass, high-pass, band-pass or bypass. Slope selects 12 or 24 dB per octave. Cutoff is the local frequency. Resonance emphasises the cutoff region; high resonance can self-oscillate while a note is active. Drive adds saturation.</p>
@@ -330,7 +333,7 @@
 <h3 id="legacy-mode-and-compatibility">Legacy mode and compatibility</h3>
 <p>Legacy retains the ten original modes, velocity modes, 16 steps, transpose, wrap, gate, swing, octaves and hold. The Step sequence factory sound uses it. Older logisth states select Legacy automatically when they have no Pattern engine parameter. ARP enable clears held notes; play fresh notes afterward. Pattern uses note-rank/octave/gate lanes instead of Legacy transpose/wrap and its shared gate. Legacy controls remain available in the Legacy view.</p>
 <h2 id="7-effects-rack">7. Effects rack</h2>
-<p>The default order is Distortion → Phaser → Chorus → EQ → Reverb → Delay → Compressor → Clipper → Main → Limiter. Click a name to edit it and use the adjacent square to bypass or enable it. All nine effects are global after the A/B/C mix.</p>
+<p>The default order is Distortion → Phaser → Chorus → Flanger → EQ → Reverb → Delay → Compressor → Clipper → Main → Limiter. Click a name to edit it and use the adjacent square to bypass or enable it. All nine effects are global after the A/B/C mix.</p>
 <p>Drag an effect's right-hand grip up or down within AUDIO FX to change its actual audio position. The selected editor page stays open while dragging. Alternatively, focus its row and press Alt+Up/Down, or right-click for Move up, Move down and Reset effect order. Disabled effects retain their positions. Chords/Arp and the Sample/Morph tools are outside this audio ordering. <strong>Main and Limiter remain fixed after the movable chain</strong>, preserving the final ceiling.</p>
 <p>The order is saved with presets and DAW state; older presets without an order use the original sequence. Changing order while playing fades down over about 5 ms, switches at zero, then fades back over about 5 ms. This keeps one DSP state bank and introduces no reported host latency. Effects retain their existing state through that transition. Order is patch metadata, rather than an automation knob. Later stages and Main can raise the level after Clipper; use the fixed output Limiter when a final sample-peak ceiling is required.</p>
 <div class="table-wrap"><table>
@@ -354,26 +357,30 @@
 <td>Delay, depth, rate, feedback, dual mode, width and Dry/Wet thicken a sound.</td>
 </tr>
 <tr class="even">
+<td>Flanger</td>
+<td>Short stereo delay with a swept comb response, bipolar feedback, damping and wet mix.</td>
+</tr>
+<tr class="odd">
 <td>Equalizer</td>
 <td>Legacy two-shelf or 16-slot Graphic/parametric; eight filter types, response curve, Auto Gain and output trim.</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td>Reverb</td>
 <td>Hall, Room, Spring, Vintage, Shimmer or Convolution; waveform/import for IR and relevant model controls.</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td>Delay</td>
 <td>Independent left/right times or divisions, feedback, ping-pong, spread, width, low/high cut, smear and Dry/Wet.</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td>Compressor</td>
 <td>Legacy/Modern, stereo link, threshold, ratio, knee, attack/release, makeup, Mix and live graphs.</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td>Clipper</td>
 <td>Hard/Soft, Drive, Ceiling, Knee, Mix and Direct/Antialiased quality, with curve and waveform.</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td>Limiter</td>
 <td>Final stereo-linked sample ceiling, release, drive, reduction history and activity.</td>
 </tr>
@@ -389,6 +396,8 @@
 <p>Chorus keeps the same grid in Sync and free modes. RATE and DUAL share the far-right column. FEEDBACK follows DRY/WET on the lower row; Delay, Depth, Width and Dry/Wet keep their positions. Sync switches RATE between a musical division and Hz without moving its cell.</p>
 <p><img loading="lazy" src="../assets/manual/logisth-distortion.webp" alt="Four-stage distortion" /></p>
 <p><img loading="lazy" src="../assets/manual/logisth-chorus.webp" alt="Chorus grid" /></p>
+<h3 id="flanger">Flanger</h3>
+<p>Flanger starts directly below Chorus. Turn it on from the rack and adjust <strong>Delay</strong> and <strong>Depth</strong> to set the sweep, <strong>Rate</strong> to set its speed in Hz, and <strong>Width</strong> to change the offset between left and right sweeps. Positive and negative <strong>Feedback</strong> reinforce different comb peaks. <strong>Damping</strong> rolls off high frequencies in the feedback path. Use <strong>Mix</strong> to set the balance. Drag the row by its handle or use Alt+Up/Down to move it in the chain.</p>
 <h3 id="equalizer">Equalizer</h3>
 <p>MODE selects Legacy or Graphic. Legacy retains bass/treble shelves with separate corner frequencies. Graphic opens a response plot and the selected-band inspector. Ten enabled Bell bands initially occupy 31.5, 63, 125, 250, 500 Hz, 1, 2, 4, 8 and 16 kHz, preserving older graphic presets. Six extra slots initially remain off.</p>
 <p><strong>+ BAND</strong> enables and selects the first unused slot; <strong>REMOVE</strong> bypasses the selected slot while retaining its settings. Use BAND 1–16 or click a plot point to select a band. ENABLED toggles it independently. Up to sixteen filters may run.</p>

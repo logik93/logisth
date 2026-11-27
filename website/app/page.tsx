@@ -86,7 +86,7 @@ export default function Home() {
               <div className="rack-copy">
                 <SlidersHorizontal className="card-icon" size={23} />
                 <h3>Build your effects chain</h3>
-                <p>Reorder eight effects, split distortion across up to four bands and compare the signal before and after processing.</p>
+                <p>Reorder nine effects, split distortion across up to four bands and compare the signal before and after processing.</p>
               </div>
               <img src="./assets/manual/logisth-distortion-multiband.webp" alt="logisth multiband distortion rack with crossover controls and a spectrum display" width="1240" height="860" loading="lazy" decoding="async" />
             </article>

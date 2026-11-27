@@ -9,9 +9,9 @@
     <link rel="icon" href="../assets/icon.svg">
     <link rel="stylesheet" href="../theme.css">
     <link rel="stylesheet" href="../manual.css">
-    <script src="../manual.js" defer></script>
+    <script type="module" src="../manual.js"></script>
   </head>
-  <body>
+  <body data-manual="$manual_key" data-version="$version">
     <a class="manual-skip" href="#content">Skip to manual</a>
     <header class="manual-header">
       <div class="manual-shell manual-bar">
@@ -29,9 +29,9 @@
         <h1>$title</h1>
         <p class="manual-description">$description</p>
         <div class="manual-meta">
-          <span>logisth v$version</span>
+          <span class="manual-version">logisth v$version</span>
           <span>English</span>
-          <a href="$source">View on GitHub</a>
+          <a class="manual-source" href="$source">View on GitHub</a>
         </div>
       </div>
       <div class="manual-shell manual-layout">

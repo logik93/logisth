@@ -2,16 +2,7 @@
 
 import { BookOpen, Code2, Download, FileText, GitFork, Laptop, Monitor, Terminal } from "lucide-react";
 import { useEffect, useState } from "react";
-import { latest } from "../lib/project";
-
-type Package = { format: string; url: string | null };
-type Manual = { online: string; pdf: string | null };
-type Release = {
-  version: string;
-  url: string;
-  downloads: Record<"Windows" | "macOS" | "Linux", Package>;
-  manuals: Record<"user" | "technical", Manual>;
-};
+import { bundledRelease, latestRelease } from "../public/release-client.js";
 
 const platforms = [
   { name: "Windows", format: "x64 · ZIP", Icon: Monitor },
@@ -25,16 +16,13 @@ const manuals = [
 ] as const;
 
 export function ReleaseDownloads() {
-  const [release, setRelease] = useState<Release | null>(null);
+  const [release, setRelease] = useState(bundledRelease);
 
   useEffect(() => {
     const controller = new AbortController();
-    void fetch("./releases.php", { signal: controller.signal, headers: { Accept: "application/json" } })
-      .then((response) => response.ok && response.headers.get("content-type")?.includes("application/json") ? response.json() : null)
-      .then((data: Release | null) => {
-        if (data?.version && data.downloads && data.manuals) setRelease(data);
-      })
-      .catch(() => { /* The initial GitHub and bundled manual links stay available. */ });
+    void latestRelease("./releases.php", controller.signal).then((current) => {
+      if (current && !controller.signal.aborted) setRelease(current);
+    });
     return () => controller.abort();
   }, []);
 
@@ -48,7 +36,7 @@ export function ReleaseDownloads() {
         </div>
         <div className="manual-stack">
           {manuals.map(({ id, label, description, local, pdf, Icon }) => {
-            const manual = release?.manuals[id];
+            const manual = release.manuals[id];
             return (
               <article className="manual surface" key={id}>
                 <Icon size={24} />
@@ -68,14 +56,14 @@ export function ReleaseDownloads() {
       <section className="shell download-section" id="download" data-arrival>
         <div className="download-box surface">
           <div className="download-heading">
-            <p className="eyebrow"><span className="signal-dot" /> {release ? "Release v" + release.version : "Latest stable release"}</p>
+            <p className="eyebrow"><span className="signal-dot" /> {"Release v" + release.version}</p>
             <h2>Download logisth.</h2>
             <p>VST3, CLAP and Standalone are included in each platform package.</p>
           </div>
           <div className="platforms">
             {platforms.map(({ name, format, Icon }) => {
-              const item = release?.downloads[name];
-              if (release && !item?.url) {
+              const item = release.downloads[name];
+              if (!item.url) {
                 return (
                   <div className="platform is-pending" key={name}>
                     <Icon size={22} />
@@ -84,15 +72,15 @@ export function ReleaseDownloads() {
                 );
               }
               return (
-                <a className="platform" key={name} href={item?.url ?? latest} aria-label={item?.url ? "Download logisth for " + name : "Find the " + name + " download on GitHub"}>
+                <a className="platform" key={name} href={item.url} aria-label={"Download logisth for " + name}>
                   <Icon size={22} />
-                  <span><strong>{name}</strong><small>{item?.format ?? format}</small></span>
+                  <span><strong>{name}</strong><small>{item.format ?? format}</small></span>
                   <Download size={18} className="platform-download" />
                 </a>
               );
             })}
           </div>
-          <a className="text-link release-notes" href={release?.url ?? latest}><GitFork size={17} /> Release notes on GitHub</a>
+          <a className="text-link release-notes" href={release.url}><GitFork size={17} /> Release notes on GitHub</a>
         </div>
       </section>
     </>
