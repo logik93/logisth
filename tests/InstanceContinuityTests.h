@@ -117,26 +117,36 @@ inline void checkTrimControls(const File &report) {
                 if (auto *label = dynamic_cast<Label *>(c))
                     positionText = label;
             const auto *positionBounds = position.getParentComponent();
+            gain_test::require(positionText != nullptr, "Sample position has a numeric textbox");
+            auto waitForPositionText = [&](const String &expected) {
+                // JUCE schedules timer dispatch independently of the message thread.
+                // A single dispatch attempt is not guaranteed to include this editor.
+                for (int tick = 0; tick < 20 && positionText->getText() != expected; ++tick)
+                    features0983_test::tick();
+                if (positionText->getText() != expected)
+                    throw std::runtime_error(
+                        ("Sample " + prefix + " position: expected " + expected + ", got " +
+                         positionText->getText()).toStdString());
+            };
             logisth::PlaybackPicture live;
             live.active = true;
             live.position = .4275f;
             live.revision = p->sourceData(slot)->revision;
             p->playback[size_t(slot)].write(live);
-            features0983_test::tick();
-            gain_test::require(positionText && positionText->getText() == "42.75%" &&
-                                   positionParam->getValue() == parameterBefore &&
-                                   positionBounds->getX() >= start.getParentComponent()->getRight() &&
-                                   positionBounds->getRight() <= end.getParentComponent()->getX() &&
-                                   positionBounds->getY() == start.getParentComponent()->getY() &&
-                                   positionBounds->getY() == end.getParentComponent()->getY() &&
-                                   positionBounds->getWidth() == start.getParentComponent()->getWidth() &&
-                                   positionBounds->getWidth() == end.getParentComponent()->getWidth(),
-                               "live playhead readout is between trim controls");
+            waitForPositionText("42.75%");
+            gain_test::require(positionParam->getValue() == parameterBefore,
+                               "live playhead does not write to the position parameter");
+            gain_test::require(
+                positionBounds->getX() >= start.getParentComponent()->getRight() &&
+                    positionBounds->getRight() <= end.getParentComponent()->getX() &&
+                    positionBounds->getY() == start.getParentComponent()->getY() &&
+                    positionBounds->getY() == end.getParentComponent()->getY() &&
+                    positionBounds->getWidth() == start.getParentComponent()->getWidth() &&
+                    positionBounds->getWidth() == end.getParentComponent()->getWidth(),
+                "live playhead readout is between trim controls");
             ++live.revision;
             p->playback[size_t(slot)].write(live);
-            features0983_test::tick();
-            gain_test::require(positionText->getText() == position.getTextFromValue(position.getValue()),
-                               "a replaced source restores the editable base position");
+            waitForPositionText(position.getTextFromValue(position.getValue()));
             auto *a = p->state.getParameter(prefix + (mode == 2 ? "position" : "trimstart"));
             auto *b = p->state.getParameter(prefix + "end");
             gain_test::require(editor->getControlParameterIndex(start) == a->getParameterIndex() &&
