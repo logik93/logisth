@@ -1,21 +1,21 @@
 {
   "tag": "v1.1.0",
-  "automation_commit": "bf2ddbf3e9ad1f560fb6c0c1be7c29f2beea6df6",
-  "run_id": "46148096155",
-  "run_url": "https://github.com/logik93/logisth/actions/runs/46148096155",
+  "automation_commit": "81ad126fe8802d1f7b5c2d37eec8ef16861c66dd",
+  "run_id": "46149129286",
+  "run_url": "https://github.com/logik93/logisth/actions/runs/46149129286",
   "phase": "passed",
   "pipeline_phase": "passed",
   "stage": "",
-  "recorded_at": "2026-11-28T13:17:26.273196+00:00",
+  "recorded_at": "2026-11-28T13:41:35.810710+00:00",
   "platform": "windows-x86_64",
   "build": {
     "version": "1.1.0",
     "platform": "windows-x86_64",
-    "source_commit": "bf2ddbf3e9ad1f560fb6c0c1be7c29f2beea6df6",
+    "source_commit": "81ad126fe8802d1f7b5c2d37eec8ef16861c66dd",
     "source_fingerprint": {
       "Source": "5b1d09801cec9b37f2a4a824dd46feec8c02e778",
       "CMakeLists.txt": "3dd51e8b3036b1ad8a95d55110b6b49905c67515",
-      "tests": "fe0a6bdb7be4e4e4cced1cea5e70b0fe57321dbd",
+      "tests": "3979e8891f2aabef05387b7a9d7e94b49253f2c4",
       "assets": "d1cf91f49de4a7b9198e2e60fc9b9f071266f235"
     },
     "technical_manual": {
@@ -36,21 +36,21 @@
         "architectures": [
           "x86_64"
         ],
-        "sha256": "28324bd0af146c0619f10d55e2336ecb3728dd675f5111b842090377a7ab29e7"
+        "sha256": "84118edce020c482e8c3976effb29ad32ac40b8a81fc909e52d0b2cef5d29ab6"
       },
       {
         "path": "CLAP/logisth.clap",
         "architectures": [
           "x86_64"
         ],
-        "sha256": "d031593f11c4b5ff3edfef26b1958f474620f0906e140b9868628fa54965775e"
+        "sha256": "62a502401679d685ca487fe81d3b730cc3d8d3a8da521ec10b1725d0bc010222"
       },
       {
         "path": "Standalone/logisth.exe",
         "architectures": [
           "x86_64"
         ],
-        "sha256": "ec824708451c24e84c6d581ab7f749dfbac876b8b20535ce408bc8d16a3d5696"
+        "sha256": "dd0299e38a2395c6b02c7c558e0a4208185bbd40746b490bb2406a133fb67cb0"
       }
     ],
     "formats": [
@@ -58,9 +58,9 @@
       "CLAP",
       "Standalone"
     ],
-    "run_url": "https://github.com/logik93/logisth/actions/runs/46148096155",
+    "run_url": "https://github.com/logik93/logisth/actions/runs/46149129286",
     "signing": "unsigned",
     "archive": "logisth-1.1.0-windows-x86_64.zip",
-    "archive_sha256": "34373fa9048d10e4037535425c626a06cec5428b9771bbdef6773cebc917d238"
+    "archive_sha256": "a562b682c5a80be4cfa18efdba7a3854a26a44c29e78d9d306483cf856216133"
   }
 }
