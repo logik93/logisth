@@ -1,26 +1,67 @@
 {
   "tag": "v1.1.0",
-  "automation_commit": "bf2ddbf3e9ad1f560fb6c0c1be7c29f2beea6df6",
-  "run_id": "46148096155",
-  "run_url": "https://github.com/logik93/logisth/actions/runs/46148096155",
-  "phase": "failed",
-  "pipeline_phase": "failed",
+  "automation_commit": "81ad126fe8802d1f7b5c2d37eec8ef16861c66dd",
+  "run_id": "46149129286",
+  "run_url": "https://github.com/logik93/logisth/actions/runs/46149129286",
+  "phase": "passed",
+  "pipeline_phase": "passed",
   "stage": "",
-  "recorded_at": "2026-11-28T13:18:01.131857+00:00",
+  "recorded_at": "2026-11-28T13:43:39.941416+00:00",
   "platform": "linux-x86_64",
-  "failures": [
-    {
-      "log": "native-out/logs/tests.log",
-      "errors": [
-        "The following tests FAILED:"
-      ]
-    }
-  ],
-  "test_failures": [
-    {
-      "name": "processor",
-      "message": "Failed",
-      "output": "\n\t\t\n\t\t\n\t\tPASS sampler stretch controls: all eight modes, independent On buttons and dedicated FFT/amount\nPASS appearance: persisted size, typed scale, isolated instances, ten JSON defaults, custom editor, folder scanning and stable selection\nPASS advanced themes: chosen save path, rename, font/background/knobs, two-minute scans, per-instance draft and editor recreation\nPASS 0.9.2 integration: zero MOD ENV, source DSP bindings, EQ audio/gestures, new parameter presets and conditional UI\nPASS 0.9.3 integration: MORPH names/ranges, section locks/Undo, zoomed range selection/handles, routing and full layout\nPASS 0.9.4 integration: six per-player controls, preset round-trips, compact UI, live/muted pool changes and last-request preparation\nPASS 0.9.5 integration: 736 frozen host parameters, six players, 200 ct, extended choices, tail mouse editing, all-parameter presets and old sessions\nPASS 0.9.6 integration: frozen 954-parameter contract, six 400ct/blend controls, paired menus, velocity/MIDI, scrollable credits, 16 EQ bands and presets\nPASS v0.9.6.1 baseline: 1055 frozen definitions, 200 grouped macro choices and symmetric A/B/C mappings\nPASS convolution: direct FIR parity, three rates, arbitrary blocks, zero latency, normalization, embedded preset/project PCM, invalid imports, live replacement and audio allocation guards\nPASS oscillator clipboard: all 36 source/destination pairs, complete controls, semantic FM routing, embedded media, cross-instance paste and six panel buttons\nPASS 0.9.6.2 integration: Legacy recall, dynamic presets, post-Main ceiling, live graphs, no audio allocations, ordered tabs, IR waveform/drop, 1070-control layout and MIDI-only CPU\nPASS 0.9.7: 1070-field compatibility, 32 voices, default Sample, pointer/keyboard reorder, preset/legacy order, allocation/ceiling, 120 theme renders and layout\nPASS stereo convolution: 48 real-WAV lane/polarity/normalization/rate cases, stereo sampler integration and audio allocation guards\nPASS UI review: chorus grid, four pointer-responsive distortion slots/order/state, EQ controls, seven settings categories and persistent typography\nPASS 0.9.8.1 appearance: 96 text scale/DPI/quality cases, coverage, exact vectors, five folders, portable PNG/JPEG/grid backgrounds and ten-theme popups\nPASS compact layout: first-click disclosure, 100 theme/scale/layout cases, persistence, hidden automation, 20 portable backgrounds\nPASS 0.9.8.3: visible gradients in ten themes, grid intensity/drag/draft/save, credits, multiband UI/crossover gesture, pre/post/off, allocation-free processing and legacy preset compatibility\nlive playhead readout is between trim controls\n\n\t"
-    }
-  ]
+  "build": {
+    "version": "1.1.0",
+    "platform": "linux-x86_64",
+    "source_commit": "81ad126fe8802d1f7b5c2d37eec8ef16861c66dd",
+    "source_fingerprint": {
+      "Source": "5b1d09801cec9b37f2a4a824dd46feec8c02e778",
+      "CMakeLists.txt": "3dd51e8b3036b1ad8a95d55110b6b49905c67515",
+      "tests": "3979e8891f2aabef05387b7a9d7e94b49253f2c4",
+      "assets": "d1cf91f49de4a7b9198e2e60fc9b9f071266f235"
+    },
+    "technical_manual": {
+      "format": 1,
+      "software_version": "1.1.0",
+      "implementation_sha256": "5b9afa5322481a21bd641f7f63356f6cbc28dd262ce3ef5374abc985dd3744ea",
+      "markdown_sha256": "546b00c8cbe95ab8f3f10e3b1bdb80c8c108779fd50b6a32b569e5c7057fa6b0",
+      "pdf_sha256": "e6bcdeded2a46cae61c3589b22fd8a57f24d0331ce592d5f5439d5f93de9f8df"
+    },
+    "tests": {
+      "passed": 20,
+      "failed": 0,
+      "skipped": 0
+    },
+    "binaries": [
+      {
+        "path": "VST3/logisth.vst3/Contents/x86_64-linux/logisth.so",
+        "architectures": [
+          "x86_64"
+        ],
+        "sha256": "2c0c25425693056d4d6e3606a40dd8380e15200d078f703aae50f98643364178"
+      },
+      {
+        "path": "CLAP/logisth.clap",
+        "architectures": [
+          "x86_64"
+        ],
+        "sha256": "09d986e2d6e27f8ee49f7db642802972be26546751957d8a1255b8f9d1c7264a"
+      },
+      {
+        "path": "Standalone/logisth",
+        "architectures": [
+          "x86_64"
+        ],
+        "sha256": "0fbf9e91232384ae8a680bced672d00a4df88bd547704fae17da278779faf5a8"
+      }
+    ],
+    "formats": [
+      "VST3",
+      "CLAP",
+      "Standalone"
+    ],
+    "run_url": "https://github.com/logik93/logisth/actions/runs/46149129286",
+    "signing": "unsigned",
+    "minimum_glibc": "2.35",
+    "archive": "logisth-1.1.0-linux-x86_64.tar.gz",
+    "archive_sha256": "8572928aca2a55a28ec471ff8e78d2cdf5fa04cebd534657086413de7f0dc380"
+  }
 }
