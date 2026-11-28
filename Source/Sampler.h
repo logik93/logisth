@@ -119,6 +119,7 @@ struct SamplerPlayer {
     double rateCache = 0, smoothing = 0;
     double cursor = 0, untilGrain = 0, lastStart = 0, stretch = 1;
     double elapsedSamples = 0, displayCursor = 0;
+    double pendingSeek = -1, attackStart = 0;
     float rateControl = 1, pitchControl = 0, tonalityControl = 0, formantControl = 0;
     bool controlsReady = false;
     SpectralStream *spectral = nullptr;
@@ -130,10 +131,13 @@ struct SamplerPlayer {
     void reset() {
         auto *saved = spectral;
         auto serial = token;
+        const double seek = pendingSeek;
         *this = SamplerPlayer{};
         spectral = saved;
         token = serial;
+        pendingSeek = seek;
     }
+    void seekTo(double offset) { pendingSeek = offset; }
     template <class Data>
     std::array<float, 2> tick(const Data &data, double ratio, double sr, float begin, float end,
                               bool loop, bool reverse, int mode, float factor, int interpolation,
@@ -156,6 +160,17 @@ struct SamplerPlayer {
         double first = begin * (length - 2),
                last = std::min(length - 1, std::max(first + 2., end * (length - 1))),
                span = std::max(1., last - first);
+        if (pendingSeek >= 0) {
+            // Each algorithm restarts at the same source point with fresh overlap
+            // and spectral history. The trim region still determines loop bounds.
+            cursor = attackStart = lastStart = std::clamp(pendingSeek, 0., span - 1);
+            pendingSeek = -1;
+            elapsedSamples = untilGrain = 0;
+            grains = {};
+            started = finished = false;
+            spectralReset = true;
+            spectralWasReady = false;
+        }
         if (rateCache != sr) {
             rateCache = sr;
             smoothing = 1 - std::exp(-1 / (.02 * sr));
@@ -243,7 +258,7 @@ struct SamplerPlayer {
                 float mix = float(std::clamp((elapsedSamples - attack) / (sr * .008), 0., 1.));
                 for (int ch = 0; ch < 2; ++ch)
                     out[size_t(ch)] =
-                        read(elapsedSamples * step, ch) * (1 - mix) + out[size_t(ch)] * mix;
+                        read(attackStart + elapsedSamples * step, ch) * (1 - mix) + out[size_t(ch)] * mix;
             }
             if (!loop && !tailOn) {
                 float fade = float(std::clamp((span - cursor) / (step * sr * .005), 0., 1.));
@@ -373,7 +388,7 @@ struct SamplerPlayer {
             double attack = kickAttack * .001 * sr;
             float mix = float(std::clamp((elapsedSamples - attack) / (sr * .008), 0., 1.));
             for (int ch = 0; ch < 2; ++ch)
-                out[size_t(ch)] = read(elapsedSamples * data.sampleRate / sr, ch) * (1 - mix) +
+                out[size_t(ch)] = read(attackStart + elapsedSamples * data.sampleRate / sr, ch) * (1 - mix) +
                                   out[size_t(ch)] * mix;
         }
         ++elapsedSamples;

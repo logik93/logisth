@@ -327,6 +327,8 @@ void LogisthLook::drawLinearSlider(Graphics &g, int x, int y, int w, int h, floa
     if (bool(s.getProperties()["number"])) {
         capsule(g, b, isDark ? screenLine : Colour(0xffe9ede5), isDark ? screenLine : line);
         float p = float(s.valueToProportionOfLength(s.getValue()));
+        if (s.getProperties().contains("sampleProgress"))
+            p = jlimit(0.f, 1.f, float(s.getProperties()["sampleProgress"]));
         if (bool(s.getProperties()["lane"])) {
             g.setColour((isDark ? mint : green).withAlpha(.24f));
             g.fillRoundedRectangle(b.withTrimmedTop(b.getHeight() * (1 - p)).reduced(1), 2);
@@ -589,6 +591,8 @@ class LogisthEditor::Console : public Component,
                 }
                 slider.textFromValueFunction = [this](double v) { return formatted(v); };
                 slider.valueFromTextFunction = [this](const String &t) {
+                    if (String(spec.id).endsWith("sampleseek") && t.trim().equalsIgnoreCase("Auto"))
+                        return double(spec.low);
                     double v = t.getDoubleValue();
                     if (t.containsIgnoreCase("k"))
                         v *= 1000;
@@ -748,14 +752,34 @@ class LogisthEditor::Console : public Component,
         double sliderValue() const {
             return slider.getValue();
         }
+        void showPlaybackPosition(std::optional<float> live) {
+            if (attachedDrag || slider.isMouseButtonDown())
+                return;
+            for (auto *child : slider.getChildren()) {
+                if (auto *valueBox = dynamic_cast<Label *>(child)) {
+                    if (!valueBox->isBeingEdited()) {
+                        // The moving display is telemetry. Only an edit to the
+                        // attached slider writes the actual host parameter.
+                        const double value = live ? double(*live) : slider.getValue();
+                        valueBox->setText(formatted(value), dontSendNotification);
+                        slider.getProperties().set("sampleProgress", value);
+                        slider.repaint();
+                    }
+                    return;
+                }
+            }
+        }
 
       private:
         bool percent() const {
             return (spec.low >= 0 && spec.high <= 1 && String(spec.id) != "portamento") ||
-                   String(spec.id).endsWith("gspace") || String(spec.id).endsWith("gwave");
+                   String(spec.id).endsWith("gspace") || String(spec.id).endsWith("gwave") ||
+                   String(spec.id).endsWith("sampleseek");
         }
         String formatted(double v) const {
             const String name(spec.id);
+            if (name.endsWith("sampleseek") && v < 0)
+                return "Auto";
             if (name.startsWith("pat") && name.endsWith("note"))
                 return String(int(v) + 1);
             if (name.contains("env") &&
@@ -1449,11 +1473,6 @@ class LogisthEditor::Console : public Component,
         setLookAndFeel(&look);
         addChildComponent(patternCanvas);
         addChildComponent(waveView);
-        samplePosition.setComponentID("sample.position");
-        samplePosition.setName("Sample playback position");
-        samplePosition.setJustificationType(Justification::centred);
-        samplePosition.setInterceptsMouseClicks(false, false);
-        addChildComponent(samplePosition);
         addAndMakeVisible(scopeView);
         addChildComponent(eqView);
         addChildComponent(distortionView);
@@ -2369,28 +2388,25 @@ class LogisthEditor::Console : public Component,
     static Rectangle<int> sampleFieldBounds(int column) {
         return {663 + 94 * column, 297, 83, 18};
     }
-    void showSampleTrim(int slot, int mode) {
-        // Both editor locations drive the same APVTS parameter. Keep attachments alive
-        // across repaints and only rebind when the selected player or engine changes.
-        std::array<Param, 2> ids{logisth_ui::WaveView::startParameter(slot, mode),
-                                 Param(playerParamIndex(Param::o1end, slot, 16))};
+    void showSampleFields(int slot, int mode) {
+        // Keep attachments alive across repaints. A slot or engine change can
+        // change the meaning of START and POSITION without sharing their bindings.
+        const std::array<Param, 3> ids{
+            logisth_ui::WaveView::startParameter(slot, mode),
+            mode == 2 ? samplerSeekParam(slot) : Param(playerParamIndex(Param::o1position, slot, 16)),
+            Param(playerParamIndex(Param::o1end, slot, 16))};
+        constexpr std::array<const char *, 3> names{"start", "position", "end"};
         for (size_t i = 0; i < ids.size(); ++i) {
-            auto &field = sampleTrim[i];
+            auto &field = sampleFields[i];
             if (!field || field->parameter() != ids[i]) {
                 field = std::make_unique<Control>(*this, ids[i]);
-                field->setComponentID(i == 0 ? "sample.start" : "sample.end");
+                field->setComponentID("sample." + String(names[i]));
+                field->setName("Sample " + String(names[i]));
                 addChildComponent(*field);
             }
-            field->setName(i == 0 ? "Sample start" : "Sample end");
-            field->configure(sampleFieldBounds(int(i) * 2), Style::Number, {}, true);
+            field->configure(sampleFieldBounds(int(i)), Style::Number, {}, true);
         }
-        samplePosition.setFont(font(10));
-        samplePosition.setBorderSize({});
-        samplePosition.setColour(Label::textColourId, screenText);
-        samplePosition.setColour(Label::backgroundColourId, screenLine.withAlpha(.4f));
-        samplePosition.setBounds(sampleFieldBounds(1));
-        samplePosition.setText(waveView.playbackPositionText(), dontSendNotification);
-        samplePosition.setVisible(true);
+        sampleFields[1]->showPlaybackPosition(waveView.playbackPosition());
     }
     bool rackHeadingVisible() const {
         return !settingsOpen && rack != 1 && rack != 9 && rack != 10 && rack != 4 && rack != 7 &&
@@ -2406,6 +2422,7 @@ class LogisthEditor::Console : public Component,
         const int oldPart = selectedPart, oldRack = rack, oldStep = stepPage,
                   oldMacro = selectedMacro, oldEqBand = selectedEqBand,
                   oldDistortion = selectedDistortion;
+        const int oldSampleSlot = waveView.selectedSlot();
         std::array<int, playerCount> views, algorithms;
         for (int i = 0; i < playerCount; ++i) {
             views[size_t(i)] = sourceViews[size_t(i)].getSelectedId();
@@ -2415,6 +2432,14 @@ class LogisthEditor::Console : public Component,
         String error;
         auto inspect = [&] {
             layout();
+            for (const auto &field : sampleFields)
+                if (field && field->isVisible()) {
+                    visited.insert(size_t(field->parameter()));
+                    auto *hit = getComponentAt(field->getBounds().getCentre());
+                    if (!getLocalBounds().contains(field->getBounds()) ||
+                        (hit != field.get() && !field->isParentOf(hit)))
+                        error = "Obscured Sample field: " + field->getComponentID();
+                }
             for (size_t i = 0; i < controls.size(); ++i)
                 if (controls[i]->isVisible()) {
                     visited.insert(i);
@@ -2556,6 +2581,15 @@ class LogisthEditor::Console : public Component,
             selectedMacro = macro;
             inspect();
         }
+        rack = 9;
+        for (int engine : {2, 3}) {
+            previewSource = engine;
+            for (int slot = 0; slot < playerCount; ++slot) {
+                waveView.setSlot(slot);
+                inspect();
+            }
+        }
+        waveView.setSlot(oldSampleSlot);
         visited.insert(size_t(Param::fixedvelocity)); // Settings uses a dedicated attached button.
         visited.insert(size_t(Param::bendwheel)); // Performance uses the attached wheels.
         visited.insert(size_t(Param::modwheel));
@@ -4151,7 +4185,7 @@ class LogisthEditor::Console : public Component,
             waveView.setMode(mode);
             if (mode == 2 || mode == 3) {
                 waveSlot.setSize(67, 23);
-                showSampleTrim(slot, mode);
+                showSampleFields(slot, mode);
             } else if (mode == 1) {
                 sourceFrame[size_t(slot)].setBounds(846, 289, 88, 23);
                 sourceFrame[size_t(slot)].setVisible(true);
@@ -4334,8 +4368,7 @@ class LogisthEditor::Console : public Component,
         }
         patternCanvas.setVisible(false);
         waveView.setVisible(false);
-        samplePosition.setVisible(false);
-        for (auto &field : sampleTrim)
+        for (auto &field : sampleFields)
             if (field)
                 field->setVisible(false);
         eqView.setVisible(false);
@@ -4612,8 +4645,8 @@ class LogisthEditor::Console : public Component,
             waveView.setMode(
                 int(value(Param(playerParamIndex(Param::o1engine, waveView.selectedSlot(), 16)))));
             waveView.repaint();
-            if (samplePosition.isVisible())
-                samplePosition.setText(waveView.playbackPositionText(), dontSendNotification);
+            if (sampleFields[1] && sampleFields[1]->isVisible())
+                sampleFields[1]->showPlaybackPosition(waveView.playbackPosition());
         }
         for (int slot = 0; slot < playerCount; ++slot) {
             auto picture = processor.playback[size_t(slot)].read();
@@ -4821,7 +4854,7 @@ class LogisthEditor::Console : public Component,
             const Rectangle<int> titleArea =
                 mode >= 2 ? Rectangle<int>(491, 289, 166, 23) : Rectangle<int>(540, 289, 295, 23);
             drawCaption(g, title, titleArea, 11, screenText);
-            if (samplePosition.isVisible()) {
+            if (sampleFields[1] && sampleFields[1]->isVisible()) {
                 constexpr std::array<const char *, 3> captions{"START", "POSITION", "END"};
                 for (int i = 0; i < int(captions.size()); ++i)
                     drawCaption(g, captions[size_t(i)], sampleFieldBounds(i).withY(285).withHeight(12),
@@ -4949,8 +4982,7 @@ class LogisthEditor::Console : public Component,
     Keys keyboard;
     PatternCanvas patternCanvas;
     logisth_ui::WaveView waveView;
-    std::array<std::unique_ptr<Control>, 2> sampleTrim;
-    Label samplePosition;
+    std::array<std::unique_ptr<Control>, 3> sampleFields;
     logisth_ui::ScopeView scopeView;
     logisth_ui::ImpulseView impulseView;
     logisth_ui::DynamicsView dynamicsView;

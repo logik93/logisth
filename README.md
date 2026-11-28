@@ -11,8 +11,8 @@ independent synthesis engine.
 
 ## New in 1.1
 
-**Sample** now shows the live **Position** between **Start** and **End**. Loop
-grips remain independent when their endpoints share a pixel. Graphic EQ adds
+**Sample** now has an editable **Position** between **Start** and **End** that
+follows the live playhead. Loop grips remain independent when their endpoints share a pixel. Graphic EQ adds
 12, 24, 36 and 48 dB/octave cut slopes and separate **Pre** and **Post**
 analyzer switches. [Release notes](docs/RELEASE-v1.1.0.md)
 

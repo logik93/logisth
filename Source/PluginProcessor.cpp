@@ -91,6 +91,8 @@ Params LogisthProcessor::snapshot() const {
         o.engine = int(sourceNext());
         o.position = sourceNext();
         o.end = sourceNext();
+        const float seek = get(samplerSeekParam(i));
+        o.samplerSeek = seek >= 0 ? seek : -1.f;
         o.root = int(sourceNext());
         o.loop = sourceNext() > 0;
         o.reverse = sourceNext() > 0;

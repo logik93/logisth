@@ -152,10 +152,45 @@ static void checkParallelStretch() {
     }
     check(difference > 1, "parallel layers produce measurably different output");
 }
+static void checkSamplerSeek() {
+    constexpr double rate = 48000;
+    SourceData source;
+    source.sampleRate = rate;
+    for (auto &channel : source.samples) {
+        channel.resize(48001);
+        for (size_t i = 0; i < channel.size(); ++i)
+            channel[i] = float(i) / 48000;
+    }
+    for (bool reverse : {false, true}) {
+        SourcePlayback player;
+        auto next = [&](float position, unsigned layers = 0) {
+            return player.tick(source, 2, 1., rate, .2f, .8f, false, reverse, .04f, 16, 0, 0, 0,
+                               0, 1, 0, .5f, 0, 25, 0, {}, {}, layers, 2, nullptr, position)[0];
+        };
+        const float first = next(.65f);
+        check(std::abs(first - .65f) < .0001f, "Sampler starts at the chosen position in either direction");
+        const float transition = next(.35f);
+        check(std::abs(first - transition) < .005f, "live seek crossfades from the previous output");
+        float current = 0;
+        for (int i = 0; i < 246; ++i)
+            current = next(.35f);
+        check(std::abs(current - (.35f + (reverse ? -1 : 1) * 246.f / 48000)) < .0001f,
+              "audio continues from the new position without changing the trimmed range");
+        for (int i = 0; i < 245; ++i)
+            current = next(-1);
+        check(std::abs(current - (reverse ? .8f - 245.f / 48000 : .2f + 244.f / 48000)) < .0001f,
+              "Auto returns to the original playback boundary");
+        next(.50f, (1u << 1) | (1u << 2));
+        check(player.stretchLayers[0].player.cursor > 14000 &&
+                  player.stretchLayers[1].player.cursor > 14000,
+              "a seek reaches each active stretch layer");
+    }
+}
 int main() {
     try {
         checkDiffusionAndGrainRate();
         checkParallelStretch();
+        checkSamplerSeek();
         for (double rate : {44100., 48000., 96000.})
             for (float speed : {.5f, 1.f, 2.f}) {
                 upstreamParity(rate, {}, speed, 1.5f, 3000, 7);

@@ -93,8 +93,7 @@ inline void checkTrimControls(const File &report) {
     auto *console = editor->getChildComponent(0);
     auto *slotMenu = dynamic_cast<ComboBox *>(console->findChildWithID("sample.slot"));
     auto *wave = console->findChildWithID("sample.waveform");
-    auto *position = dynamic_cast<Label *>(console->findChildWithID("sample.position"));
-    gain_test::require(slotMenu && wave && position, "Sample page present");
+    gain_test::require(slotMenu && wave, "Sample page present");
     auto field = [&](const char *name) -> Slider & {
         if (auto *control = console->findChildWithID(name))
             for (auto *c : control->getChildren())
@@ -109,36 +108,49 @@ inline void checkTrimControls(const File &report) {
         for (int mode : {2, 3}) {
             features0983_test::selectChoice(*console, prefix + "engine", mode + 1);
             features0983_test::tick();
-            auto &start = field("sample.start"), &end = field("sample.end");
+            auto &start = field("sample.start"), &position = field("sample.position"),
+                 &end = field("sample.end");
+            auto *positionParam = p->state.getParameter(prefix + (mode == 2 ? "sampleseek" : "position"));
+            const auto parameterBefore = positionParam->getValue();
+            Label *positionText = nullptr;
+            for (auto *c : position.getChildren())
+                if (auto *label = dynamic_cast<Label *>(c))
+                    positionText = label;
+            const auto *positionBounds = position.getParentComponent();
             logisth::PlaybackPicture live;
             live.active = true;
             live.position = .4275f;
             live.revision = p->sourceData(slot)->revision;
             p->playback[size_t(slot)].write(live);
             features0983_test::tick();
-            gain_test::require(position->isVisible() && position->getText() == "42.75%" &&
-                                   position->getX() >= start.getParentComponent()->getRight() &&
-                                   position->getRight() <= end.getParentComponent()->getX() &&
-                                   position->getY() == start.getParentComponent()->getY() &&
-                                   position->getY() == end.getParentComponent()->getY() &&
-                                   position->getWidth() == start.getParentComponent()->getWidth() &&
-                                   position->getWidth() == end.getParentComponent()->getWidth(),
+            gain_test::require(positionText && positionText->getText() == "42.75%" &&
+                                   positionParam->getValue() == parameterBefore &&
+                                   positionBounds->getX() >= start.getParentComponent()->getRight() &&
+                                   positionBounds->getRight() <= end.getParentComponent()->getX() &&
+                                   positionBounds->getY() == start.getParentComponent()->getY() &&
+                                   positionBounds->getY() == end.getParentComponent()->getY() &&
+                                   positionBounds->getWidth() == start.getParentComponent()->getWidth() &&
+                                   positionBounds->getWidth() == end.getParentComponent()->getWidth(),
                                "live playhead readout is between trim controls");
             ++live.revision;
             p->playback[size_t(slot)].write(live);
             features0983_test::tick();
-            gain_test::require(position->getText() == "--", "discard playhead from replaced source");
+            gain_test::require(positionText->getText() == position.getTextFromValue(position.getValue()),
+                               "a replaced source restores the editable base position");
             auto *a = p->state.getParameter(prefix + (mode == 2 ? "position" : "trimstart"));
             auto *b = p->state.getParameter(prefix + "end");
             gain_test::require(editor->getControlParameterIndex(start) == a->getParameterIndex() &&
                                    editor->getControlParameterIndex(end) ==
                                        b->getParameterIndex() &&
-                                   a->isAutomatable() && b->isAutomatable(),
+                                   editor->getControlParameterIndex(position) == positionParam->getParameterIndex() &&
+                                   a->isAutomatable() && b->isAutomatable() && positionParam->isAutomatable(),
                                "host identifies each player's independent trim endpoints");
             start.setValue(start.getValueFromText("25.50%"), sendNotificationSync);
             end.setValue(end.getValueFromText("76.25%"), sendNotificationSync);
+            position.setValue(position.getValueFromText("52.50%"), sendNotificationSync);
             gain_test::require(std::abs(a->getValue() - .255f) < 1e-6 &&
-                                   std::abs(b->getValue() - .7625f) < 1e-6,
+                                   std::abs(b->getValue() - .7625f) < 1e-6 &&
+                                   std::abs(positionParam->convertFrom0to1(positionParam->getValue()) - .525f) < 1e-6,
                                "editing Sample UI values reaches host parameters");
             a->setValueNotifyingHost(.375f);
             b->setValueNotifyingHost(.625f);
@@ -207,7 +219,7 @@ inline void checkTrimControls(const File &report) {
         features0983_test::tick();
         gain_test::require(!console->findChildWithID("sample.start")->isVisible() &&
                                !console->findChildWithID("sample.end")->isVisible() &&
-                               !position->isVisible(),
+                               !console->findChildWithID("sample.position")->isVisible(),
                            "trim hidden for classic");
         const auto position = p->state.getParameter(prefix + "position")->getValue();
         wave->mouseDown(features0983_test::event(*wave, {12, 90}, true));

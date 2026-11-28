@@ -455,9 +455,21 @@ their mode. An invalid file keeps the previous source and mode. While dragging,
 the waveform highlights the destination. Loading and waveform-peak generation
 run in the background; long samples keep waveform zoom/pan responsive. It draws the actual stereo amplitude envelope,
 region markers, start/end and the most recent active voice's scanner, plus up to
-16 active grain positions. Use **START** and **END** above the waveform to drag or enter percentages. **POSITION**, between them, shows the current playhead as a percentage of the full source and displays `--` when the selected player has no active position to show. Drag a waveform handle to record just that endpoint or drag across the waveform to select a new range. The wheel zooms around the pointer and Shift-wheel pans.
+16 active grain positions. **START**, **POSITION** and **END** accept drag and
+text edits in percentages. **POSITION** shows the live playhead where available
+and the editable setting while idle. In Sampler, editing Position moves the head
+within the trimmed selection and is used for new notes. Type **Auto** to start
+at START for forward playback or END for reverse. Granular Position controls
+the scanner's source location. Drag a waveform handle to record just that
+endpoint or drag across the waveform to select a new range. The wheel zooms
+around the pointer and Shift-wheel pans.
 
-For automation, select the player in SAMPLE and touch its START or END field with the host in automation write mode. In the host parameter list, SOURCE 1–6 correspond to A1, A2, B1, B2, C1 and C2. Sampler START uses **Position**. Both granular models use **Trim start** for the lower playback boundary and keep **Position** available for the grain scanner. END uses **Sample end**. These controls also save with the preset. The labels sit above the moving playhead.
+For automation, select the player in SAMPLE and touch its field with the host in
+automation write mode. In the host parameter list, SOURCE 1–6 correspond to A1,
+A2, B1, B2, C1 and C2. Sampler START uses **Position** and its editable playhead
+uses **Sampler playback position**. Both granular models use **Trim start** for
+START and **Position** for the scanner. END uses **Sample end**. Each control
+saves with the preset.
 
 ![Sample position readout and separated Loop In and Out grips](images/logisth-sample-position.png)
 

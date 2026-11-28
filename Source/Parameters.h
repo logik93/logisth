@@ -1199,6 +1199,12 @@ enum class Param : size_t {
     eqb13slope,
     eqb14slope,
     eqb15slope,
+    o1sampleseek,
+    o2sampleseek,
+    o3sampleseek,
+    o4sampleseek,
+    o5sampleseek,
+    o6sampleseek,
     Count
 };
 constexpr size_t parameterCount = size_t(Param::Count);
@@ -1209,6 +1215,7 @@ constexpr size_t stretchLayerParam(int player, int mode) {
                      : size_t(Param::o1stretchon1) + size_t(player * 7 + mode - 1);
 }
 constexpr Param eqBandSlope(int band) { return Param(size_t(Param::eqb0slope) + size_t(band)); }
+constexpr Param samplerSeekParam(int player) { return Param(size_t(Param::o1sampleseek) + size_t(player)); }
 inline constexpr float bendWheelMax = 12.f;
 struct ParameterSpec {
     const char *id;
@@ -3065,6 +3072,12 @@ inline const std::array<ParameterSpec, parameterCount> parameterSpecs{{
      "12 dB/oct|24 dB/oct|36 dB/oct|48 dB/oct", true},
     {"eqb15slope", "Band 16 slope / dB per octave", 3, "EQUALIZER", 0, 3, 0, 1,
      "12 dB/oct|24 dB/oct|36 dB/oct|48 dB/oct", true},
+    {"o1sampleseek", "Sampler playback position", 5, "SOURCE 1", -.01f, 1, -.01f, 1, "", false},
+    {"o2sampleseek", "Sampler playback position", 5, "SOURCE 2", -.01f, 1, -.01f, 1, "", false},
+    {"o3sampleseek", "Sampler playback position", 5, "SOURCE 3", -.01f, 1, -.01f, 1, "", false},
+    {"o4sampleseek", "Sampler playback position", 5, "SOURCE 4", -.01f, 1, -.01f, 1, "", false},
+    {"o5sampleseek", "Sampler playback position", 5, "SOURCE 5", -.01f, 1, -.01f, 1, "", false},
+    {"o6sampleseek", "Sampler playback position", 5, "SOURCE 6", -.01f, 1, -.01f, 1, "", false},
 }};
 
 inline constexpr size_t legacyParameterCount = 736;

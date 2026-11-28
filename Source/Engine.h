@@ -17,6 +17,7 @@ struct OscParams {
     bool retrigger = false, invert = false;
     int engine = 0, root = 60;
     float position = 0, end = 1, size = .08f, density = 16, spray = .15f, scan = 0, warp = 0;
+    float samplerSeek = -1;
     bool loop = true, reverse = false, envelopeEnabled = false;
     EnvelopeParams envelope{.008f, .25f, 1, .35f};
     float fmDepth = 0, fmRatio = 1, amDepth = 0, amRatio = 1, pulseWidth = .5f, pwmDepth = 0,
@@ -838,7 +839,7 @@ class Engine {
                                         op.phaseStretch,
                                         op.engine == 2 && p.spectralBank
                                             ? p.spectralBank->getPhase(int(&v - voices.data()), osc, u)
-                                            : nullptr);
+                                            : nullptr, op.samplerSeek);
                                 }
                             }
                         }

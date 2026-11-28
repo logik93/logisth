@@ -1,5 +1,6 @@
 #pragma once
 #include "PluginEditor.h"
+#include <optional>
 namespace logisth_ui {
 using namespace juce;
 using FontMaker = std::function<Font(float)>;
@@ -337,11 +338,11 @@ class WaveView : public Component, public FileDragAndDropTarget {
     int selectedSlot() const {
         return slot;
     }
-    String playbackPositionText() const {
+    std::optional<float> playbackPosition() const {
         const auto telemetry = p.playback[size_t(slot)].read();
         if (!telemetry.active || telemetry.revision != p.sourceData(slot)->revision)
-            return "--";
-        return String(jlimit(0.f, 1.f, telemetry.position) * 100, 2) + "%";
+            return {};
+        return jlimit(0.f, 1.f, telemetry.position);
     }
     void paint(Graphics &g) override {
         auto data = p.sourceData(slot);

@@ -54,7 +54,7 @@ a player is one source slot; a unison lane is one component inside a player.
 | Player engines | Classic, Wavetable, Sampler, Granular |
 | Note polyphony | 1–32 voices, default 16; mono/legato and portamento available |
 | Unison selection | 0–8 lanes per player; 0 disables the player |
-| Host parameter count | 1193, including sixteen independent per-band EQ cut slopes |
+| Host parameter count | 1199, including sixteen per-band EQ cut slopes and six Sampler seek parameters |
 | Modulators | Two modulation ADSRs, two LFOs, four miscellaneous source selectors, two destinations per modulator |
 | Performance macros | Four macros, four target assignments each |
 | Pattern memory | Twelve pattern slots; sequences up to 32 steps |
@@ -271,7 +271,15 @@ Implementation: [Sampler.h](../Source/Sampler.h), [SourceAssets.cpp](../Source/S
 
 ### Trim automation and instance lifetime
 
-The Sample-page START and END fields attach directly to the selected player's existing automation parameters. Sampler START uses `oNposition`, granular START uses `oNtrimstart` and both engines use `oNend`. POSITION reads the same per-player playback telemetry as the waveform and verifies the source revision before showing a value. The engine switch preserves the independent granular launch position. Each waveform endpoint owns its own host gesture. The loop grips occupy separate vertical hit areas so coincident endpoints can be edited independently.
+The Sample-page fields attach directly to the selected player. Sampler START
+uses `oNposition`, granular START uses `oNtrimstart` and both engines use
+`oNend`. POSITION edits `oNsampleseek` in Sampler and `oNposition` in Granular.
+While playing it shows the existing per-player telemetry after checking the
+source revision. The display updates independently of parameter values and host
+automation. Sampler seeks clamp to the trim region and restart affected readers.
+A five-millisecond ramp bridges a live relocation. The default Auto setting
+uses the forward or reverse playback boundary. The loop grips occupy separate
+vertical hit areas, so coincident endpoints remain independently editable.
 
 The audio graph may negotiate a new maximum block size while a MIDI note is held. Preparation rebuilds rate-dependent DSP when the sample rate changes. The VST3 wrapper maps a processing suspension to a processor reset. For a prepared realtime instance, the processor defers that reset. A transition from playing to stopped or a discontinuity in all comparable clocks clears suspended voices. MIDI notes begun without a transport report, or played live while the transport stays stopped, retain their voice state. Audio and incoming events keep their sample offsets during gaps in timing metadata. Offline resets are immediate, and a pending realtime restart clears DSP before an offline bounce renders audio.
 

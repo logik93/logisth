@@ -215,6 +215,9 @@ struct SourcePlayback {
     unsigned soundingLayers = 0;
     float baseGain = 1;
     bool layersStarted = false;
+    float lastSamplerSeek = -1;
+    std::array<float, 2> samplerOutput{}, seekFrom{};
+    int seekFade = 0, seekFadeLength = 1;
     std::array<SpectralStream *, 2> spectralCells{};
     uint64_t spectralToken = 0;
     std::array<uint64_t, 2> spectralIdentities{};
@@ -250,6 +253,14 @@ struct SourcePlayback {
         sampler.spectral = cells[0];
         sampler.token = serial;
     }
+    std::array<float, 2> fadeSeek(std::array<float, 2> out) {
+        if (seekFade > 0) {
+            const float mix = 1.f - float(--seekFade) / seekFadeLength;
+            for (size_t ch = 0; ch < out.size(); ++ch)
+                out[ch] = seekFrom[ch] + (out[ch] - seekFrom[ch]) * mix;
+        }
+        return samplerOutput = out;
+    }
     std::array<float, 2> tick(const SourceData &data, int selected, double ratio, double sr,
                               float position, float end, bool loop, bool reverse, float size,
                               float density, float spray, float scan, float random,
@@ -257,7 +268,8 @@ struct SourcePlayback {
                               float width = .5f, double fmOffset = 0, float kickAttack = 25,
                               float trimStart = 0, const StretchControls &controls = {},
                               const TailLoopSettings &tail = {}, unsigned layers = 0,
-                              float phaseAmount = 2, SpectralStream *phaseStream = nullptr) {
+                              float phaseAmount = 2, SpectralStream *phaseStream = nullptr,
+                              float samplerSeek = -1) {
         if (mode != selected || source != &data || sourceRevision != data.revision) {
             reset();
             mode = selected;
@@ -271,6 +283,20 @@ struct SourcePlayback {
         double span = std::max(1., last - first);
         double speed = ratio * data.sampleRate / sr;
         if (selected == 2) {
+            if (samplerSeek != lastSamplerSeek) {
+                const double frame = samplerSeek * (length - 1);
+                const double offset = samplerSeek < 0 ? 0. : reverse ? last - 1 - frame : frame - first;
+                const double target = std::clamp(offset, 0., span - 1);
+                lastSamplerSeek = samplerSeek;
+                sampler.seekTo(target);
+                previousSampler.seekTo(target);
+                for (auto &layer : stretchLayers)
+                    layer.player.seekTo(target);
+                if (layersStarted) {
+                    seekFrom = samplerOutput;
+                    seekFade = seekFadeLength = std::max(1, int(sr * .005));
+                }
+            }
             std::array<float, 2> layersOut{};
             float layersGain = 0;
             if (layers || soundingLayers || baseGain < 1) {
@@ -324,7 +350,7 @@ struct SourcePlayback {
                 if (baseGain == 0 && layersGain > 0) {
                     layersStarted = true;
                     finished = done;
-                    return {layersOut[0] / layersGain, layersOut[1] / layersGain};
+                    return fadeSeek({layersOut[0] / layersGain, layersOut[1] / layersGain});
                 }
             }
             layersStarted = true;
@@ -351,6 +377,7 @@ struct SourcePlayback {
                 sampler.spectral = spectralCells[size_t(spectralLane)];
                 sampler.token = spectralToken;
                 sampler.elapsedSamples = previousSampler.elapsedSamples;
+                sampler.attackStart = previousSampler.attackStart;
                 sampler.cursor = at;
                 sampler.stretch = factor;
                 sampler.algorithm = stretchMode;
@@ -385,8 +412,8 @@ struct SourcePlayback {
                 sampler.finished && std::none_of(sampler.grains.begin(), sampler.grains.end(),
                                                  [](auto &g) { return g.active; });
             const float gain = baseGain + layersGain;
-            return {(out[0] * baseGain + layersOut[0]) / gain,
-                    (out[1] * baseGain + layersOut[1]) / gain};
+            return fadeSeek({(out[0] * baseGain + layersOut[0]) / gain,
+                             (out[1] * baseGain + layersOut[1]) / gain});
         }
         std::array<float, 2> out{};
         if (untilGrain <= 0) {
