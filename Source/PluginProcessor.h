@@ -68,6 +68,7 @@ class LogisthProcessor : public juce::AudioProcessor, private juce::VST3ClientEx
     void serviceAssets();
     void ensureSpectral(bool synchronous = false);
     bool spectralReady(int slot) const;
+    unsigned samplerLayerMask(int slot) const;
     std::atomic<int> arpPlayhead{-1};
     logisth::ScopeBuffer scope;
     mutable logisth::ScopeBuffer eqSpectrum;
@@ -227,7 +228,8 @@ class LogisthProcessor : public juce::AudioProcessor, private juce::VST3ClientEx
     uint64_t spectralPendingGeneration = 0, spectralRejectedGeneration = 0;
     std::array<logisth::SpectralConfig, logisth::playerCount> spectralDesiredConfigs{};
     std::array<int, logisth::playerCount> spectralDesiredUnisons{};
-    unsigned spectralDesiredMask = 0;
+    unsigned spectralDesiredMask = 0, spectralDesiredPhaseMask = 0;
+    std::array<logisth::SpectralConfig, logisth::playerCount> spectralDesiredPhaseConfigs{};
     int spectralDesiredVoices = 0;
     double spectralDesiredRate = 0;
     std::atomic<double> spectralRate{44100};

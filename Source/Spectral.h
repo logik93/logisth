@@ -9,27 +9,36 @@
 #include <stdexcept>
 #include <type_traits>
 namespace logisth {
+inline constexpr int phaseDiffusionMode = 8;
+inline constexpr int minPhaseFftOrder = 8, maxPhaseFftOrder = 18, defaultPhaseFftOrder = 15;
 struct StretchControls {
     float rate = 1, semitones = 0, tonalityHz = 0, formant = 0, blockMs = 0;
     bool diffuse = false;
     std::array<float, 3> ratios{0, 1, 0};
     int overlap = 0; // Auto, otherwise the actual overlap ratio (2..16).
+    int phaseFftOrder = defaultPhaseFftOrder;
 };
 struct SpectralConfig {
     float blockMs = 0;
     int overlap = 0;
     bool diffuse = false;
+    int phaseFftOrder = defaultPhaseFftOrder;
     static SpectralConfig from(const StretchControls &controls) {
+        if (controls.diffuse)
+            return {0, 0, true, std::clamp(controls.phaseFftOrder, minPhaseFftOrder, maxPhaseFftOrder)};
         return {std::isfinite(controls.blockMs) ? std::clamp(controls.blockMs, 0.f, 200.f) : 0.f,
                 controls.overlap == 0 ? 0 : std::clamp(controls.overlap, 2, 16), controls.diffuse};
     }
     bool operator==(const SpectralConfig &other) const {
-        return blockMs == other.blockMs && overlap == other.overlap && diffuse == other.diffuse;
+        return blockMs == other.blockMs && overlap == other.overlap && diffuse == other.diffuse &&
+               phaseFftOrder == other.phaseFftOrder;
     }
     bool operator!=(const SpectralConfig &other) const {
         return !(*this == other);
     }
     int window(double rate) const {
+        if (diffuse)
+            return 1 << phaseFftOrder;
         if (blockMs > 0)
             return std::max(32, int(std::round(rate * blockMs * .001)));
         int samples = 1024;
@@ -41,8 +50,10 @@ struct SpectralConfig {
         return std::max(1, window(rate) / (overlap ? overlap : 8));
     }
     size_t estimatedBytes(double rate) const {
+        if (diffuse)
+            return size_t(window(rate)) * 64 + 65536;
         size_t fft = 1;
-        const size_t frames = size_t(diffuse ? std::max(1024, window(rate)) : window(rate));
+        const size_t frames = size_t(window(rate));
         while (fft < frames)
             fft *= 2;
         return fft * 160 + frames * 32 + 65536;
@@ -76,7 +87,7 @@ class SpectralStream {
         : rate(std::isfinite(hostRate) ? std::clamp(hostRate, 8000., 384000.) : 48000.),
           config(settings) {
         if (config.diffuse) {
-            diffusion = std::make_unique<PhaseDiffuseStretch>(std::max(1024, config.window(rate)));
+            diffusion = std::make_unique<PhaseDiffuseStretch>(config.window(rate));
             return;
         }
         core.configure(2, config.window(rate), config.hop(rate));
@@ -140,11 +151,14 @@ struct SpectralBank {
     static constexpr size_t memoryBudget = 512ull * 1024 * 1024;
     double rate;
     unsigned mask;
+    unsigned phaseMask;
     int voiceCapacity;
     std::array<int, playerCount> capacity{};
     std::array<SpectralConfig, playerCount> configs{};
+    std::array<SpectralConfig, playerCount> phaseConfigs{};
     std::array<std::shared_ptr<SpectralStream>, maxPolyphony * playerCount * unisonCapacity * 2>
         cells{};
+    std::vector<std::shared_ptr<SpectralStream>> phaseCells;
     static size_t index(int voice, int osc, int unison, int lane) {
         return size_t((((voice * playerCount) + osc) * unisonCapacity + unison) * 2 + lane);
     }
@@ -162,13 +176,28 @@ struct SpectralBank {
     SpectralBank(double sampleRate, unsigned wanted, std::array<int, playerCount> unisons,
                  const std::shared_ptr<SpectralBank> &old,
                  std::array<SpectralConfig, playerCount> settings = {},
-                 int voices = defaultPolyphony)
-        : rate(sampleRate), mask(wanted), voiceCapacity(std::clamp(voices, 1, maxPolyphony)),
-          capacity(unisons), configs(settings) {
-        if (estimatedBytes(rate, mask, capacity, configs, voiceCapacity) > memoryBudget)
+                 int voices = defaultPolyphony, unsigned phaseWanted = 0,
+                 std::array<SpectralConfig, playerCount> phaseSettings = {})
+        : rate(sampleRate), mask(wanted), phaseMask(phaseWanted),
+          voiceCapacity(std::clamp(voices, 1, maxPolyphony)), capacity(unisons), configs(settings),
+          phaseConfigs(phaseSettings) {
+        if (estimatedBytes(rate, mask, capacity, configs, voiceCapacity) +
+                estimatedBytes(rate, phaseMask, capacity, phaseConfigs, voiceCapacity) / 2 > memoryBudget)
             throw std::length_error("Spectral memory budget exceeded");
+        if (phaseMask)
+            phaseCells.resize(size_t(voiceCapacity) * playerCount * unisonCapacity);
         for (int voice = 0; voice < voiceCapacity; ++voice)
-            for (int osc = 0; osc < playerCount; ++osc)
+            for (int osc = 0; osc < playerCount; ++osc) {
+                if (phaseMask & (1u << osc))
+                    for (int u = 0; u < capacity[size_t(osc)]; ++u) {
+                        const auto i = index(voice, osc, u, 0) / 2;
+                        if (old && old->rate == rate && (old->phaseMask & (1u << osc)) &&
+                            old->phaseConfigs[size_t(osc)] == phaseConfigs[size_t(osc)] &&
+                            i < old->phaseCells.size() && old->phaseCells[i])
+                            phaseCells[i] = old->phaseCells[i];
+                        else
+                            phaseCells[i] = std::make_shared<SpectralStream>(rate, phaseConfigs[size_t(osc)]);
+                    }
                 if (mask & (1u << osc))
                     for (int u = 0; u < capacity[size_t(osc)]; ++u)
                         for (int lane = 0; lane < 2; ++lane) {
@@ -180,6 +209,7 @@ struct SpectralBank {
                                 cells[i] =
                                     std::make_shared<SpectralStream>(rate, configs[size_t(osc)]);
                         }
+            }
     }
     template <class T, size_t N>
     static std::array<T, playerCount> expanded(const std::array<T, N> &values) {
@@ -198,6 +228,12 @@ struct SpectralBank {
             unison >= capacity[size_t(osc)] || lane < 0 || lane > 1)
             return nullptr;
         return cells[index(voice, osc, unison, lane)].get();
+    }
+    SpectralStream *getPhase(int voice, int osc, int unison) const {
+        if (voice < 0 || voice >= voiceCapacity || osc < 0 || osc >= playerCount ||
+            unison < 0 || unison >= capacity[size_t(osc)] || !(phaseMask & (1u << osc)))
+            return nullptr;
+        return phaseCells[index(voice, osc, unison, 0) / 2].get();
     }
 };
 } // namespace logisth

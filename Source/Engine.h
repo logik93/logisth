@@ -22,6 +22,8 @@ struct OscParams {
     float fmDepth = 0, fmRatio = 1, amDepth = 0, amRatio = 1, pulseWidth = .5f, pwmDepth = 0,
           pwmRate = .5f, stretch = 1;
     int stretchMode = 0, interpolation = 0;
+    unsigned stretchLayers = 0;
+    float phaseStretch = 2;
     int fmSource = 0, amSource = 0, pwmDivision = 7;
     bool pwmSync = false;
     float kickAttack = 25;
@@ -832,7 +834,11 @@ class Engine {
                                             : 0,
                                         op.stretchMode, op.stretch, op.interpolation, duty,
                                         samplePhase, op.kickAttack, op.gran.trimStart,
-                                        op.stretchControls, op.tail);
+                                        op.stretchControls, op.tail, op.stretchLayers,
+                                        op.phaseStretch,
+                                        op.engine == 2 && p.spectralBank
+                                            ? p.spectralBank->getPhase(int(&v - voices.data()), osc, u)
+                                            : nullptr);
                                 }
                             }
                         }

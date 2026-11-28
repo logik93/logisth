@@ -206,6 +206,15 @@ struct SourcePlayback {
     uint64_t sourceRevision = 0;
     bool finished = false;
     SamplerPlayer sampler, previousSampler;
+    struct Layer {
+        SamplerPlayer player;
+        float gain = 0;
+        uint64_t streamIdentity = 0;
+    };
+    std::array<Layer, phaseDiffusionMode> stretchLayers{};
+    unsigned soundingLayers = 0;
+    float baseGain = 1;
+    bool layersStarted = false;
     std::array<SpectralStream *, 2> spectralCells{};
     uint64_t spectralToken = 0;
     std::array<uint64_t, 2> spectralIdentities{};
@@ -247,7 +256,8 @@ struct SourcePlayback {
                               int stretchMode = 0, float stretch = 1, int interpolation = 0,
                               float width = .5f, double fmOffset = 0, float kickAttack = 25,
                               float trimStart = 0, const StretchControls &controls = {},
-                              const TailLoopSettings &tail = {}) {
+                              const TailLoopSettings &tail = {}, unsigned layers = 0,
+                              float phaseAmount = 2, SpectralStream *phaseStream = nullptr) {
         if (mode != selected || source != &data || sourceRevision != data.revision) {
             reset();
             mode = selected;
@@ -261,6 +271,63 @@ struct SourcePlayback {
         double span = std::max(1., last - first);
         double speed = ratio * data.sampleRate / sr;
         if (selected == 2) {
+            std::array<float, 2> layersOut{};
+            float layersGain = 0;
+            if (layers || soundingLayers || baseGain < 1) {
+                const float delta = float(1. / (sr * .005));
+                const float baseTarget = layers ? 0.f : 1.f;
+                baseGain = layersStarted ? baseGain + std::clamp(baseTarget - baseGain, -delta, delta)
+                                         : baseTarget;
+                unsigned render = layers | soundingLayers;
+                soundingLayers = 0;
+                bool done = true;
+                for (int algorithm = 1; algorithm <= phaseDiffusionMode; ++algorithm) {
+                    const unsigned bit = 1u << algorithm;
+                    if (!(render & bit))
+                        continue;
+                    auto &layer = stretchLayers[size_t(algorithm - 1)];
+                    const bool enabled = (layers & bit) != 0;
+                    if (enabled && layer.gain == 0)
+                        layer.player.reset();
+                    const float target = enabled ? 1.f : 0.f;
+                    layer.gain = layersStarted ? layer.gain + std::clamp(target - layer.gain, -delta, delta)
+                                               : target;
+                    if (layer.gain <= 0)
+                        continue;
+                    soundingLayers |= bit;
+                    const bool phase = algorithm == phaseDiffusionMode;
+                    auto *stream = phase ? phaseStream
+                                         : algorithm >= 6 ? spectralCells[size_t(algorithm - 6)] : nullptr;
+                    const uint64_t identity = stream ? stream->identity : 0;
+                    if (layer.streamIdentity != identity) {
+                        layer.streamIdentity = identity;
+                        layer.player.spectralReset = true;
+                        layer.player.spectralWasReady = false;
+                    }
+                    layer.player.spectral = stream;
+                    layer.player.token = spectralToken;
+                    auto settings = controls;
+                    settings.diffuse = phase;
+                    const auto audio = layer.player.tick(data, ratio, sr, position, end, loop,
+                                                         reverse, algorithm, phase ? phaseAmount : stretch,
+                                                         interpolation, width, fmOffset, kickAttack,
+                                                         settings, tail);
+                    for (int ch = 0; ch < 2; ++ch)
+                        layersOut[size_t(ch)] += audio[size_t(ch)] * layer.gain;
+                    if (layersGain == 0)
+                        cursor = tail.enabled ? layer.player.displayCursor : layer.player.cursor;
+                    layersGain += layer.gain;
+                    done &= layer.player.finished &&
+                            std::none_of(layer.player.grains.begin(), layer.player.grains.end(),
+                                         [](auto &g) { return g.active; });
+                }
+                if (baseGain == 0 && layersGain > 0) {
+                    layersStarted = true;
+                    finished = done;
+                    return {layersOut[0] / layersGain, layersOut[1] / layersGain};
+                }
+            }
+            layersStarted = true;
             if (samplerMode < 0) {
                 samplerMode = stretchMode;
                 samplerQuality = interpolation;
@@ -293,6 +360,13 @@ struct SourcePlayback {
                 fadeLeft = fadeLength;
             }
             activeControls = controls;
+            // Kick and Signalsmith use these two lanes independently while layered.
+            // During the short transition let the solo voice use its overlap-add fallback.
+            if (layersGain > 0) {
+                sampler.spectral = previousSampler.spectral = nullptr;
+                sampler.spectralReset = true;
+                sampler.spectralWasReady = false;
+            }
             auto out =
                 sampler.tick(data, ratio, sr, position, end, loop, reverse, samplerMode, stretch,
                              samplerQuality, width, fmOffset, kickAttack, controls, activeTail);
@@ -310,7 +384,9 @@ struct SourcePlayback {
             finished =
                 sampler.finished && std::none_of(sampler.grains.begin(), sampler.grains.end(),
                                                  [](auto &g) { return g.active; });
-            return out;
+            const float gain = baseGain + layersGain;
+            return {(out[0] * baseGain + layersOut[0]) / gain,
+                    (out[1] * baseGain + layersOut[1]) / gain};
         }
         std::array<float, 2> out{};
         if (untilGrain <= 0) {

@@ -140,12 +140,15 @@ struct SamplerPlayer {
                               float width = .5f, double fmOffset = 0, float kickAttack = 25,
                               const StretchControls &controls = {},
                               const TailLoopSettings &tail = {}) {
+        const float rateTarget =
+            std::isfinite(controls.rate) ? std::clamp(controls.rate, .125f, 8.f) : 1;
+        const bool diffuse = mode == phaseDiffusionMode;
+        const double stretchTarget = diffuse ? std::clamp(factor, minPhaseStretch, maxPhaseStretch)
+                                             : std::clamp(double(factor) / rateTarget, 1. / 64, 64.);
         if (algorithm != mode) {
             reset();
             algorithm = mode;
-            stretch =
-                std::clamp(double(factor), .125, 8.) /
-                (std::isfinite(controls.rate) ? std::clamp(double(controls.rate), .125, 8.) : 1.);
+            stretch = diffuse ? stretchTarget : std::clamp(double(factor), .125, 8.) / rateTarget;
         }
         double length = double(data.samples[0].size());
         if (length < 2)
@@ -165,8 +168,6 @@ struct SamplerPlayer {
             finished = false;
             cursor = std::max(cursor, span);
         }
-        const float rateTarget =
-            std::isfinite(controls.rate) ? std::clamp(controls.rate, .125f, 8.f) : 1;
         const float pitchTarget =
             std::isfinite(controls.semitones) ? std::clamp(controls.semitones, -48.f, 48.f) : 0;
         const float tonalityTarget = std::isfinite(controls.tonalityHz)
@@ -185,7 +186,7 @@ struct SamplerPlayer {
         pitchControl += float(smoothing) * (pitchTarget - pitchControl);
         tonalityControl += float(smoothing) * (tonalityTarget - tonalityControl);
         formantControl += float(smoothing) * (formantTarget - formantControl);
-        stretch += smoothing * (std::clamp(double(factor) / rateTarget, 1. / 64, 64.) - stretch);
+        stretch += smoothing * (stretchTarget - stretch);
         ratio *= std::exp2(double(pitchControl) / 12);
         double pitch = ratio * data.sampleRate / sr;
         auto read = [&](double offset, int ch) {

@@ -1,9 +1,9 @@
-# logisth 1.0.10 — User Manual
+# logisth 1.0.11 — User Manual
 
 wavelogik logisth is a three-part polyphonic subtractive synthesizer for VST3, CLAP and standalone use.
 This manual describes logisth's controls, sound engines and preset workflow.
 
-This edition describes **v1.0.10**. Published downloads include their corresponding manuals.
+This edition describes **v1.0.11**. Published downloads include their corresponding manuals.
 
 ## Contents
 
@@ -503,7 +503,7 @@ Tail settings also work with sampler stretching and interpolation modes.
 
 ![Part C players and shared mixer](images/logisth-part-c.png)
 
-### Granular playback and phase diffusion
+### Granular playback and Sampler stretch layers
 
 For a Granular oscillator, open **Playback** to set **Time Factor**, **Rate**,
 **Semitones** and **Interpolation**. Time Factor above 1 slows the scan or
@@ -512,13 +512,25 @@ Semitones adds to the source tuning in Cloud and in Granulizer when key routing
 controls pitch. In Cloud, set **Scan** away from zero to hear the change in
 source movement. In Granulizer, **Time Hold** still freezes the grain head.
 
-For a Sampler oscillator, open **Paul Stretch** and enable **Phase Diffusion**.
-It processes overlapping spectral windows with randomized phase to draw out
-textures and soften transients. Set the time factor and block size, then blend
-the **0.5x**, **1x** and **2x** spectral layers. Disable Phase Diffusion to
-return to the stretch algorithm selected in Playback. The spectral workspace
-can take a moment to prepare. Smaller blocks or fewer voices and unison lanes
-reduce memory use.
+For a **Sampler** oscillator, open **Stretch** and pick the algorithm to edit.
+Use **ON** to add it to the parallel mix. Pick another algorithm and switch it
+on to layer both outputs. The picker marks active layers with **[ON]**. With
+every layer off, the **Playback** page's stretch selection determines the sound.
+The conventional algorithms use the oscillator's shared time and pitch settings.
+
+Choose **PaulXStretch** in **Stretch** for long, diffused textures. Set
+**Stretch Amount** from **0.1x to 1024x** (default **2x**). **FFT Size** selects
+the actual analysis length in samples, from **256 to 262144** in powers of two
+(default **32768**). Larger windows preserve finer frequency detail and blur
+short changes more. Blend the **0.5x**, **1x** and **2x** octave layers with the
+ratio mixer. Allow a moment after changing FFT Size for the buffers to prepare.
+Smaller FFT sizes or fewer voices and unison lanes reduce memory and CPU use.
+
+This mode uses the Signalsmith Linear FFT and takes inspiration from
+PaulStretch by Nasca Octavian Paul and PaulXStretch by Xenakios and Jesse Chappell.
+[Project and credits](https://github.com/essej/paulxstretch) · [Third-party notices](../THIRD_PARTY_NOTICES.md#paulxstretch-inspiration)
+
+![PaulXStretch in the Sampler Stretch panel](images/logisth-paulxstretch.png)
 
 ## 4. Filters and shared Filter Control
 

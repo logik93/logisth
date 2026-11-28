@@ -1,4 +1,4 @@
-# logisth 1.0.10
+# logisth 1.0.11
 
 **wavelogik logisth — a three-part polyphonic subtractive synthesizer with a compact single-window console.**
 VST3, CLAP and Standalone for Windows, macOS and Linux. Built with JUCE and an
@@ -8,6 +8,14 @@ independent synthesis engine.
 [Technical Manual PDF](docs/logisth-Technical-Manual-English.pdf)
 
 ![logisth dark interface](docs/images/logisth-dark.png)
+
+## New in 1.0.11
+
+**Sampler → Stretch** gives each algorithm an **ON** switch for parallel
+playback. **PaulXStretch** adds independent **Stretch Amount** and **FFT Size**
+controls alongside its octave ratio mixer. The mode is an original logisth
+implementation inspired by PaulStretch and PaulXStretch, using Signalsmith
+Linear's FFT. [Release notes](docs/RELEASE-v1.0.11.md) · [Credits](THIRD_PARTY_NOTICES.md#paulxstretch-inspiration)
 
 ## New in 1.0.10
 

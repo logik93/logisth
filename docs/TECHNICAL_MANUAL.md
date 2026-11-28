@@ -1,14 +1,14 @@
-# logisth 1.0.10 — Technical Manual
+# logisth 1.0.11 — Technical Manual
 
 **wavelogik · Architecture, DSP and Engineering Reference**
 
-Document revision: 2.7 · Software baseline: 1.0.10 · State schema: 4
+Document revision: 2.8 · Software baseline: 1.0.11 · State schema: 4
 
-Implementation baseline: release tag `v1.0.10`. The technical identity manifest
+Implementation baseline: release tag `v1.0.11`. The technical identity manifest
 records the CMake/runtime source identity. Native BUILD_INFO records its tagged
 commit, tree fingerprints, binary hashes and manual identities.
 
-This reference describes the implementation of logisth 1.0.10. It is
+This reference describes the implementation of logisth 1.0.11. It is
 intended for sound designers, audio engineers, contributors and integrators.
 The [User Manual](MANUAL.md) describes operating the interface; this document
 explains how its controls affect processing, how data is stored and which
@@ -54,7 +54,7 @@ a player is one source slot; a unison lane is one component inside a player.
 | Player engines | Classic, Wavetable, Sampler, Granular |
 | Note polyphony | 1–32 voices, default 16; mono/legato and portamento available |
 | Unison selection | 0–8 lanes per player; 0 disables the player |
-| Host parameter count | 1091, including the Bend and Mod automation controls |
+| Host parameter count | 1177, including independent Sampler layer switches and per-oscillator PaulXStretch settings |
 | Modulators | Two modulation ADSRs, two LFOs, four miscellaneous source selectors, two destinations per modulator |
 | Performance macros | Four macros, four target assignments each |
 | Pattern memory | Twelve pattern slots; sequences up to 32 steps |
@@ -340,16 +340,28 @@ instead of allocating without a bound.
 Implementation: [Sampler.h](../Source/Sampler.h), [Spectral.h](../Source/Spectral.h),
 [SourceAssets.cpp](../Source/SourceAssets.cpp).
 
-### Phase diffusion and ratio mixing
+### PaulXStretch and parallel Sampler layers
 
-The Sampler can override its playback algorithm with the phase diffusion
-option on the Paul Stretch page. The adapter uses the licensed Signalsmith
-Linear FFT and original logisth source for the stretch. Each frame uses a
-square-root Hann window and four-way overlap. Shared phase rotations preserve
-the stereo relationship. The mixer remaps bins to 0.5x, 1x and 2x frequency
-ratios with band limiting at Nyquist. The existing spectral pool owns the
-working buffers, allocates them off the audio thread and bounds their size.
-[PaulXStretch project](https://github.com/essej/paulxstretch)
+Each enabled layer on the Sampler Stretch page keeps its own playback cursor
+and algorithm state. Their outputs are mixed at equal weight, with short ramps
+when layers are enabled or disabled. When every layer is off, the original
+Playback selection drives the oscillator. Kick, Signalsmith Stretch and
+PaulXStretch can use separate spectral streams for the same voice.
+
+PaulXStretch uses an original logisth phase diffusion implementation and the
+MIT-licensed Signalsmith Linear FFT. It uses square-root Hann windows with
+four-way overlap and shared phase rotations for stereo. Each new frame advances
+the input head by one hop divided by **Stretch Amount** (0.1x to 1024x, default
+2x). The octave mixer remaps bins to 0.5x, 1x and 2x within the Nyquist limit.
+**FFT Size** sets the actual power-of-two analysis length in host samples
+(256 to 262144, default 32768). Changing this size rebuilds only the affected
+prepared streams off the audio thread. The pool's memory budget covers both
+Signalsmith and PaulXStretch streams. The two Signalsmith lanes and one
+PaulXStretch lane are accounted for independently.
+
+Credits include Nasca Octavian Paul for PaulStretch, and Xenakios and Jesse
+Chappell for PaulXStretch. The standard parameter ranges were checked against
+the upstream project. [PaulXStretch project](https://github.com/essej/paulxstretch) · [Third-party notices](../THIRD_PARTY_NOTICES.md#paulxstretch-inspiration)
 
 ## 7. Granular synthesis
 
@@ -1083,3 +1095,4 @@ the release tag matching a binary when investigating a specific implementation.
 | 2.5 | 1.0.6 | Windows Standalone ASIO backend and native registration test |
 | 2.6 | 1.0.8 | FL Studio octave-wide Master Pitch fallback and Bend scale of −12 to +12 |
 | 2.7 | 1.0.10 | Flanger, granular playback controls and Sampler phase diffusion |
+| 2.8 | 1.0.11 | PaulXStretch Amount and FFT Size, parallel Sampler layers and upstream credits |

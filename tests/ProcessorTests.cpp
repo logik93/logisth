@@ -32,6 +32,45 @@ void check(bool ok, const char *message) {
     if (!ok)
         throw std::runtime_error(message);
 }
+static void checkSamplerLayerUi() {
+    using namespace juce;
+    auto processor = std::make_unique<LogisthProcessor>();
+    auto &p = *processor;
+    gain_test::set(p, "o1engine", 2);
+    std::unique_ptr<AudioProcessorEditor> ui(p.createEditor());
+    auto *editor = dynamic_cast<LogisthEditor *>(ui.get());
+    auto *console = ui->getChildComponent(0);
+    auto *source = dynamic_cast<ComboBox *>(console->findChildWithID("source.view.0"));
+    check(source && source->indexOfItemId(10) >= 0 && source->indexOfItemId(12) < 0,
+          "PaulXStretch moved into Sampler Stretch");
+    source->setSelectedId(10, sendNotificationSync);
+    auto *algorithm = dynamic_cast<ComboBox *>(console->findChildWithID("source.stretch.algorithm.0"));
+    check(algorithm && algorithm->isVisible() && algorithm->getNumItems() == 8,
+          "all eight stretch layers can be edited from one place");
+    auto find = [&](const char *id) -> Component * {
+        auto *control = console->findChildWithID(id);
+        if (!control || !control->isVisible())
+            return nullptr;
+        for (auto *widget : control->getChildren())
+            if (widget->isVisible() && (dynamic_cast<ToggleButton *>(widget) ||
+                                        dynamic_cast<Slider *>(widget) ||
+                                        dynamic_cast<ComboBox *>(widget)))
+                return widget;
+        return nullptr;
+    };
+    for (const auto &item : {std::pair{1, "o1stretchon1"}, std::pair{8, "o1paul"}}) {
+        algorithm->setSelectedId(item.first, sendNotificationSync);
+        auto *on = dynamic_cast<ToggleButton *>(find(item.second));
+        check(on && on->getButtonText() == "ON", "each algorithm exposes its own On button");
+        on->setToggleState(true, sendNotificationSync);
+    }
+    auto *fft = dynamic_cast<ComboBox *>(find("o1paulfft"));
+    check(fft && fft->getNumItems() == 11 && fft->getText() == "32768" && find("o1paulamount") &&
+              p.samplerLayerMask(0) == ((1u << 1) | (1u << 8)),
+          "dedicated FFT/amount controls and independent layer flags");
+    check(editor && editor->validateLayout().isEmpty(), "combined Stretch layout remains clear");
+    std::cout << "PASS sampler stretch controls: all eight modes, independent On buttons and dedicated FFT/amount\n";
+}
 void checkPerformanceWheels() {
     using namespace juce;
     auto p = std::make_unique<LogisthProcessor>();
@@ -1169,6 +1208,11 @@ int main(int argc, char **argv) {
                            juce::File(juce::String::fromUTF8(argv[2])));
             return 0;
         }
+        if (argc > 1 && juce::String(argv[1]) == "--sampler-layers-check") {
+            checkSamplerLayerUi();
+            return 0;
+        }
+        checkSamplerLayerUi();
         appearance_test::run();
         theme_advanced_test::run();
         features092_test::run();
@@ -1401,6 +1445,7 @@ int main(int argc, char **argv) {
             check(ui->getChildComponent(0)->findChildWithID("graph.canvas") == nullptr &&
                       p.state.getParameter("arpgraphs") == nullptr,
                   "Graphs is removed from the editor and parameter model");
+
         }
         p.setStateInformation(uiState.getData(), int(uiState.getSize()));
         if (argc > 1) {
