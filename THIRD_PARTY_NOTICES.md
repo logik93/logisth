@@ -45,8 +45,8 @@ PaulStretch, originally developed by Nasca Octavian Paul, and PaulXStretch by
 Xenakios and Jesse Chappell inspired the Sampler mode. Its Stretch Amount and
 standard FFT range were checked against the upstream PaulXStretch project.
 The logisth DSP is implemented here and uses the MIT-licensed Signalsmith Linear
-FFT. No PaulXStretch source files are included or linked. The upstream
-PaulXStretch project's license is GPLv3 with its stated exceptions.
+FFT. The upstream repository is credited for the design and parameter
+reference. PaulXStretch is licensed under GPLv3 with its stated exceptions.
 [PaulXStretch upstream](https://github.com/essej/paulxstretch) · [Upstream license](https://github.com/essej/paulxstretch/blob/b6175e904a445809b45b3a5ee8e18501055cd2ef/LICENSE)
 
 ## AP logo artwork
