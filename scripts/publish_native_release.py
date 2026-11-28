@@ -145,8 +145,9 @@ def main():
     if release_info is None:
         if set(args.platforms) != set(PLATFORMS[:2]):
             raise ValueError('Publish Windows/Linux together before appending macOS')
+        display_version = version.removesuffix('.0') if version.count('.') == 2 else version
         subprocess.run(['gh', 'release', 'create', args.tag, '--draft', '--verify-tag', '--title',
-                        f'wavelogik logisth {version}', '--notes-file', f'docs/RELEASE-{args.tag}.md',
+                        f'wavelogik logisth {display_version}', '--notes-file', f'docs/RELEASE-{args.tag}.md',
                         '--repo', repository], check=True)
         release_info = find_release(repository, args.tag)
         if release_info is None:

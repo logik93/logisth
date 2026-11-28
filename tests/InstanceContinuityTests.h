@@ -93,7 +93,8 @@ inline void checkTrimControls(const File &report) {
     auto *console = editor->getChildComponent(0);
     auto *slotMenu = dynamic_cast<ComboBox *>(console->findChildWithID("sample.slot"));
     auto *wave = console->findChildWithID("sample.waveform");
-    gain_test::require(slotMenu && wave, "Sample page present");
+    auto *position = dynamic_cast<Label *>(console->findChildWithID("sample.position"));
+    gain_test::require(slotMenu && wave && position, "Sample page present");
     auto field = [&](const char *name) -> Slider & {
         if (auto *control = console->findChildWithID(name))
             for (auto *c : control->getChildren())
@@ -109,6 +110,20 @@ inline void checkTrimControls(const File &report) {
             features0983_test::selectChoice(*console, prefix + "engine", mode + 1);
             features0983_test::tick();
             auto &start = field("sample.start"), &end = field("sample.end");
+            logisth::PlaybackPicture live;
+            live.active = true;
+            live.position = .4275f;
+            live.revision = p->sourceData(slot)->revision;
+            p->playback[size_t(slot)].write(live);
+            features0983_test::tick();
+            gain_test::require(position->isVisible() && position->getText() == "42.75%" &&
+                                   position->getX() >= start.getParentComponent()->getRight() &&
+                                   position->getRight() <= end.getParentComponent()->getX(),
+                               "live playhead readout is between trim controls");
+            ++live.revision;
+            p->playback[size_t(slot)].write(live);
+            features0983_test::tick();
+            gain_test::require(position->getText() == "--", "discard playhead from replaced source");
             auto *a = p->state.getParameter(prefix + (mode == 2 ? "position" : "trimstart"));
             auto *b = p->state.getParameter(prefix + "end");
             gain_test::require(editor->getControlParameterIndex(start) == a->getParameterIndex() &&
@@ -161,11 +176,34 @@ inline void checkTrimControls(const File &report) {
                 gain_test::require(PNGImageFormat{}.writeImageToStream(image, stream),
                                    "trim marker detail");
             }
+            if (slot == 0 && mode == 2) {
+                gain_test::set(*p, prefix + "position", .2f);
+                gain_test::set(*p, prefix + "end", .8f);
+                gain_test::set(*p, prefix + "tailon", 1);
+                auto dragLoop = [&](float y, float destination) {
+                    gain_test::set(*p, prefix + "tailstart", .5f);
+                    gain_test::set(*p, prefix + "tailend", .5f);
+                    auto from = Point<float>{.5f * wave->getWidth(), y};
+                    auto to = Point<float>{destination * wave->getWidth(), y};
+                    wave->mouseDown(features0983_test::event(*wave, from, true));
+                    wave->mouseDrag(features0983_test::event(*wave, to, true));
+                    wave->mouseUp(features0983_test::event(*wave, to, false));
+                };
+                auto raw = [&](const char *id) { return p->state.getRawParameterValue(prefix + id)->load(); };
+                dragLoop(145, .4f);
+                gain_test::require(std::abs(raw("tailstart") - .4f) < .00001f && raw("tailend") == .5f,
+                                   "upper loop grip moves only LOOP IN when both are aligned");
+                dragLoop(169, .6f);
+                gain_test::require(raw("tailstart") == .5f && std::abs(raw("tailend") - .6f) < .00001f &&
+                                       raw("position") == .2f && raw("end") == .8f,
+                                   "lower loop grip moves only LOOP OUT and keeps sample trim");
+            }
         }
         features0983_test::selectChoice(*console, prefix + "engine", 1);
         features0983_test::tick();
         gain_test::require(!console->findChildWithID("sample.start")->isVisible() &&
-                               !console->findChildWithID("sample.end")->isVisible(),
+                               !console->findChildWithID("sample.end")->isVisible() &&
+                               !position->isVisible(),
                            "trim hidden for classic");
         const auto position = p->state.getParameter(prefix + "position")->getValue();
         wave->mouseDown(features0983_test::event(*wave, {12, 90}, true));

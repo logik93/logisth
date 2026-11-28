@@ -1,14 +1,14 @@
-# logisth 1.0.11 — Technical Manual
+# logisth 1.1.0 — Technical Manual
 
 **wavelogik · Architecture, DSP and Engineering Reference**
 
-Document revision: 2.8 · Software baseline: 1.0.11 · State schema: 4
+Document revision: 2.9 · Software baseline: 1.1.0 · State schema: 4
 
-Implementation baseline: release tag `v1.0.11`. The technical identity manifest
+Implementation baseline: release tag `v1.1.0`. The technical identity manifest
 records the CMake/runtime source identity. Native BUILD_INFO records its tagged
 commit, tree fingerprints, binary hashes and manual identities.
 
-This reference describes the implementation of logisth 1.0.11. It is
+This reference describes the implementation of logisth 1.1.0. It is
 intended for sound designers, audio engineers, contributors and integrators.
 The [User Manual](MANUAL.md) describes operating the interface; this document
 explains how its controls affect processing, how data is stored and which
@@ -54,7 +54,7 @@ a player is one source slot; a unison lane is one component inside a player.
 | Player engines | Classic, Wavetable, Sampler, Granular |
 | Note polyphony | 1–32 voices, default 16; mono/legato and portamento available |
 | Unison selection | 0–8 lanes per player; 0 disables the player |
-| Host parameter count | 1177, including independent Sampler layer switches and per-oscillator PaulXStretch settings |
+| Host parameter count | 1193, including sixteen independent per-band EQ cut slopes |
 | Modulators | Two modulation ADSRs, two LFOs, four miscellaneous source selectors, two destinations per modulator |
 | Performance macros | Four macros, four target assignments each |
 | Pattern memory | Twelve pattern slots; sequences up to 32 steps |
@@ -271,7 +271,7 @@ Implementation: [Sampler.h](../Source/Sampler.h), [SourceAssets.cpp](../Source/S
 
 ### Trim automation and instance lifetime
 
-The two Sample-page fields attach directly to the selected player's existing automation parameters. Sampler START uses `oNposition`, granular START uses `oNtrimstart` and both engines use `oNend`. The engine switch preserves the independent granular launch position. Each waveform endpoint owns its own host gesture. Captions occupy a rail above playback telemetry.
+The Sample-page START and END fields attach directly to the selected player's existing automation parameters. Sampler START uses `oNposition`, granular START uses `oNtrimstart` and both engines use `oNend`. POSITION reads the same per-player playback telemetry as the waveform and verifies the source revision before showing a value. The engine switch preserves the independent granular launch position. Each waveform endpoint owns its own host gesture. The loop grips occupy separate vertical hit areas so coincident endpoints can be edited independently.
 
 The audio graph may negotiate a new maximum block size while a MIDI note is held. Preparation rebuilds rate-dependent DSP when the sample rate changes. The VST3 wrapper maps a processing suspension to a processor reset. For a prepared realtime instance, the processor defers that reset. A transition from playing to stopped or a discontinuity in all comparable clocks clears suspended voices. MIDI notes begun without a transport report, or played live while the transport stays stopped, retain their voice state. Audio and incoming events keep their sample offsets during gaps in timing metadata. Offline resets are immediate, and a pending realtime restart clears DSP before an offline bounce renders audio.
 
@@ -603,15 +603,20 @@ normalized by the window sum (DC/Nyquist have no doubling). The trace averages
 L/R power before 10 log10, avoiding antiphase cancellation. A bin-centered
 full-scale stereo sine is 0 dBFS; doubling it gives +6.0206 dB. Attack/release
 smoothing is visual. Display tilt is `1.5 * choice * log2(f/1000)`, choice 0–4.
-It does not alter audio coefficients. Off or a hidden/closed EQ view disables
-capture and FFT work. The response curve remains available with the analyzer off.
+The independent PRE and POST buttons map to the persisted analyzer mode bits.
+With both off or the EQ view hidden, capture and FFT work stop. The response
+curve stays visible with both traces off, and display tilt affects only the traces.
 
 Graphic EQ types are Bell, Low shelf, High shelf, High-pass, Low-pass, Notch,
 Band-pass and All-pass. Frequency spans 20–20000 Hz, gain −18–18 dB and Q 0.1–20;
 coefficients additionally respect the host's Nyquist region. Ten slots start
 enabled and six are available to add. Gain/frequency/Q smoothing uses about
-15 ms; type changes crossfade over about 20 ms. The graph evaluates the same
-coefficient model used by processing. Auto Gain estimates the largest boost
+15 ms. High-pass and Low-pass select one to four biquads for 12, 24, 36 or 48
+dB/octave. Each higher order uses paired Butterworth poles with Q distributed
+across its sections to preserve the cutoff magnitude. The default one-stage
+path retains the original response. Type and slope changes crossfade over about
+20 ms. The graph evaluates the same coefficients at the host sample rate.
+Auto Gain estimates the largest boost
 over 96 log-spaced frequencies and compensates it; it is not a loudness meter
 or an LUFS normalization process.
 
@@ -1096,3 +1101,4 @@ the release tag matching a binary when investigating a specific implementation.
 | 2.6 | 1.0.8 | FL Studio octave-wide Master Pitch fallback and Bend scale of −12 to +12 |
 | 2.7 | 1.0.10 | Flanger, granular playback controls and Sampler phase diffusion |
 | 2.8 | 1.0.11 | PaulXStretch Amount and FFT Size, parallel Sampler layers and upstream credits |
+| 2.9 | 1.1.0 | Live Sample position, independent loop grips, EQ cut slope and separate analyzer switches |

@@ -1,4 +1,4 @@
-# logisth 1.0.11
+# logisth 1.1
 
 **wavelogik logisth — a three-part polyphonic subtractive synthesizer with a compact single-window console.**
 VST3, CLAP and Standalone for Windows, macOS and Linux. Built with JUCE and an
@@ -8,6 +8,13 @@ independent synthesis engine.
 [Technical Manual PDF](docs/logisth-Technical-Manual-English.pdf)
 
 ![logisth dark interface](docs/images/logisth-dark.png)
+
+## New in 1.1
+
+**Sample** now shows the live **Position** between **Start** and **End**. Loop
+grips remain independent when their endpoints share a pixel. Graphic EQ adds
+12, 24, 36 and 48 dB/octave cut slopes and separate **Pre** and **Post**
+analyzer switches. [Release notes](docs/RELEASE-v1.1.0.md)
 
 ## New in 1.0.11
 

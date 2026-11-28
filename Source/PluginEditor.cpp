@@ -529,7 +529,7 @@ class LogisthEditor::Console : public Component,
                             menu.getRootMenu()->addSectionHeader("Individual WT players");
                         String name = choices[i];
                         if (String(spec.id).endsWith("slope"))
-                            name = i == 0 ? "12 dB" : "24 dB";
+                            name = name.replace("/oct", "");
                         if (String(spec.id).contains("dest")) {
                             name = name.replace(" and B", "+B")
                                        .replace("Resonance", "Reso")
@@ -1455,6 +1455,11 @@ class LogisthEditor::Console : public Component,
         setLookAndFeel(&look);
         addChildComponent(patternCanvas);
         addChildComponent(waveView);
+        samplePosition.setComponentID("sample.position");
+        samplePosition.setName("Sample playback position");
+        samplePosition.setJustificationType(Justification::centred);
+        samplePosition.setInterceptsMouseClicks(false, false);
+        addChildComponent(samplePosition);
         addAndMakeVisible(scopeView);
         addChildComponent(eqView);
         addChildComponent(distortionView);
@@ -1517,9 +1522,7 @@ class LogisthEditor::Console : public Component,
                 processor, parameterSpecs[size_t(eqBandTypes[size_t(selectedEqBand)]) + 3].id, 0);
             eqView.repaint();
         };
-        eqHelp.setFont(font(9));
-        eqHelp.setText("Drag: freq/gain\nWheel: Q", dontSendNotification);
-        for (Component *c : std::array<Component *, 4>{&eqBandSelect, &eqAdd, &eqRemove, &eqHelp})
+        for (Component *c : std::array<Component *, 3>{&eqBandSelect, &eqAdd, &eqRemove})
             addChildComponent(*c);
         for (int i = 0; i < 4; ++i) {
             distortionButtons[size_t(i)] = std::make_unique<DistortionButton>(*this, i);
@@ -1530,37 +1533,28 @@ class LogisthEditor::Console : public Component,
                                dontSendNotification);
         distortionHelp.setFont(font(10));
         addChildComponent(distortionHelp);
-        eqAnalysis.setComponentID("eq.analyzer.mode");
-        eqAnalysis.addItemList({"Off", "Pre", "Post", "Pre + Post"}, 1);
+        eqPre.setComponentID("eq.analyzer.pre");
+        eqPost.setComponentID("eq.analyzer.post");
+        eqPre.setButtonText("PRE");
+        eqPost.setButtonText("POST");
+        eqPre.setTooltip("Show the spectrum at the EQ input");
+        eqPost.setTooltip("Show the spectrum at the EQ output");
+        for (auto *button : {&eqPre, &eqPost}) {
+            button->setClickingTogglesState(true);
+            button->onClick = [this] { saveEqAnalyzer(); };
+        }
         eqTilt.setComponentID("eq.analyzer.tilt");
         eqTilt.addItemList({"0 dB/oct", "1.5 dB/oct", "3 dB/oct", "4.5 dB/oct", "6 dB/oct"}, 1);
+        eqTilt.getProperties().set("dark", true);
+        eqTilt.setTooltip("Analyzer display tilt. The EQ response stays the same.");
+        eqTilt.onChange = [this] { saveEqAnalyzer(); };
         eqAnalysisLabel.setText("ANALYZER", dontSendNotification);
         eqTiltLabel.setText("TILT", dontSendNotification);
-        eqLegendPre.setText("PRE", dontSendNotification);
-        eqLegendPost.setText("POST", dontSendNotification);
-        for (auto *label : {&eqAnalysisLabel, &eqTiltLabel, &eqLegendPre, &eqLegendPost})
+        for (auto *label : {&eqAnalysisLabel, &eqTiltLabel})
             label->setFont(font(9));
-        for (auto *box : {&eqAnalysis, &eqTilt}) {
-            box->getProperties().set("dark", true);
-            box->onChange = [this] {
-                const auto value = UserSettings::Analyzer{eqAnalysis.getSelectedId() - 1,
-                                                          eqTilt.getSelectedId() - 1};
-                if (!UserSettings::setAnalyzer(value))
-                    readout = "Analyzer preference could not be saved.";
-                eqView.setAnalyzer(value.mode, value.tilt);
-                processor.eqSpectrumEnabled = value.mode && eqView.isShowing();
-                repaint();
-            };
-        }
-        auto analyzer = UserSettings::analyzer();
-        eqAnalysis.setSelectedId(analyzer.mode + 1, dontSendNotification);
-        eqTilt.setSelectedId(analyzer.tilt + 1, dontSendNotification);
-        eqView.setAnalyzer(analyzer.mode, analyzer.tilt);
-        eqTilt.setTooltip(
-            "Analyzer display slope, anchored at 1 kHz. Does not change the EQ sound.");
-        for (Component *c : std::array<Component *, 6>{&eqAnalysis, &eqTilt, &eqAnalysisLabel,
-                                                       &eqTiltLabel, &eqLegendPre, &eqLegendPost})
+        for (Component *c : std::array<Component *, 5>{&eqPre, &eqPost, &eqTilt, &eqAnalysisLabel, &eqTiltLabel})
             addChildComponent(*c);
+        applyEqAnalyzer(UserSettings::analyzer());
         modulationToggle.setComponentID("ui.modulation");
         modulationToggle.setButtonText("MODULATION -");
         modulationToggle.setName("Show or hide modulation controls");
@@ -2392,8 +2386,16 @@ class LogisthEditor::Console : public Component,
             }
             const String label = i == 0 ? "START" : "END";
             field->setName("Sample " + label.toLowerCase());
-            field->configure({734 + int(i) * 103, 289, 97, 23}, Style::Number, label, true);
+            field->configure(i == 0 ? Rectangle<int>{663, 289, 93, 23}
+                                    : Rectangle<int>{844, 289, 90, 23},
+                             Style::Number, label, true);
         }
+        samplePosition.setFont(font(10));
+        samplePosition.setBorderSize({});
+        samplePosition.setColour(Label::textColourId, screenText);
+        samplePosition.setBounds(762, 299, 76, 13);
+        samplePosition.setText(waveView.playbackPositionText(), dontSendNotification);
+        samplePosition.setVisible(true);
     }
     bool rackHeadingVisible() const {
         return !settingsOpen && rack != 1 && rack != 9 && rack != 10 && rack != 4 && rack != 7 &&
@@ -4097,21 +4099,20 @@ class LogisthEditor::Console : public Component,
             put(Param::eqmode, {414, 289, 114, 24}, Style::Menu, {}, true);
             put(Param::eqautogain, {536, 289, 100, 24}, Style::Toggle, "AUTO GAIN", true);
             eqAnalysisLabel.setBounds(414, 317, 78, 22);
-            eqAnalysis.setBounds(494, 317, 138, 22);
+            eqPre.setBounds(494, 317, 66, 22);
+            eqPost.setBounds(568, 317, 66, 22);
             eqTiltLabel.setBounds(646, 317, 40, 22);
             eqTilt.setBounds(688, 317, 116, 22);
-            eqLegendPre.setBounds(816, 317, 54, 22);
-            eqLegendPost.setBounds(878, 317, 56, 22);
-            for (Component *c :
-                 std::array<Component *, 6>{&eqAnalysis, &eqTilt, &eqAnalysisLabel, &eqTiltLabel,
-                                            &eqLegendPre, &eqLegendPost})
-                c->setVisible(true);
-            for (auto *label : {&eqAnalysisLabel, &eqTiltLabel, &eqLegendPre, &eqLegendPost})
+            eqAnalysisLabel.setVisible(true);
+            for (auto *label : {&eqAnalysisLabel, &eqTiltLabel})
                 label->setColour(Label::textColourId, screenText);
-            eqLegendPre.setColour(Label::textColourId, mint);
-            eqLegendPost.setColour(Label::textColourId, screenAccent);
+            eqPre.setColour(TextButton::buttonOnColourId, mint);
+            eqPost.setColour(TextButton::buttonOnColourId, screenAccent);
+            eqPre.setColour(TextButton::textColourOnId, screen);
+            eqPost.setColour(TextButton::textColourOnId, screen);
             eqView.setBounds(414, 345, 520, 87);
             eqView.setVisible(true);
+            applyEqAnalyzer(UserSettings::analyzer());
             if (value(Param::eqmode) > 0) {
                 eqBandSelect.setBounds(644, 289, 112, 24);
                 eqBandSelect.setVisible(true);
@@ -4127,9 +4128,9 @@ class LogisthEditor::Console : public Component,
                 put(Param(at), {414, 440, 158, 34}, Style::Menu, "TYPE", true);
                 put(Param(at + 3), {582, 447, 82, 25}, Style::Toggle, "ENABLED", true);
                 put(Param::eqoutput, {414, 482, 112, 34}, Style::Number, "OUTPUT", true);
-                eqHelp.setBounds(538, 477, 126, 42);
-                eqHelp.setVisible(true);
-                eqHelp.setColour(Label::textColourId, screenText);
+                const auto slope = eqBandSlope(selectedEqBand);
+                put(slope, {538, 482, 126, 34}, Style::Menu, "SLOPE (dB/OCT)", true);
+                controls[size_t(slope)]->enable(eqIsCut(int(value(Param(at)))));
                 put(Param(at + 1), {672, 440, 82, 76}, Style::Knob, "FREQ", true);
                 put(eqBandGains[size_t(selectedEqBand)], {762, 440, 82, 76}, Style::Knob, "GAIN",
                     true);
@@ -4338,6 +4339,7 @@ class LogisthEditor::Console : public Component,
         }
         patternCanvas.setVisible(false);
         waveView.setVisible(false);
+        samplePosition.setVisible(false);
         for (auto &field : sampleTrim)
             if (field)
                 field->setVisible(false);
@@ -4350,8 +4352,8 @@ class LogisthEditor::Console : public Component,
         for (auto &button : distortionButtons)
             button->setVisible(false);
         distortionHelp.setVisible(false);
-        for (Component *c : std::array<Component *, 6>{&eqAnalysis, &eqTilt, &eqAnalysisLabel,
-                                                       &eqTiltLabel, &eqLegendPre, &eqLegendPost})
+        for (Component *c : std::array<Component *, 5>{&eqPre, &eqPost, &eqTilt, &eqAnalysisLabel,
+                                                       &eqTiltLabel})
             c->setVisible(false);
         impulseView.setVisible(false);
         dynamicsView.setVisible(false);
@@ -4360,7 +4362,7 @@ class LogisthEditor::Console : public Component,
                                         : rack == 11 ? 1
                                                      : 2)
                                      : -1;
-        for (Component *c : std::array<Component *, 4>{&eqBandSelect, &eqAdd, &eqRemove, &eqHelp})
+        for (Component *c : std::array<Component *, 3>{&eqBandSelect, &eqAdd, &eqRemove})
             c->setVisible(false);
         waveSlot.setVisible(false);
         for (auto &area : sourceWave)
@@ -4497,6 +4499,28 @@ class LogisthEditor::Console : public Component,
         state[13 + 4 * playerCount] = int(value(Param::distbands));
         return state;
     }
+    void saveEqAnalyzer() {
+        // Keep the original preference bits so PRE and POST can toggle independently.
+        const int mode = (eqPre.getToggleState() ? 1 : 0) | (eqPost.getToggleState() ? 2 : 0);
+        const UserSettings::Analyzer analyzer{mode, eqTilt.getSelectedId() - 1};
+        if (!UserSettings::setAnalyzer(analyzer))
+            readout = "Analyzer preference could not be saved.";
+        applyEqAnalyzer(analyzer);
+        repaint();
+    }
+    void applyEqAnalyzer(UserSettings::Analyzer analyzer) {
+        const bool visible = eqView.isVisible();
+        const bool enabled = analyzer.mode != 0;
+        eqPre.setToggleState((analyzer.mode & 1) != 0, dontSendNotification);
+        eqPost.setToggleState((analyzer.mode & 2) != 0, dontSendNotification);
+        eqPre.setVisible(visible);
+        eqPost.setVisible(visible);
+        eqTilt.setSelectedId(analyzer.tilt + 1, dontSendNotification);
+        eqTilt.setVisible(visible && enabled);
+        eqTiltLabel.setVisible(visible && enabled);
+        processor.eqSpectrumEnabled = enabled && eqView.isShowing();
+        eqView.setAnalyzer(analyzer.mode, analyzer.tilt);
+    }
     void refreshImpulseLabel() {
         auto data = processor.impulseData();
         if (!data)
@@ -4528,13 +4552,9 @@ class LogisthEditor::Console : public Component,
             distortionView.updateSpectrum();
         }
         const auto analyzer = UserSettings::analyzer();
-        processor.eqSpectrumEnabled = eqView.isShowing() && analyzer.mode != 0;
-        if (eqView.isVisible()) {
-            eqAnalysis.setSelectedId(analyzer.mode + 1, dontSendNotification);
-            eqTilt.setSelectedId(analyzer.tilt + 1, dontSendNotification);
-            eqView.setAnalyzer(analyzer.mode, analyzer.tilt);
+        applyEqAnalyzer(analyzer);
+        if (eqView.isVisible())
             eqView.updateSpectrum();
-        }
         for (auto &button : distortionButtons)
             if (button->isVisible())
                 button->repaint();
@@ -4597,6 +4617,8 @@ class LogisthEditor::Console : public Component,
             waveView.setMode(
                 int(value(Param(playerParamIndex(Param::o1engine, waveView.selectedSlot(), 16)))));
             waveView.repaint();
+            if (samplePosition.isVisible())
+                samplePosition.setText(waveView.playbackPositionText(), dontSendNotification);
         }
         for (int slot = 0; slot < playerCount; ++slot) {
             auto picture = processor.playback[size_t(slot)].read();
@@ -4802,8 +4824,10 @@ class LogisthEditor::Console : public Component,
                     title = "SAMPLE / STRETCH LAYERS";
             }
             const Rectangle<int> titleArea =
-                mode >= 2 ? Rectangle<int>(491, 289, 236, 23) : Rectangle<int>(540, 289, 295, 23);
+                mode >= 2 ? Rectangle<int>(491, 289, 166, 23) : Rectangle<int>(540, 289, 295, 23);
             drawCaption(g, title, titleArea, 11, screenText);
+            if (samplePosition.isVisible())
+                drawCaption(g, "POSITION", {762, 288, 76, 12}, 8, mint, Justification::centred);
         } else if (rack == 8) {
             drawCaption(g, "TRIGGER", {414, 309, 140, 18}, 9, mint);
             drawCaption(g, "VOICING", {566, 309, 145, 18}, 9, mint);
@@ -4927,6 +4951,7 @@ class LogisthEditor::Console : public Component,
     PatternCanvas patternCanvas;
     logisth_ui::WaveView waveView;
     std::array<std::unique_ptr<Control>, 2> sampleTrim;
+    Label samplePosition;
     logisth_ui::ScopeView scopeView;
     logisth_ui::ImpulseView impulseView;
     logisth_ui::DynamicsView dynamicsView;
@@ -4936,12 +4961,12 @@ class LogisthEditor::Console : public Component,
     int previewDistortion = -1, previewDistortionBands = -1;
     ComboBox eqBandSelect;
     TextButton eqAdd, eqRemove;
-    Label eqHelp;
     int selectedEqBand = 0, selectedDistortion = 0;
     std::array<std::unique_ptr<DistortionButton>, 4> distortionButtons;
     Label distortionHelp;
-    ComboBox eqAnalysis, eqTilt;
-    Label eqAnalysisLabel, eqTiltLabel, eqLegendPre, eqLegendPost;
+    TextButton eqPre, eqPost;
+    ComboBox eqTilt;
+    Label eqAnalysisLabel, eqTiltLabel;
     std::array<logisth_ui::ClickArea, playerCount> sourceWave;
     std::array<ToggleButton, 4> scopeSources;
     TextButton presetFiles;

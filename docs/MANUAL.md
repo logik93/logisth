@@ -1,9 +1,9 @@
-# logisth 1.0.11 — User Manual
+# logisth 1.1.0 — User Manual
 
 wavelogik logisth is a three-part polyphonic subtractive synthesizer for VST3, CLAP and standalone use.
 This manual describes logisth's controls, sound engines and preset workflow.
 
-This edition describes **v1.0.11**. Published downloads include their corresponding manuals.
+This edition describes **v1.1.0**. Published downloads include their corresponding manuals.
 
 ## Contents
 
@@ -455,9 +455,11 @@ their mode. An invalid file keeps the previous source and mode. While dragging,
 the waveform highlights the destination. Loading and waveform-peak generation
 run in the background; long samples keep waveform zoom/pan responsive. It draws the actual stereo amplitude envelope,
 region markers, start/end and the most recent active voice's scanner, plus up to
-16 active grain positions. Use **START** and **END** above the waveform to drag or enter percentages. Drag a waveform handle to record just that endpoint or drag across the waveform to select a new range. The wheel zooms around the pointer and Shift-wheel pans.
+16 active grain positions. Use **START** and **END** above the waveform to drag or enter percentages. **POSITION**, between them, shows the current playhead as a percentage of the full source and displays `--` when the selected player has no active position to show. Drag a waveform handle to record just that endpoint or drag across the waveform to select a new range. The wheel zooms around the pointer and Shift-wheel pans.
 
 For automation, select the player in SAMPLE and touch its START or END field with the host in automation write mode. In the host parameter list, SOURCE 1–6 correspond to A1, A2, B1, B2, C1 and C2. Sampler START uses **Position**. Both granular models use **Trim start** for the lower playback boundary and keep **Position** available for the grain scanner. END uses **Sample end**. These controls also save with the preset. The labels sit above the moving playhead.
+
+![Sample position readout and separated Loop In and Out grips](images/logisth-sample-position.png)
 
 Enable OSC ENVELOPE in ENV to give a slot an additional attack, decay, sustain
 and release. A part's shared envelope still limits its final output. New
@@ -486,8 +488,9 @@ END. It then repeats only the tail region while the note's amplitude envelope
 remains active. Note-off follows the usual release envelope. Reverse playback
 traverses the full selection backward, then repeats the marked tail backward.
 
-In SAMPLE, hold **Alt and drag** to mark the tail. Drag its lower IN/OUT handles
-to adjust it; ordinary dragging still edits the main START/END range. Wheel
+In SAMPLE, hold **Alt and drag** to mark the tail. Drag the upper **LOOP IN** or
+lower **LOOP OUT** grip to adjust an endpoint, even when the endpoints line up.
+Ordinary dragging in the waveform edits the main START/END range. Wheel
 zoom and Shift-wheel pan remain available. Alt-right-click resets the tail to
 the main selection. The loop band and playhead show its real source positions.
 Each of the six players stores its own enable, points and crossfade in presets.
@@ -795,33 +798,35 @@ to select a band. ENABLED toggles it independently. Up to sixteen filters may ru
 | FREQ | 20 Hz–20 kHz; actual DSP cutoff is also limited below Nyquist. |
 | GAIN | ±18 dB for Bell/shelves. Other types do not use gain; its knob is disabled. |
 | Q | 0.1–20, controlling resonance/bandwidth. |
+| SLOPE | 12, 24, 36 or 48 dB/octave for High-pass and Low-pass. Each band stores its own choice. |
 
 Drag a point horizontally for frequency and vertically for Bell/shelf gain.
 Wheel over a point changes Q. Double-click resets its gain to 0 dB. Graph axes
 occupy separate margins; only the selected point is emphasized to avoid crowded
 labels. The combined curve includes enabled bands, output gain and compensation.
-High/low-pass are second-order filters (nominal 12 dB/octave); several slots can
-be combined for steeper slopes. All-pass changes phase while preserving magnitude.
+High-pass and Low-pass default to 12 dB/octave. The slope changes the falloff
+beyond the cutoff. Q still controls the resonance around it. All-pass changes
+phase while preserving magnitude.
 
 OUTPUT adds ±18 dB after either EQ. AUTO GAIN is off by default. It reduces gain
 by the maximum positive response estimated across the audible spectrum. This is
 peak-response compensation; later effects, resonance and several voices can
 still overload. Frequency/gain/Q, enable and Legacy/Graphic changes are smoothed
-around 15 ms. Filter-type changes crossfade over 20 ms; rapid requests settle to
-the latest type. Both EQ modes and every band setting are saved with presets.
+around 15 ms. Filter-type and slope changes crossfade over 20 ms. Rapid requests
+settle to the latest setting. Both EQ modes and every band setting are saved with presets.
 
-![Graphic EQ selected-band inspector](images/logisth-eq-graphic.png)
+![Graphic EQ slope control and independent PRE and POST switches](images/logisth-eq-slopes.png)
 
-The ANALYZER selector offers Off, Pre, Post and Pre + Post. Pre captures the
-actual stereo signal entering the EQ stage; Post captures its output. The
-spectrum is the mean L/R power, so opposite-polarity channels remain visible.
-The frequency-response curve and its band controls are separate from these
-live traces. Bypassing EQ makes Pre and Post coincide.
+Turn **PRE** on to see the stereo signal entering the EQ. Turn **POST** on to see
+its output. Switch both on to compare them, or both off to show the EQ response
+alone. The spectrum is the mean L/R power, so opposite-polarity channels remain
+visible. Bypassing EQ makes Pre and Post coincide.
 
 TILT offers **0, 1.5, 3, 4.5 or 6 dB/oct**, anchored at 1 kHz. It changes the
 display slope only. A 2048-sample Hann-window FFT is calculated on the GUI
-thread. Off, hidden EQ pages and closed editors stop audio capture/FFT work.
-Mode and tilt are application preferences rather than sound-preset parameters.
+thread. With both switches off, Tilt is hidden and capture/FFT work stops.
+Hidden EQ pages and closed editors also stop capture. Switches and Tilt save
+as application preferences.
 
 ### Compressor
 

@@ -314,6 +314,7 @@ EffectsParams LogisthProcessor::effectsSnapshot() const {
         auto n = size_t(i), at = size_t(eqBandTypes[n]);
         p.eqBands[n] = get(eqBandGains[n]);
         p.eqTypes[n] = int(get(Param(at)));
+        p.eqSlopes[n] = int(get(eqBandSlope(i)));
         p.eqFrequencies[n] = get(Param(at + 1));
         p.eqQ[n] = get(Param(at + 2));
         p.eqEnabled[n] = get(Param(at + 3)) > 0;

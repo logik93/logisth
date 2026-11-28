@@ -4,6 +4,8 @@
 #include <cstdint>
 namespace logisth {
 inline constexpr int eqMaxBands = 16;
+inline constexpr int eqMaxCutStages = 4;
+inline constexpr bool eqIsCut(int type) { return type == 3 || type == 4; }
 inline constexpr std::array<double, eqMaxBands> eqInitialFrequencies{
     31.5, 63, 125, 250, 500, 1000, 2000, 4000, 8000, 16000, 80, 180, 700, 3000, 6000, 12000};
 struct EqualizerParams {
@@ -12,6 +14,7 @@ struct EqualizerParams {
     float eqOutput = 0;
     std::array<float, eqMaxBands> eqBands{};
     std::array<int, eqMaxBands> eqTypes{};
+    std::array<int, eqMaxBands> eqSlopes{};
     std::array<float, eqMaxBands> eqFrequencies = [] {
         std::array<float, eqMaxBands> values{};
         for (int i = 0; i < eqMaxBands; ++i)
@@ -126,12 +129,42 @@ class Equalizer {
             return std::abs((b0 + b1 * z + b2 * z * z) / (1. + a1 * z + a2 * z * z));
         }
     };
+    struct BandFilter {
+        std::array<Filter, eqMaxCutStages> stages{};
+        int count = 1;
+
+        void configure(double rate, int type, double hz, double db, double q, int slope) {
+            count = eqIsCut(type) ? std::clamp(slope, 0, eqMaxCutStages - 1) + 1 : 1;
+            if (count == 1) {
+                stages[0].graphic(rate, type, hz, db, q);
+                return;
+            }
+            // Use the paired Butterworth poles for each order. Distribute Q across
+            // the sections so changing slope preserves the gain at the cutoff.
+            const double resonance = std::pow(std::clamp(q, .1, 20.) * std::sqrt(2.), 1. / count);
+            for (int i = 0; i < count; ++i) {
+                const double pole = 2 * std::cos((2 * i + 1) * pi / (4 * count));
+                stages[size_t(i)].graphic(rate, type, hz, db, resonance / pole);
+            }
+        }
+        float tick(float sample) {
+            for (int i = 0; i < count; ++i)
+                sample = stages[size_t(i)].tick(sample);
+            return sample;
+        }
+        double magnitude(double hz, double rate) const {
+            double result = 1;
+            for (int i = 0; i < count; ++i)
+                result *= stages[size_t(i)].magnitude(hz, rate);
+            return result;
+        }
+    };
     std::array<std::array<Filter, 2>, 2> legacy{};
-    std::array<std::array<Filter, eqMaxBands>, 2> bands{}, previous{};
+    std::array<std::array<BandFilter, eqMaxBands>, 2> bands{}, previous{};
     std::array<float, 4 + eqMaxBands> current{}, target{};
     std::array<float, eqMaxBands> frequency{}, frequencyTarget{}, q{}, qTarget{}, wet{},
         wetTarget{}, typeMix{};
-    std::array<int, eqMaxBands> types{}, oldTypes{};
+    std::array<int, eqMaxBands> types{}, oldTypes{}, slopes{}, oldSlopes{};
     double sr = 44100;
     float coefficient = 0, sampleCoefficient = 0, mode = 0, modeTarget = 0, gain = 1,
           gainTarget = 1;
@@ -143,10 +176,11 @@ class Equalizer {
             legacy[size_t(ch)][1].set(sr, current[3], current[1], true, true);
             for (int i = 0; i < eqMaxBands; ++i) {
                 auto n = size_t(i);
-                bands[size_t(ch)][n].graphic(sr, types[n], frequency[n], current[n + 4], q[n]);
+                bands[size_t(ch)][n].configure(sr, types[n], frequency[n], current[n + 4], q[n],
+                                               slopes[n]);
                 if (typeMix[n] < 1)
-                    previous[size_t(ch)][n].graphic(sr, oldTypes[n], frequency[n], current[n + 4],
-                                                    q[n]);
+                    previous[size_t(ch)][n].configure(sr, oldTypes[n], frequency[n], current[n + 4],
+                                                      q[n], oldSlopes[n]);
             }
         }
     }
@@ -174,6 +208,8 @@ class Equalizer {
         wetTarget = {};
         types = {};
         oldTypes = {};
+        slopes = {};
+        oldSlopes = {};
         typeMix.fill(1);
         counter = 0;
         initial = false;
@@ -193,16 +229,21 @@ class Equalizer {
             qTarget[n] = std::clamp(p.eqQ[n], .1f, 20.f);
             wetTarget[n] = p.eqEnabled[n] ? 1.f : 0.f;
             int type = std::clamp(p.eqTypes[n], 0, 7);
-            if (initial && type != types[n] && typeMix[n] >= 1) {
+            int slope = eqIsCut(type) ? std::clamp(p.eqSlopes[n], 0, eqMaxCutStages - 1) : 0;
+            if (initial && (type != types[n] || slope != slopes[n]) && typeMix[n] >= 1) {
                 for (int ch = 0; ch < 2; ++ch) {
                     previous[size_t(ch)][n] = bands[size_t(ch)][n];
                     bands[size_t(ch)][n] = {};
                 }
                 oldTypes[n] = types[n];
                 types[n] = type;
+                oldSlopes[n] = slopes[n];
+                slopes[n] = slope;
                 typeMix[n] = 0;
-            } else if (!initial)
+            } else if (!initial) {
                 types[n] = oldTypes[n] = type;
+                slopes[n] = oldSlopes[n] = slope;
+            }
         }
         modeTarget = p.eqMode == 0 ? 0.f : 1.f;
         double compensation = 0;
@@ -242,6 +283,8 @@ class Equalizer {
             update();
         }
         mode += sampleCoefficient * (modeTarget - mode);
+        if (std::abs(modeTarget - mode) < 1e-5f)
+            mode = modeTarget;
         gain += sampleCoefficient * (gainTarget - gain);
         for (size_t i = 0; i < wet.size(); ++i) {
             wet[i] += sampleCoefficient * (wetTarget[i] - wet[i]);
@@ -263,7 +306,9 @@ class Equalizer {
                 }
                 b = wet[i] == 1 ? filtered : b + (filtered - b) * wet[i];
             }
-            out[c] = (a + (b - a) * mode) * gain;
+            // At full wet, subtraction through the legacy branch would lose
+            // the low-level samples left by the steepest stopband filters.
+            out[c] = (mode == 1 ? b : a + (b - a) * mode) * gain;
         }
         return out;
     }
@@ -276,13 +321,15 @@ class Equalizer {
             mag *= f.magnitude(hz, sr);
             f.set(sr, trebleFreq, treble, true, true);
             mag *= f.magnitude(hz, sr);
-        } else
+        } else {
+            BandFilter band;
             for (size_t i = 0; i < p.eqBands.size(); ++i)
                 if (p.eqEnabled[i]) {
-                    f.graphic(sr, std::clamp(p.eqTypes[i], 0, 7), p.eqFrequencies[i], p.eqBands[i],
-                              p.eqQ[i]);
-                    mag *= f.magnitude(hz, sr);
+                    band.configure(sr, std::clamp(p.eqTypes[i], 0, 7), p.eqFrequencies[i],
+                                   p.eqBands[i], p.eqQ[i], p.eqSlopes[i]);
+                    mag *= band.magnitude(hz, sr);
                 }
+        }
         return 20 * std::log10(std::max(1e-12, mag)) + (output ? p.eqOutput : 0);
     }
 };

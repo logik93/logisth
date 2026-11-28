@@ -50,6 +50,25 @@ int main() {
         p.eqTypes[0] = 7;
         check(std::abs(Equalizer::response(p, 0, 200, 0, 6000, 3000, 48000)) < 1e-8,
               "all-pass retains magnitude");
+        for (double rate : {44100., 48000., 96000.})
+            for (int type : {3, 4})
+                for (int slope = 0; slope < eqMaxCutStages; ++slope) {
+                    p.eqTypes[0] = type;
+                    p.eqSlopes[0] = slope;
+                    const double near = type == 3 ? 500. : 2000., far = type == 3 ? 250. : 4000.;
+                    const double attenuation = measured(p, near, rate) - measured(p, far, rate);
+                    auto graph = [&](double hz) {
+                        return Equalizer::response(p, 0, 200, 0, 6000, hz, rate);
+                    };
+                    check(std::abs(attenuation - 12 * (slope + 1)) < 1.8 &&
+                              std::abs(measured(p, far, rate) - graph(far)) < .35,
+                          "cut slopes match the requested order in audio and the response plot");
+                    check(std::abs(graph(1000) + 3.0103) < .001,
+                          "Butterworth Q preserves the cutoff reference at every order");
+                }
+        p.eqTypes[0] = 0;
+        check(std::abs(measured(p, 1000, 48000) - 6) < .01,
+              "slope does not affect a bell band");
         for (int band = 0; band < eqMaxBands; ++band) {
             p = {};
             p.eqMode = 1;
@@ -70,6 +89,7 @@ int main() {
             for (int band = 0; band < eqMaxBands; ++band) {
                 auto n = size_t(band);
                 p.eqTypes[n] = (block + band) % 8;
+                p.eqSlopes[n] = (block / 3 + band) % eqMaxCutStages;
                 p.eqFrequencies[n] = float(40 * std::pow(1.45, band));
                 p.eqQ[n] = .5f + float((block + band) % 6) * .3f;
                 p.eqEnabled[n] = (block + band) % 3 != 0;
@@ -79,7 +99,7 @@ int main() {
             for (int i = 0; i < 256; ++i) {
                 auto y = eq.tick(.01f * std::sin(float(block * 256 + i) * .02f), .005f);
                 check(std::isfinite(y[0]) && std::abs(y[0]) < 100,
-                      "live filter type/frequency/enabled changes crossfade without instability");
+                      "live filter type/slope/frequency/enabled changes stay stable");
             }
         }
         std::cout << "PASS flexible EQ: eight filter shapes, 16 independent bands, model/audio "

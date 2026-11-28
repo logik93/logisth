@@ -28,19 +28,21 @@ class EqView : public juce::Component, public juce::SettableTooltipClient {
             auto prefix = "eqb" + juce::String(i);
             p.eqBands[n] = value("eqband" + juce::String(i));
             p.eqTypes[n] = int(value(prefix + "type"));
+            p.eqSlopes[n] = int(value(prefix + "slope"));
             p.eqFrequencies[n] = value(prefix + "freq");
             p.eqQ[n] = value(prefix + "q");
             p.eqEnabled[n] = value(prefix + "on") > 0;
         }
         return p;
     }
-    double response(const logisth::EqualizerParams &p, double hz, bool output = true) const {
+    double response(const logisth::EqualizerParams &p, double hz, double rate,
+                    bool output = true) const {
         return logisth::Equalizer::response(p, value("eqbass"), value("eqbassfreq"),
-                                            value("eqtreble"), value("eqtreblefreq"), hz,
-                                            std::max(44100., processor.getSampleRate()), output);
+                                            value("eqtreble"), value("eqtreblefreq"), hz, rate,
+                                            output);
     }
     juce::Rectangle<float> plot() const {
-        return {30, 5, float(getWidth() - 74), float(getHeight() - 26)};
+        return {30, 5, float(getWidth() - (analysisMode ? 74 : 40)), float(getHeight() - 26)};
     }
     float x(double hz) const {
         return plot().getX() + float(std::log(hz / 20) / std::log(1000.)) * plot().getWidth();
@@ -69,6 +71,8 @@ class EqView : public juce::Component, public juce::SettableTooltipClient {
 
   public:
     void setAnalyzer(int selected, int tilt) {
+        if (analysisMode == selected && analysisTilt == tilt)
+            return;
         analysisMode = selected;
         analysisTilt = tilt;
         repaint();
@@ -104,11 +108,14 @@ class EqView : public juce::Component, public juce::SettableTooltipClient {
         for (double db : {-12., 0., 12.})
             g.drawHorizontalLine(int(y(db)), area.getX(), area.getRight());
         auto p = settings();
+        const double hostRate = processor.getSampleRate();
+        const double rate = hostRate > 0 ? hostRate : 44100.;
         double compensation = 0;
         if (p.eqAutoGain)
             for (int i = 0; i < 96; ++i)
                 compensation =
-                    std::max(compensation, response(p, 20 * std::pow(1000., i / 95.), false));
+                    std::max(compensation, response(p, 20 * std::pow(std::min(20000., rate * .45) / 20,
+                                                                       i / 95.), rate, false));
         {
             juce::Graphics::ScopedSaveState clip(g);
             g.reduceClipRegion(area.toNearestInt());
@@ -116,7 +123,9 @@ class EqView : public juce::Component, public juce::SettableTooltipClient {
             juce::Path curve;
             for (int i = 0; i < 256; ++i) {
                 double hz = 20 * std::pow(1000., i / 255.);
-                float xx = x(hz), yy = y(response(p, hz) - compensation);
+                if (hz >= rate * .5)
+                    break;
+                float xx = x(hz), yy = y(response(p, hz, rate) - compensation);
                 if (i == 0)
                     curve.startNewSubPath(xx, yy);
                 else

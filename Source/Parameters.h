@@ -1183,6 +1183,22 @@ enum class Param : size_t {
     o6stretchon5,
     o6stretchon6,
     o6stretchon7,
+    eqb0slope,
+    eqb1slope,
+    eqb2slope,
+    eqb3slope,
+    eqb4slope,
+    eqb5slope,
+    eqb6slope,
+    eqb7slope,
+    eqb8slope,
+    eqb9slope,
+    eqb10slope,
+    eqb11slope,
+    eqb12slope,
+    eqb13slope,
+    eqb14slope,
+    eqb15slope,
     Count
 };
 constexpr size_t parameterCount = size_t(Param::Count);
@@ -1192,6 +1208,7 @@ constexpr size_t stretchLayerParam(int player, int mode) {
     return mode == 8 ? phaseDiffuseParam(player)
                      : size_t(Param::o1stretchon1) + size_t(player * 7 + mode - 1);
 }
+constexpr Param eqBandSlope(int band) { return Param(size_t(Param::eqb0slope) + size_t(band)); }
 inline constexpr float bendWheelMax = 12.f;
 struct ParameterSpec {
     const char *id;
@@ -3016,6 +3033,38 @@ inline const std::array<ParameterSpec, parameterCount> parameterSpecs{{
     {"o6stretchon5", "Transient On", 5, "SOURCE 6", 0, 1, 0, 1, "Off|On", false},
     {"o6stretchon6", "Kick On", 5, "SOURCE 6", 0, 1, 0, 1, "Off|On", false},
     {"o6stretchon7", "Signalsmith Stretch On", 5, "SOURCE 6", 0, 1, 0, 1, "Off|On", false},
+    {"eqb0slope", "Band 1 slope / dB per octave", 3, "EQUALIZER", 0, 3, 0, 1,
+     "12 dB/oct|24 dB/oct|36 dB/oct|48 dB/oct", true},
+    {"eqb1slope", "Band 2 slope / dB per octave", 3, "EQUALIZER", 0, 3, 0, 1,
+     "12 dB/oct|24 dB/oct|36 dB/oct|48 dB/oct", true},
+    {"eqb2slope", "Band 3 slope / dB per octave", 3, "EQUALIZER", 0, 3, 0, 1,
+     "12 dB/oct|24 dB/oct|36 dB/oct|48 dB/oct", true},
+    {"eqb3slope", "Band 4 slope / dB per octave", 3, "EQUALIZER", 0, 3, 0, 1,
+     "12 dB/oct|24 dB/oct|36 dB/oct|48 dB/oct", true},
+    {"eqb4slope", "Band 5 slope / dB per octave", 3, "EQUALIZER", 0, 3, 0, 1,
+     "12 dB/oct|24 dB/oct|36 dB/oct|48 dB/oct", true},
+    {"eqb5slope", "Band 6 slope / dB per octave", 3, "EQUALIZER", 0, 3, 0, 1,
+     "12 dB/oct|24 dB/oct|36 dB/oct|48 dB/oct", true},
+    {"eqb6slope", "Band 7 slope / dB per octave", 3, "EQUALIZER", 0, 3, 0, 1,
+     "12 dB/oct|24 dB/oct|36 dB/oct|48 dB/oct", true},
+    {"eqb7slope", "Band 8 slope / dB per octave", 3, "EQUALIZER", 0, 3, 0, 1,
+     "12 dB/oct|24 dB/oct|36 dB/oct|48 dB/oct", true},
+    {"eqb8slope", "Band 9 slope / dB per octave", 3, "EQUALIZER", 0, 3, 0, 1,
+     "12 dB/oct|24 dB/oct|36 dB/oct|48 dB/oct", true},
+    {"eqb9slope", "Band 10 slope / dB per octave", 3, "EQUALIZER", 0, 3, 0, 1,
+     "12 dB/oct|24 dB/oct|36 dB/oct|48 dB/oct", true},
+    {"eqb10slope", "Band 11 slope / dB per octave", 3, "EQUALIZER", 0, 3, 0, 1,
+     "12 dB/oct|24 dB/oct|36 dB/oct|48 dB/oct", true},
+    {"eqb11slope", "Band 12 slope / dB per octave", 3, "EQUALIZER", 0, 3, 0, 1,
+     "12 dB/oct|24 dB/oct|36 dB/oct|48 dB/oct", true},
+    {"eqb12slope", "Band 13 slope / dB per octave", 3, "EQUALIZER", 0, 3, 0, 1,
+     "12 dB/oct|24 dB/oct|36 dB/oct|48 dB/oct", true},
+    {"eqb13slope", "Band 14 slope / dB per octave", 3, "EQUALIZER", 0, 3, 0, 1,
+     "12 dB/oct|24 dB/oct|36 dB/oct|48 dB/oct", true},
+    {"eqb14slope", "Band 15 slope / dB per octave", 3, "EQUALIZER", 0, 3, 0, 1,
+     "12 dB/oct|24 dB/oct|36 dB/oct|48 dB/oct", true},
+    {"eqb15slope", "Band 16 slope / dB per octave", 3, "EQUALIZER", 0, 3, 0, 1,
+     "12 dB/oct|24 dB/oct|36 dB/oct|48 dB/oct", true},
 }};
 
 inline constexpr size_t legacyParameterCount = 736;

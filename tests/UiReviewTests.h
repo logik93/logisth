@@ -273,19 +273,47 @@ inline void run(const File &report = {}) {
     buttonIn(console->findChildWithID("dist.slot.0"))->onClick();
     writeImage("distortion-rack");
     showRack(4);
-    auto *analysis = dynamic_cast<ComboBox *>(console->findChildWithID("eq.analyzer.mode"));
+    auto *pre = dynamic_cast<TextButton *>(console->findChildWithID("eq.analyzer.pre"));
+    auto *post = dynamic_cast<TextButton *>(console->findChildWithID("eq.analyzer.post"));
     auto *tilt = dynamic_cast<ComboBox *>(console->findChildWithID("eq.analyzer.tilt"));
-    check(analysis && tilt && analysis->getNumItems() == 4 && tilt->getNumItems() == 5,
-          "EQ exposes Off/Pre/Post/Both and all five tilt values");
-    analysis->setSelectedId(1, sendNotificationSync);
-    check(!p->eqSpectrumEnabled.load() && UserSettings::analyzer().mode == 0,
-          "EQ analyzer Off stops capture and persists immediately");
-    analysis->setSelectedId(4, sendNotificationSync);
+    check(pre && post && tilt && tilt->getNumItems() == 5,
+          "EQ exposes independent analyzer switches and all five tilt values");
+    pre->setToggleState(false, sendNotificationSync);
+    post->setToggleState(false, sendNotificationSync);
+    check(!p->eqSpectrumEnabled.load() && UserSettings::analyzer().mode == 0 &&
+              pre->isVisible() && post->isVisible() && !tilt->isVisible() &&
+              console->findChildWithID("eq.graph")->isVisible(),
+          "both analyzer switches off stops capture while retaining the response plot");
+    pre->setToggleState(true, sendNotificationSync);
+    check(UserSettings::analyzer().mode == 1 && !post->getToggleState(), "PRE can be enabled alone");
+    pre->setToggleState(false, sendNotificationSync);
+    post->setToggleState(true, sendNotificationSync);
+    check(UserSettings::analyzer().mode == 2 && !pre->getToggleState(), "POST can be enabled alone");
+    pre->setToggleState(true, sendNotificationSync);
     tilt->setSelectedId(5, sendNotificationSync);
     check(UserSettings::analyzer().mode == 3 && UserSettings::analyzer().tilt == 4,
           "analyzer mode and slope persist");
     gain_test::set(*p, "eqon", 1);
     gain_test::set(*p, "eqmode", 1);
+    gain_test::set(*p, "eqb0type", 3);
+    showRack(4);
+    auto *slopeField = console->findChildWithID("eqb0slope");
+    ComboBox *slope = nullptr;
+    if (slopeField)
+        for (auto *child : slopeField->getChildren())
+            if (auto *menu = dynamic_cast<ComboBox *>(child))
+                slope = menu;
+    check(slope && slopeField->isVisible() && slope->isEnabled() && slope->getNumItems() == 4 &&
+              slope->getItemText(0) == "12 dB" && slope->getItemText(1) == "24 dB" &&
+              slope->getItemText(2) == "36 dB" && slope->getItemText(3) == "48 dB",
+          "cut bands expose four slope choices");
+    slope->setSelectedId(4, sendNotificationSync);
+    check(p->state.getRawParameterValue("eqb0slope")->load() == 3,
+          "slope selector writes the selected band's host parameter");
+    gain_test::set(*p, "eqb0type", 0);
+    gain_test::set(*p, "eqb0slope", 0);
+    showRack(4);
+    check(!slope->isEnabled(), "bell bands do not offer cut slope");
     gain_test::set(*p, "eqband3", -9);
     gain_test::set(*p, "eqband7", 6);
     gain_test::set(*p, "limiton", 1);
