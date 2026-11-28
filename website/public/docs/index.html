@@ -5,13 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="theme-color" content="#0a0910">
     <meta name="description" content="Installation, synthesis engines, sound design and performance.">
-    <title>User manual · logisth 1.0.10</title>
+    <title>User manual · logisth 1.0.11</title>
     <link rel="icon" href="../assets/icon.svg">
     <link rel="stylesheet" href="../theme.css">
     <link rel="stylesheet" href="../manual.css">
     <script type="module" src="../manual.js"></script>
   </head>
-  <body data-manual="user" data-version="1.0.10">
+  <body data-manual="user" data-version="1.0.11">
     <a class="manual-skip" href="#content">Skip to manual</a>
     <header class="manual-header">
       <div class="manual-shell manual-bar">
@@ -29,9 +29,9 @@
         <h1>User manual</h1>
         <p class="manual-description">Installation, synthesis engines, sound design and performance.</p>
         <div class="manual-meta">
-          <span class="manual-version">logisth v1.0.10</span>
+          <span class="manual-version">logisth v1.0.11</span>
           <span>English</span>
-          <a class="manual-source" href="https://github.com/logik93/logisth/blob/v1.0.10/docs/MANUAL.md">View on GitHub</a>
+          <a class="manual-source" href="https://github.com/logik93/logisth/blob/v1.0.11/docs/MANUAL.md">View on GitHub</a>
         </div>
       </div>
       <div class="manual-shell manual-layout">
@@ -41,7 +41,7 @@
         </details>
         <article class="manual-body" aria-label="User manual">
 <p>wavelogik logisth is a three-part polyphonic subtractive synthesizer for VST3, CLAP and standalone use. This manual describes logisth's controls, sound engines and preset workflow.</p>
-<p>This edition describes <strong>v1.0.10</strong>. Published downloads include their corresponding manuals.</p>
+<p>This edition describes <strong>v1.0.11</strong>. Published downloads include their corresponding manuals.</p>
 <h2 id="1-installation-and-first-sound">1. Installation and first sound</h2>
 <p>Download the archive for your operating system from the GitHub release. Each native archive contains VST3, CLAP and Standalone folders. Extract it first. Copy the entire .vst3 bundle and the .clap file or bundle into a plug-in directory scanned by your DAW. Keep the internal structure of bundles intact.</p>
 <div class="table-wrap"><table>
@@ -301,9 +301,12 @@
 <p>Enabling LOOP TAIL in the editor turns off the earlier whole-selection LOOP. If both are enabled by host automation, LOOP TAIL takes priority. Turning it off resumes one-shot playback from the current source position. Crossfades are limited to a quarter of the tail's length so very short loops remain bounded; overlapping heads shorten each repeated cycle by the crossfade duration. Tail settings also work with sampler stretching and interpolation modes.</p>
 <p><img loading="lazy" src="../assets/manual/logisth-loop-tail.webp" alt="Loop Tail controls and independent region" /></p>
 <p><img loading="lazy" src="../assets/manual/logisth-part-c.webp" alt="Part C players and shared mixer" /></p>
-<h3 id="granular-playback-and-phase-diffusion">Granular playback and phase diffusion</h3>
+<h3 id="granular-playback-and-sampler-stretch-layers">Granular playback and Sampler stretch layers</h3>
 <p>For a Granular oscillator, open <strong>Playback</strong> to set <strong>Time Factor</strong>, <strong>Rate</strong>, <strong>Semitones</strong> and <strong>Interpolation</strong>. Time Factor above 1 slows the scan or grain-head motion. Rate offsets that speed independently of the grain pitch. Semitones adds to the source tuning in Cloud and in Granulizer when key routing controls pitch. In Cloud, set <strong>Scan</strong> away from zero to hear the change in source movement. In Granulizer, <strong>Time Hold</strong> still freezes the grain head.</p>
-<p>For a Sampler oscillator, open <strong>Paul Stretch</strong> and enable <strong>Phase Diffusion</strong>. It processes overlapping spectral windows with randomized phase to draw out textures and soften transients. Set the time factor and block size, then blend the <strong>0.5x</strong>, <strong>1x</strong> and <strong>2x</strong> spectral layers. Disable Phase Diffusion to return to the stretch algorithm selected in Playback. The spectral workspace can take a moment to prepare. Smaller blocks or fewer voices and unison lanes reduce memory use.</p>
+<p>For a <strong>Sampler</strong> oscillator, open <strong>Stretch</strong> and pick the algorithm to edit. Use <strong>ON</strong> to add it to the parallel mix. Pick another algorithm and switch it on to layer both outputs. The picker marks active layers with <strong>[ON]</strong>. With every layer off, the <strong>Playback</strong> page's stretch selection determines the sound. The conventional algorithms use the oscillator's shared time and pitch settings.</p>
+<p>Choose <strong>PaulXStretch</strong> in <strong>Stretch</strong> for long, diffused textures. Set <strong>Stretch Amount</strong> from <strong>0.1x to 1024x</strong> (default <strong>2x</strong>). <strong>FFT Size</strong> selects the actual analysis length in samples, from <strong>256 to 262144</strong> in powers of two (default <strong>32768</strong>). Larger windows preserve finer frequency detail and blur short changes more. Blend the <strong>0.5x</strong>, <strong>1x</strong> and <strong>2x</strong> octave layers with the ratio mixer. Allow a moment after changing FFT Size for the buffers to prepare. Smaller FFT sizes or fewer voices and unison lanes reduce memory and CPU use.</p>
+<p>This mode uses the Signalsmith Linear FFT and takes inspiration from PaulStretch by Nasca Octavian Paul and PaulXStretch by Xenakios and Jesse Chappell. <a href="https://github.com/essej/paulxstretch">Project and credits</a> · <a href="https://github.com/logik93/logisth/blob/v1.0.11/THIRD_PARTY_NOTICES.md#paulxstretch-inspiration">Third-party notices</a></p>
+<p><img loading="lazy" src="../assets/manual/logisth-paulxstretch.webp" alt="PaulXStretch in the Sampler Stretch panel" /></p>
 <h2 id="4-filters-and-shared-filter-control">4. Filters and shared Filter Control</h2>
 <p>Each part has an input selector, type, slope, cutoff, resonance and drive. Input A uses A1+A2, B uses B1+B2, and C uses C1+C2. A+B, A+C, B+C and A+B+C sum the named sources. None disconnects the input. Each of the three filters accepts all eight selections. Consequently, a part's filter can process the other oscillator source. Its output still passes through its own amplitude envelope and Mix level.</p>
 <p>Choose low-pass, high-pass, band-pass or bypass. Slope selects 12 or 24 dB per octave. Cutoff is the local frequency. Resonance emphasises the cutoff region; high resonance can self-oscillate while a note is active. Drive adds saturation.</p>

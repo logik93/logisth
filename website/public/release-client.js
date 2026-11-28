@@ -30,7 +30,7 @@ function releaseWithAssets(tag, uploaded) {
 }
 
 // Shipped links for a release whose three archives and PDFs are already public.
-const fallbackTag = "v1.0.8";
+const fallbackTag = "v1.0.10";
 const fallbackNames = [
   ...Object.values(packages).map(([suffix]) => "logisth-" + fallbackTag.slice(1) + "-" + suffix),
   ...Object.values(manualFiles).map(([, pdf]) => pdf),
