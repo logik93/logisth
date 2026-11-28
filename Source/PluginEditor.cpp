@@ -688,13 +688,7 @@ class LogisthEditor::Console : public Component,
             bool heading = caption.isNotEmpty() && kind != Style::Toggle && kind != Style::Trim;
             label.setVisible(heading);
             auto b = getLocalBounds();
-            if (heading && getComponentID().startsWith("sample.")) {
-                const int width = GlyphArrangement::getStringWidthInt(label.getFont(), caption) + 2;
-                label.setBorderSize({});
-                label.setJustificationType(Justification::centredRight);
-                label.setBounds(b.removeFromLeft(width));
-                b.removeFromLeft(2);
-            } else if (heading)
+            if (heading)
                 label.setBounds(b.removeFromTop(13));
             slider.setVisible(kind == Style::Knob || kind == Style::Trim || kind == Style::Fader ||
                               kind == Style::Number);
@@ -2372,6 +2366,9 @@ class LogisthEditor::Console : public Component,
         layout();
         repaint();
     }
+    static Rectangle<int> sampleFieldBounds(int column) {
+        return {663 + 94 * column, 297, 83, 18};
+    }
     void showSampleTrim(int slot, int mode) {
         // Both editor locations drive the same APVTS parameter. Keep attachments alive
         // across repaints and only rebind when the selected player or engine changes.
@@ -2384,16 +2381,14 @@ class LogisthEditor::Console : public Component,
                 field->setComponentID(i == 0 ? "sample.start" : "sample.end");
                 addChildComponent(*field);
             }
-            const String label = i == 0 ? "START" : "END";
-            field->setName("Sample " + label.toLowerCase());
-            field->configure(i == 0 ? Rectangle<int>{663, 289, 93, 23}
-                                    : Rectangle<int>{844, 289, 90, 23},
-                             Style::Number, label, true);
+            field->setName(i == 0 ? "Sample start" : "Sample end");
+            field->configure(sampleFieldBounds(int(i) * 2), Style::Number, {}, true);
         }
         samplePosition.setFont(font(10));
         samplePosition.setBorderSize({});
         samplePosition.setColour(Label::textColourId, screenText);
-        samplePosition.setBounds(762, 299, 76, 13);
+        samplePosition.setColour(Label::backgroundColourId, screenLine.withAlpha(.4f));
+        samplePosition.setBounds(sampleFieldBounds(1));
         samplePosition.setText(waveView.playbackPositionText(), dontSendNotification);
         samplePosition.setVisible(true);
     }
@@ -4826,8 +4821,12 @@ class LogisthEditor::Console : public Component,
             const Rectangle<int> titleArea =
                 mode >= 2 ? Rectangle<int>(491, 289, 166, 23) : Rectangle<int>(540, 289, 295, 23);
             drawCaption(g, title, titleArea, 11, screenText);
-            if (samplePosition.isVisible())
-                drawCaption(g, "POSITION", {762, 288, 76, 12}, 8, mint, Justification::centred);
+            if (samplePosition.isVisible()) {
+                constexpr std::array<const char *, 3> captions{"START", "POSITION", "END"};
+                for (int i = 0; i < int(captions.size()); ++i)
+                    drawCaption(g, captions[size_t(i)], sampleFieldBounds(i).withY(285).withHeight(12),
+                                8, mint, Justification::centred);
+            }
         } else if (rack == 8) {
             drawCaption(g, "TRIGGER", {414, 309, 140, 18}, 9, mint);
             drawCaption(g, "VOICING", {566, 309, 145, 18}, 9, mint);

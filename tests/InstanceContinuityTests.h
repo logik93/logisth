@@ -118,7 +118,11 @@ inline void checkTrimControls(const File &report) {
             features0983_test::tick();
             gain_test::require(position->isVisible() && position->getText() == "42.75%" &&
                                    position->getX() >= start.getParentComponent()->getRight() &&
-                                   position->getRight() <= end.getParentComponent()->getX(),
+                                   position->getRight() <= end.getParentComponent()->getX() &&
+                                   position->getY() == start.getParentComponent()->getY() &&
+                                   position->getY() == end.getParentComponent()->getY() &&
+                                   position->getWidth() == start.getParentComponent()->getWidth() &&
+                                   position->getWidth() == end.getParentComponent()->getWidth(),
                                "live playhead readout is between trim controls");
             ++live.revision;
             p->playback[size_t(slot)].write(live);
