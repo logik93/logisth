@@ -1,54 +1,10 @@
 {
   "tag": "v1.1.0",
-  "automation_commit": "bf2ddbf3e9ad1f560fb6c0c1be7c29f2beea6df6",
-  "run_id": "46148096155",
-  "run_url": "https://github.com/logik93/logisth/actions/runs/46148096155",
-  "phase": "failed",
-  "pipeline_phase": "failed",
-  "stage": "final",
-  "recorded_at": "2026-11-28T13:29:42.127101+00:00",
-  "jobs": {
-    "started": {
-      "result": "success",
-      "outputs": {}
-    },
-    "plugins": {
-      "result": "failure",
-      "outputs": {}
-    },
-    "windows_asan": {
-      "result": "failure",
-      "outputs": {}
-    },
-    "publish": {
-      "result": "skipped",
-      "outputs": {}
-    },
-    "report_initial": {
-      "result": "success",
-      "outputs": {}
-    },
-    "macos": {
-      "result": "skipped",
-      "outputs": {}
-    },
-    "publish_macos": {
-      "result": "skipped",
-      "outputs": {}
-    }
-  },
-  "failures": [
-    {
-      "log": "ci-artifacts/native-linux-x86_64/logs/tests.log",
-      "errors": [
-        "The following tests FAILED:"
-      ]
-    },
-    {
-      "log": "ci-artifacts/native-windows-asan-logs/tests.log",
-      "errors": [
-        "The following tests FAILED:"
-      ]
-    }
-  ]
+  "automation_commit": "81ad126fe8802d1f7b5c2d37eec8ef16861c66dd",
+  "run_id": "46149129286",
+  "run_url": "https://github.com/logik93/logisth/actions/runs/46149129286",
+  "phase": "building",
+  "pipeline_phase": "building",
+  "stage": "",
+  "recorded_at": "2026-11-28T13:30:49.573048+00:00"
 }
